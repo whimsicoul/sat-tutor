@@ -323,7 +323,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
       </div>
 
       {/* Add user dialog */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+      <Dialog open={addOpen} onOpenChange={setAddOpen} modal={false}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)', letterSpacing: '-0.02em' }}>
@@ -368,7 +368,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
             </div>
             <div>
               <Label style={{ color: 'var(--slate)' }}>Role</Label>
-              <Select value={addForm.role} onValueChange={(v) => setAddForm((f) => ({ ...f, role: v ?? 'student' }))} modal={false}>
+              <Select value={addForm.role} onValueChange={(v) => setAddForm((f) => ({ ...f, role: v ?? 'student' }))}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
@@ -393,7 +393,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
       </Dialog>
 
       {/* Edit dialog */}
-      <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
+      <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)} modal={false}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)', letterSpacing: '-0.02em' }}>
@@ -411,7 +411,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
             </div>
             <div>
               <Label style={{ color: 'var(--slate)' }}>Role</Label>
-              <Select value={editForm.role} onValueChange={(v) => setEditForm((f) => ({ ...f, role: v ?? f.role }))} modal={false}>
+              <Select value={editForm.role} onValueChange={(v) => setEditForm((f) => ({ ...f, role: v ?? f.role }))}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
