@@ -1,0 +1,40 @@
+import { auth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { getAllSessions, getUsersByRole } from '@/lib/db';
+import ScheduleClient from './client';
+
+export interface AdminSession {
+  id: string;
+  proposed_time: string;
+  status: 'pending' | 'approved' | 'denied';
+  tutor_id: string;
+  tutor_name: string;
+  student_id: string;
+  student_name: string;
+  series_id?: string;
+}
+
+export interface UserOption {
+  id: string;
+  name: string;
+}
+
+export default async function AdminSchedulePage() {
+  const session = await auth();
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  if (role !== 'admin') redirect('/login');
+
+  const [sessions, tutors, students] = await Promise.all([
+    getAllSessions(),
+    getUsersByRole('tutor'),
+    getUsersByRole('student'),
+  ]);
+
+  return (
+    <ScheduleClient
+      sessions={sessions as AdminSession[]}
+      tutors={tutors as UserOption[]}
+      students={students as UserOption[]}
+    />
+  );
+}

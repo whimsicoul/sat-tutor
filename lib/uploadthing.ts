@@ -9,13 +9,14 @@ export const ourFileRouter = {
   })
     .middleware(async () => {
       const session = await auth();
-      if (!session || (session.user as { role?: string }).role !== 'tutor') {
+      const role = (session?.user as { role?: string } | undefined)?.role;
+      if (!session || (role !== 'tutor' && role !== 'admin')) {
         throw new Error('Unauthorized');
       }
-      return { tutorId: session.user.id };
+      return { userId: session.user.id };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      return { url: file.ufsUrl, tutorId: metadata.tutorId };
+      return { url: file.ufsUrl, userId: metadata.userId };
     }),
 } satisfies FileRouter;
 
