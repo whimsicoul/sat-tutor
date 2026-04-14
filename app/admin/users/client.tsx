@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Plus, Pencil, Trash2, UserX, UserCheck } from 'lucide-react';
+import { Plus, Pencil, Trash2, UserX, UserCheck, Eye, EyeOff } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -53,6 +53,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
 
   const [addForm, setAddForm] = useState({ name: '', email: '', password: '', role: 'student' });
   const [editForm, setEditForm] = useState({ name: '', email: '', role: '' });
+  const [showAddPassword, setShowAddPassword] = useState(false);
 
   const filtered = users.filter((u) => filter === 'all' || u.role === filter);
 
@@ -340,11 +341,34 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
             </div>
             <div>
               <Label htmlFor="add-password" style={{ color: 'var(--slate)' }}>Password</Label>
-              <Input id="add-password" type="password" value={addForm.password} onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))} placeholder="••••••••" className="mt-1" />
+              <div style={{ position: 'relative' }} className="mt-1">
+                <Input
+                  id="add-password"
+                  type={showAddPassword ? 'text' : 'password'}
+                  value={addForm.password}
+                  onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))}
+                  placeholder="••••••••"
+                  style={{ paddingRight: '2.75rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAddPassword((v) => !v)}
+                  tabIndex={-1}
+                  aria-label={showAddPassword ? 'Hide password' : 'Show password'}
+                  style={{
+                    position: 'absolute', inset: '0 0 0 auto',
+                    display: 'flex', alignItems: 'center', paddingRight: 12,
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--mist)',
+                  }}
+                >
+                  {showAddPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
             <div>
               <Label style={{ color: 'var(--slate)' }}>Role</Label>
-              <Select value={addForm.role} onValueChange={(v) => setAddForm((f) => ({ ...f, role: v ?? 'student' }))}>
+              <Select value={addForm.role} onValueChange={(v) => setAddForm((f) => ({ ...f, role: v ?? 'student' }))} modal={false}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
@@ -387,7 +411,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
             </div>
             <div>
               <Label style={{ color: 'var(--slate)' }}>Role</Label>
-              <Select value={editForm.role} onValueChange={(v) => setEditForm((f) => ({ ...f, role: v ?? f.role }))}>
+              <Select value={editForm.role} onValueChange={(v) => setEditForm((f) => ({ ...f, role: v ?? f.role }))} modal={false}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>

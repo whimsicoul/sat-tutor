@@ -51,10 +51,8 @@ export default async function StudentProblemSetsPage() {
           {problemSets.map((ps, idx) => (
             <div
               key={ps.id as string}
-              className="portal-card flex items-center gap-5 p-5 transition-all"
+              className="portal-card hover-rose-border flex items-center gap-5 p-5 transition-all"
               style={{ animationDelay: `${idx * 40}ms` }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(224,166,175,0.4)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--fog)'; }}
             >
               {/* Index badge */}
               <div
@@ -79,14 +77,12 @@ export default async function StudentProblemSetsPage() {
                 href={ps.problem_pdf_url as string}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all shrink-0"
+                className="hover-rose-bg flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all shrink-0"
                 style={{
                   background: 'var(--rose)',
                   color: 'var(--charcoal)',
                   textDecoration: 'none',
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--rose-dark)'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--rose)'; }}
               >
                 <BookOpen className="h-4 w-4" />
                 <span className="hidden sm:inline">Open</span>

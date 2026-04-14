@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, AlertCircle } from 'lucide-react';
+import { ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,7 +34,7 @@ export default function LoginPage() {
     const data = await res.json();
     const role = data?.user?.role;
 
-    router.push(role === 'tutor' ? '/tutor/problem-sets' : '/student/problem-sets');
+    router.push(role === 'admin' ? '/admin' : role === 'tutor' ? '/tutor/problem-sets' : '/student/problem-sets');
     router.refresh();
   }
 
@@ -62,12 +63,20 @@ export default function LoginPage() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 relative z-10" style={{ textDecoration: 'none' }}>
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm text-white"
-            style={{ background: 'linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%)' }}
+          <svg
+            width="36"
+            height="24"
+            viewBox="0 0 90 60"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ borderRadius: 5, flexShrink: 0, boxShadow: '0 1px 6px rgba(0,0,0,0.18)', border: '0.5px solid rgba(0,0,0,0.08)' }}
           >
-            DC
-          </div>
+            <rect width="90" height="60" fill="#FFFFFF" />
+            <rect x="0" y="25" width="90" height="10" fill="#C8102E" />
+            <rect x="0" y="42" width="90" height="10" fill="#C8102E" />
+            <polygon fill="#C8102E" points="15,4.5 17.18,10.84 23.89,10.84 18.36,14.82 20.54,21.16 15,17.18 9.46,21.16 11.64,14.82 6.11,10.84 12.82,10.84" />
+            <polygon fill="#C8102E" points="45,4.5 47.18,10.84 53.89,10.84 48.36,14.82 50.54,21.16 45,17.18 39.46,21.16 41.64,14.82 36.11,10.84 42.82,10.84" />
+            <polygon fill="#C8102E" points="75,4.5 77.18,10.84 83.89,10.84 78.36,14.82 80.54,21.16 75,17.18 69.46,21.16 71.64,14.82 66.11,10.84 72.82,10.84" />
+          </svg>
           <span className="text-base font-semibold" style={{ color: 'var(--charcoal)' }}>
             DC SAT Tutor
           </span>
@@ -122,12 +131,20 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2.5 mb-10">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white"
-              style={{ background: 'linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%)' }}
+            <svg
+              width="30"
+              height="20"
+              viewBox="0 0 90 60"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ borderRadius: 4, flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.18)', border: '0.5px solid rgba(0,0,0,0.08)' }}
             >
-              DC
-            </div>
+              <rect width="90" height="60" fill="#FFFFFF" />
+              <rect x="0" y="25" width="90" height="10" fill="#C8102E" />
+              <rect x="0" y="42" width="90" height="10" fill="#C8102E" />
+              <polygon fill="#C8102E" points="15,4.5 17.18,10.84 23.89,10.84 18.36,14.82 20.54,21.16 15,17.18 9.46,21.16 11.64,14.82 6.11,10.84 12.82,10.84" />
+              <polygon fill="#C8102E" points="45,4.5 47.18,10.84 53.89,10.84 48.36,14.82 50.54,21.16 45,17.18 39.46,21.16 41.64,14.82 36.11,10.84 42.82,10.84" />
+              <polygon fill="#C8102E" points="75,4.5 77.18,10.84 83.89,10.84 78.36,14.82 80.54,21.16 75,17.18 69.46,21.16 71.64,14.82 66.11,10.84 72.82,10.84" />
+            </svg>
             <span className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
               DC SAT Tutor
             </span>
@@ -175,15 +192,28 @@ export default function LoginPage() {
               >
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                required
-                autoComplete="current-password"
-                className="portal-input"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                  className="portal-input"
+                  style={{ paddingRight: '2.75rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  tabIndex={-1}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  style={{ color: 'var(--mist)', background: 'none', border: 'none', cursor: 'pointer' }}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             {error && (

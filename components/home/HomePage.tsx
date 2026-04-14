@@ -26,12 +26,20 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-              style={{ background: 'linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%)' }}
+            <svg
+              width="36"
+              height="24"
+              viewBox="0 0 90 60"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ borderRadius: 5, flexShrink: 0, boxShadow: '0 1px 6px rgba(0,0,0,0.18)', border: '0.5px solid rgba(0,0,0,0.08)' }}
             >
-              DC
-            </div>
+              <rect width="90" height="60" fill="#FFFFFF" />
+              <rect x="0" y="25" width="90" height="10" fill="#C8102E" />
+              <rect x="0" y="42" width="90" height="10" fill="#C8102E" />
+              <polygon fill="#C8102E" points="15,4.5 17.18,10.84 23.89,10.84 18.36,14.82 20.54,21.16 15,17.18 9.46,21.16 11.64,14.82 6.11,10.84 12.82,10.84" />
+              <polygon fill="#C8102E" points="45,4.5 47.18,10.84 53.89,10.84 48.36,14.82 50.54,21.16 45,17.18 39.46,21.16 41.64,14.82 36.11,10.84 42.82,10.84" />
+              <polygon fill="#C8102E" points="75,4.5 77.18,10.84 83.89,10.84 78.36,14.82 80.54,21.16 75,17.18 69.46,21.16 71.64,14.82 66.11,10.84 72.82,10.84" />
+            </svg>
             <span className="text-base font-semibold tracking-tight" style={{ color: 'var(--charcoal)' }}>
               DC SAT Tutor
             </span>
@@ -62,24 +70,33 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
       <section
         className="relative overflow-hidden"
         style={{
-          background: 'linear-gradient(150deg, #FDF5F6 0%, #F3F9FC 50%, #F8EEF0 100%)',
+          backgroundImage: 'url(/493446241.webp)',
+          backgroundSize: 'cover',
+          backgroundPosition: '60% 40%',
           borderBottom: '1px solid var(--fog)',
         }}
       >
-        {/* Soft orbs */}
+        {/* Overlay to keep text legible */}
         <div
-          className="absolute top-0 right-0 w-[600px] h-[600px] opacity-40 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse at top right, rgba(168,203,222,0.5) 0%, transparent 65%)' }}
-        />
-        <div
-          className="absolute bottom-0 left-0 w-[400px] h-[400px] opacity-30 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse at bottom left, rgba(224,166,175,0.55) 0%, transparent 65%)' }}
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'rgba(15,35,55,0.52)' }}
         />
 
         <div className="relative max-w-6xl mx-auto px-6 py-24 lg:py-36">
           <div className="max-w-3xl">
             {/* Eyebrow */}
-            <div className="eyebrow-rose mb-8">
+            <div
+              className="mb-8 inline-flex items-center gap-2"
+              style={{
+                fontSize: '0.7rem',
+                fontWeight: 600,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                fontFamily: "'Syne', sans-serif",
+                color: '#93C9E8',
+              }}
+            >
+              <span style={{ display: 'inline-block', width: 20, height: 1, background: '#93C9E8' }} />
               Washington D.C. · SAT Preparation
             </div>
 
@@ -87,18 +104,18 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
               className="text-5xl lg:text-7xl font-bold leading-[1.05] mb-8 text-balance"
               style={{
                 fontFamily: "'Cormorant Garamond', Georgia, serif",
-                color: 'var(--charcoal)',
+                color: '#E8F4FC',
                 letterSpacing: '-0.025em',
               }}
             >
               Score Higher.
               <br />
-              <span style={{ color: 'var(--rose-dark)' }}>Go Further.</span>
+              <span style={{ color: '#7EC8E3' }}>Go Further.</span>
             </h1>
 
             <p
               className="text-lg lg:text-xl leading-relaxed mb-10 max-w-xl"
-              style={{ color: 'var(--slate)' }}
+              style={{ color: '#B8D9EC' }}
             >
               Personalized SAT tutoring that transforms students into confident test-takers.
               Expert guidance, proven strategies, and real results.
@@ -108,7 +125,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
               <Link href="/login">
                 <button
                   className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-base font-semibold transition-all hover:gap-3"
-                  style={{ background: 'var(--rose)', color: 'var(--charcoal)', letterSpacing: '0.01em' }}
+                  style={{ background: '#7EC8E3', color: '#0F2337', letterSpacing: '0.01em' }}
                 >
                   Get Started <ArrowRight className="h-4 w-4" />
                 </button>
@@ -116,7 +133,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
               <a
                 href="#about"
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-base font-medium transition-all"
-                style={{ color: 'var(--slate)', border: '1px solid var(--fog)', background: 'rgba(255,255,255,0.7)' }}
+                style={{ color: '#E8F4FC', border: '1px solid rgba(147,201,232,0.4)', background: 'rgba(255,255,255,0.1)' }}
               >
                 Learn More
               </a>
@@ -126,7 +143,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
           {/* Stats */}
           <div
             className="mt-20 pt-12 grid grid-cols-2 lg:grid-cols-4 gap-8"
-            style={{ borderTop: '1px solid rgba(224,166,175,0.3)' }}
+            style={{ borderTop: '1px solid rgba(147,201,232,0.25)' }}
           >
             {[
               { value: '200+', label: 'Average Score Increase' },
@@ -137,11 +154,11 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
               <div key={stat.label}>
                 <div
                   className="text-3xl lg:text-4xl font-bold mb-1"
-                  style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: 'var(--rose-dark)' }}
+                  style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: '#7EC8E3' }}
                 >
                   {stat.value}
                 </div>
-                <div className="text-xs tracking-wide uppercase" style={{ color: 'var(--mist)' }}>
+                <div className="text-xs tracking-wide uppercase" style={{ color: '#93C9E8' }}>
                   {stat.label}
                 </div>
               </div>
@@ -151,7 +168,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
       </section>
 
       {/* ── About ── */}
-      <section id="about" className="py-24 lg:py-32" style={{ background: 'var(--white)' }}>
+      <section id="about" className="py-24 lg:py-32" style={{ background: 'linear-gradient(135deg, #EAF4FA 0%, #FDF0F2 100%)' }}>
         <div className="max-w-6xl mx-auto px-6">
           {/* Section header */}
           <div className="section-divider mb-16"><span>About</span></div>
@@ -246,7 +263,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
       <section
         id="testimonials"
         className="py-24 lg:py-32"
-        style={{ background: 'linear-gradient(170deg, var(--sky-ultra) 0%, var(--rose-ultra) 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #D6EDF8 0%, #F9E5E8 100%)' }}
       >
         <div className="max-w-6xl mx-auto px-6">
           <div className="section-divider mb-4"><span>Results</span></div>
@@ -335,11 +352,11 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
       {/* ── CTA Banner ── */}
       <section
         className="py-20 relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, var(--rose-pale) 0%, var(--sky-pale) 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #A8CBDE 0%, #E0A6AF 100%)' }}
       >
         <div
-          className="absolute inset-0 opacity-40 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(168,203,222,0.5) 0%, transparent 70%)' }}
+          className="absolute inset-0 opacity-30 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(255,255,255,0.6) 0%, transparent 70%)' }}
         />
         <div className="relative max-w-2xl mx-auto px-6 text-center">
           <div className="eyebrow-sky justify-center mb-6">
@@ -369,12 +386,20 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
       <footer className="py-8" style={{ background: 'var(--white)', borderTop: '1px solid var(--fog)' }}>
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div
-              className="w-6 h-6 rounded-md flex items-center justify-center text-white text-xs font-bold"
-              style={{ background: 'linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%)' }}
+            <svg
+              width="27"
+              height="18"
+              viewBox="0 0 90 60"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ borderRadius: 3, flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.15)', border: '0.5px solid rgba(0,0,0,0.08)' }}
             >
-              DC
-            </div>
+              <rect width="90" height="60" fill="#FFFFFF" />
+              <rect x="0" y="25" width="90" height="10" fill="#C8102E" />
+              <rect x="0" y="42" width="90" height="10" fill="#C8102E" />
+              <polygon fill="#C8102E" points="15,4.5 17.18,10.84 23.89,10.84 18.36,14.82 20.54,21.16 15,17.18 9.46,21.16 11.64,14.82 6.11,10.84 12.82,10.84" />
+              <polygon fill="#C8102E" points="45,4.5 47.18,10.84 53.89,10.84 48.36,14.82 50.54,21.16 45,17.18 39.46,21.16 41.64,14.82 36.11,10.84 42.82,10.84" />
+              <polygon fill="#C8102E" points="75,4.5 77.18,10.84 83.89,10.84 78.36,14.82 80.54,21.16 75,17.18 69.46,21.16 71.64,14.82 66.11,10.84 72.82,10.84" />
+            </svg>
             <span className="text-sm font-medium" style={{ color: 'var(--slate)' }}>DC SAT Tutor</span>
           </div>
           <p className="text-xs" style={{ color: 'var(--mist)' }}>

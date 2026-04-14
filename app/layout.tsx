@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/sonner';
 import SessionProvider from '@/components/shared/SessionProvider';
-import { auth } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'DC SAT Tutor',
@@ -13,17 +12,15 @@ export const viewport = {
   themeColor: '#1F1F1F',
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-
   return (
     <html lang="en">
       <body className="antialiased">
-        <SessionProvider session={session}>
+        <SessionProvider>
           {children}
         </SessionProvider>
         <Toaster richColors position="top-right" />

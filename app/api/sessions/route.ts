@@ -64,8 +64,8 @@ export async function POST(req: Request) {
       proposedTime: new Date(proposedTime),
       tutorName: tutor.name as string,
     });
-  } catch {
-    // Email failure is non-fatal
+  } catch (err) {
+    console.error('[email error]', err);
   }
 
   return NextResponse.json(newSession, { status: 201 });

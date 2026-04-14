@@ -46,7 +46,7 @@ export default async function AdminDashboardPage() {
   ];
 
   return (
-    <div style={{ padding: '40px 48px', maxWidth: 1100, fontFamily: "'Syne', sans-serif" }}>
+    <div style={{ padding: '40px 48px', fontFamily: "'Syne', sans-serif", minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ marginBottom: 36 }}>
         <h1
@@ -74,6 +74,7 @@ export default async function AdminDashboardPage() {
           return (
             <Link key={label} href={href} style={{ textDecoration: 'none' }}>
               <div
+                className="hover-lift"
                 style={{
                   background: 'var(--white)',
                   borderRadius: 14,
@@ -82,18 +83,9 @@ export default async function AdminDashboardPage() {
                     ? '1px solid rgba(224,166,175,0.3)'
                     : '1px solid rgba(168,203,222,0.3)',
                   boxShadow: '0 2px 8px rgba(26,29,35,0.04)',
-                  transition: 'box-shadow 0.15s, transform 0.15s',
                   cursor: 'pointer',
                   position: 'relative',
                   overflow: 'hidden',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 20px rgba(26,29,35,0.08)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(26,29,35,0.04)';
                 }}
               >
                 {/* Soft corner gradient */}
@@ -139,7 +131,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Lower section */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 28, flex: 1, alignItems: 'start' }}>
         {/* Upcoming sessions */}
         <div
           style={{
@@ -148,6 +140,8 @@ export default async function AdminDashboardPage() {
             border: '1px solid var(--fog)',
             boxShadow: '0 2px 8px rgba(26,29,35,0.04)',
             overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <div
@@ -188,11 +182,11 @@ export default async function AdminDashboardPage() {
           </div>
 
           {upcomingFive.length === 0 ? (
-            <div style={{ padding: 32, textAlign: 'center', color: 'var(--mist)', fontSize: 14 }}>
+            <div style={{ padding: 32, textAlign: 'center', color: 'var(--mist)', fontSize: 14, flex: 1 }}>
               No upcoming sessions
             </div>
           ) : (
-            <div>
+            <div style={{ flex: 1, overflowY: 'auto' }}>
               {upcomingFive.map((s: Record<string, unknown>, i: number) => {
                 const status = s.status as string;
                 const isLast = i === upcomingFive.length - 1;
@@ -278,6 +272,7 @@ export default async function AdminDashboardPage() {
               <Link
                 key={href}
                 href={href}
+                className="hover-frost"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -286,10 +281,7 @@ export default async function AdminDashboardPage() {
                   borderRadius: 10,
                   textDecoration: 'none',
                   marginBottom: 4,
-                  transition: 'background 0.15s',
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--frost)'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
               >
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>{label}</div>
