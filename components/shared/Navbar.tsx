@@ -25,37 +25,35 @@ export default function Navbar({ role, userName }: NavbarProps) {
   const pathname = usePathname();
   const links = role === 'tutor' ? TUTOR_LINKS : STUDENT_LINKS;
   const initials = userName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  const isRose = role === 'student';
 
   return (
     <nav
       style={{
-        background: '#1F1F1F',
-        borderBottom: '1px solid rgba(139,181,174,0.15)',
+        background: 'var(--white)',
+        borderBottom: '1px solid var(--fog)',
+        boxShadow: '0 1px 8px rgba(26,29,35,0.04)',
       }}
     >
       <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between gap-4">
         {/* Brand */}
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 shrink-0"
-          style={{ textDecoration: 'none' }}
-        >
+        <Link href="/" className="flex items-center gap-2.5 shrink-0" style={{ textDecoration: 'none' }}>
           <div
-            className="w-7 h-7 rounded flex items-center justify-center text-xs font-bold"
-            style={{ background: '#8BB5AE', color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white"
+            style={{ background: 'linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%)' }}
           >
             DC
           </div>
           <span
             className="hidden sm:block text-sm font-semibold tracking-tight"
-            style={{ color: '#F0F2F5', fontFamily: "'Syne', sans-serif" }}
+            style={{ color: 'var(--charcoal)' }}
           >
             DC SAT Tutor
           </span>
         </Link>
 
         {/* Nav links */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {links.map((link) => {
             const active = pathname === link.href;
             const Icon = link.icon;
@@ -63,11 +61,14 @@ export default function Navbar({ role, userName }: NavbarProps) {
               <Link
                 key={link.href}
                 href={link.href}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
                 style={{
-                  background: active ? 'rgba(139,181,174,0.15)' : 'transparent',
-                  color: active ? '#8BB5AE' : 'rgba(240,242,245,0.5)',
-                  fontFamily: "'Syne', sans-serif",
+                  background: active
+                    ? (isRose ? 'rgba(224,166,175,0.18)' : 'rgba(168,203,222,0.18)')
+                    : 'transparent',
+                  color: active
+                    ? (isRose ? 'var(--rose-deeper)' : 'var(--sky-deeper)')
+                    : 'var(--slate)',
                 }}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -82,28 +83,38 @@ export default function Navbar({ role, userName }: NavbarProps) {
           <div className="hidden sm:flex items-center gap-2">
             <div
               className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
-              style={{ background: 'rgba(139,181,174,0.2)', color: '#8BB5AE' }}
+              style={{
+                background: isRose ? 'rgba(224,166,175,0.22)' : 'rgba(168,203,222,0.22)',
+                color: isRose ? 'var(--rose-deeper)' : 'var(--sky-deeper)',
+              }}
             >
               {initials}
             </div>
             <div className="leading-none">
-              <p className="text-xs font-medium" style={{ color: '#F0F2F5', fontFamily: "'Syne', sans-serif" }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--charcoal)' }}>
                 {userName}
               </p>
-              <p className="text-xs capitalize" style={{ color: 'rgba(240,242,245,0.4)', fontFamily: "'Syne', sans-serif" }}>
+              <p className="text-xs capitalize" style={{ color: 'var(--mist)' }}>
                 {role}
               </p>
             </div>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: '/' })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
             style={{
-              color: 'rgba(240,242,245,0.45)',
-              border: '1px solid rgba(240,242,245,0.1)',
-              fontFamily: "'Syne', sans-serif",
+              color: 'var(--mist)',
+              border: '1px solid var(--fog)',
               background: 'transparent',
               cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--charcoal)';
+              e.currentTarget.style.background = 'var(--frost)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--mist)';
+              e.currentTarget.style.background = 'transparent';
             }}
           >
             <LogOut className="h-3.5 w-3.5" />

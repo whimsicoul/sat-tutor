@@ -14,19 +14,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { AdminUser } from './page';
 
 const roleBadge = (role: string, active: boolean) => {
-  const color = role === 'tutor' ? '#8BB5AE' : role === 'student' ? '#E0A6AF' : '#6A7280';
+  const isRose = role === 'student';
+  const isSky = role === 'tutor';
+  const color = isSky ? 'var(--sky-deeper)' : isRose ? 'var(--rose-deeper)' : 'var(--slate)';
+  const bg = isSky ? 'rgba(168,203,222,0.18)' : isRose ? 'rgba(224,166,175,0.18)' : 'var(--frost)';
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
       <span
         style={{
           fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',
-          color, background: color + '22', padding: '3px 8px', borderRadius: 20,
+          color, background: bg, padding: '3px 10px', borderRadius: 20,
+          fontFamily: "'Syne', sans-serif",
         }}
       >
         {role}
       </span>
       {!active && (
-        <span style={{ fontSize: 11, color: '#8A9099', background: '#F0F2F5', padding: '3px 7px', borderRadius: 20 }}>
+        <span
+          style={{
+            fontSize: 11, color: 'var(--mist)', background: 'var(--frost)',
+            padding: '3px 8px', borderRadius: 20, fontFamily: "'Syne', sans-serif",
+          }}
+        >
           inactive
         </span>
       )}
@@ -42,10 +51,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
   const [deleteUser, setDeleteUser] = useState<AdminUser | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Add form state
   const [addForm, setAddForm] = useState({ name: '', email: '', password: '', role: 'student' });
-
-  // Edit form state
   const [editForm, setEditForm] = useState({ name: '', email: '', role: '' });
 
   const filtered = users.filter((u) => filter === 'all' || u.role === filter);
@@ -124,51 +130,96 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
     }
   }
 
+  const filterTabs: Array<'all' | 'tutor' | 'student'> = ['all', 'tutor', 'student'];
+
   return (
     <div style={{ padding: '40px 48px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
         <div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, fontWeight: 700, color: '#1F1F1F', margin: 0 }}>
+          <h1
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: 34,
+              fontWeight: 700,
+              color: 'var(--charcoal)',
+              margin: 0,
+              letterSpacing: '-0.025em',
+            }}
+          >
             Users
           </h1>
-          <p style={{ color: '#4A4F5A', marginTop: 6, fontSize: 15, fontFamily: "'Syne', sans-serif" }}>
+          <p style={{ color: 'var(--slate)', marginTop: 6, fontSize: 15 }}>
             Manage tutor and student accounts
           </p>
         </div>
-        <Button onClick={() => setAddOpen(true)} style={{ background: '#1F1F1F', color: '#F0F2F5', gap: 6, fontFamily: "'Syne', sans-serif" }}>
+        <button
+          onClick={() => setAddOpen(true)}
+          className="btn-rose"
+          style={{ gap: 8 }}
+        >
           <Plus size={16} /> Add User
-        </Button>
+        </button>
       </div>
 
       {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-        {(['all', 'tutor', 'student'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setFilter(tab)}
-            style={{
-              padding: '7px 16px', borderRadius: 20, border: 'none', cursor: 'pointer',
-              fontSize: 13, fontWeight: filter === tab ? 600 : 400,
-              background: filter === tab ? '#1F1F1F' : '#E4E7EC',
-              color: filter === tab ? '#F0F2F5' : '#4A4F5A',
-              transition: 'all 0.15s',
-              textTransform: 'capitalize',
-              fontFamily: "'Syne', sans-serif",
-            }}
-          >
-            {tab} {tab === 'all' ? `(${users.length})` : `(${users.filter((u) => u.role === tab).length})`}
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
+        {filterTabs.map((tab) => {
+          const active = filter === tab;
+          return (
+            <button
+              key={tab}
+              onClick={() => setFilter(tab)}
+              style={{
+                padding: '7px 16px',
+                borderRadius: 20,
+                border: active ? '1px solid rgba(224,166,175,0.4)' : '1px solid var(--fog)',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: active ? 600 : 400,
+                background: active ? 'rgba(224,166,175,0.14)' : 'var(--white)',
+                color: active ? 'var(--rose-deeper)' : 'var(--slate)',
+                transition: 'all 0.15s',
+                textTransform: 'capitalize',
+                fontFamily: "'Syne', sans-serif",
+              }}
+            >
+              {tab}{' '}
+              <span style={{ opacity: 0.65 }}>
+                ({tab === 'all' ? users.length : users.filter((u) => u.role === tab).length})
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #D5D9E1', boxShadow: '0 1px 4px rgba(31,31,31,0.06)', overflow: 'hidden' }}>
+      <div
+        style={{
+          background: 'var(--white)',
+          borderRadius: 14,
+          border: '1px solid var(--fog)',
+          boxShadow: '0 2px 8px rgba(26,29,35,0.04)',
+          overflow: 'hidden',
+        }}
+      >
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #D5D9E1', background: '#F0F2F5' }}>
+            <tr style={{ borderBottom: '1px solid var(--fog)', background: 'var(--frost)' }}>
               {['Name', 'Email', 'Role', 'Created', 'Actions'].map((h) => (
-                <th key={h} style={{ textAlign: 'left', padding: '12px 20px', fontSize: 12, fontWeight: 600, color: '#4A4F5A', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Syne', sans-serif" }}>
+                <th
+                  key={h}
+                  style={{
+                    textAlign: 'left',
+                    padding: '12px 20px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: 'var(--mist)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    fontFamily: "'Syne', sans-serif",
+                  }}
+                >
                   {h}
                 </th>
               ))}
@@ -177,7 +228,16 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: 40, color: '#8A9099', fontSize: 14, fontFamily: "'Syne', sans-serif" }}>
+                <td
+                  colSpan={5}
+                  style={{
+                    textAlign: 'center',
+                    padding: 40,
+                    color: 'var(--mist)',
+                    fontSize: 14,
+                    fontFamily: "'Syne', sans-serif",
+                  }}
+                >
                   No users found
                 </td>
               </tr>
@@ -186,14 +246,21 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
                 <tr
                   key={user.id}
                   style={{
-                    borderBottom: i < filtered.length - 1 ? '1px solid #E4E7EC' : 'none',
-                    opacity: user.active ? 1 : 0.55,
+                    borderBottom: i < filtered.length - 1 ? '1px solid var(--fog)' : 'none',
+                    opacity: user.active ? 1 : 0.5,
+                    transition: 'background 0.1s',
                   }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'var(--frost)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
                 >
-                  <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 600, color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>{user.name}</td>
-                  <td style={{ padding: '14px 20px', fontSize: 14, color: '#4A4F5A', fontFamily: "'Syne', sans-serif" }}>{user.email}</td>
+                  <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 600, color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif" }}>
+                    {user.name}
+                  </td>
+                  <td style={{ padding: '14px 20px', fontSize: 14, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
+                    {user.email}
+                  </td>
                   <td style={{ padding: '14px 20px' }}>{roleBadge(user.role, user.active)}</td>
-                  <td style={{ padding: '14px 20px', fontSize: 13, color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
+                  <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>
                     {format(new Date(user.created_at), 'MMM d, yyyy')}
                   </td>
                   <td style={{ padding: '14px 20px' }}>
@@ -201,21 +268,47 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
                       <button
                         onClick={() => { setEditUser(user); setEditForm({ name: user.name, email: user.email, role: user.role }); }}
                         title="Edit"
-                        style={{ background: '#E4E7EC', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer', color: '#1F1F1F' }}
+                        style={{
+                          background: 'var(--frost)',
+                          border: '1px solid var(--fog)',
+                          borderRadius: 8,
+                          padding: '6px 8px',
+                          cursor: 'pointer',
+                          color: 'var(--slate)',
+                          transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sky-pale)'; e.currentTarget.style.color = 'var(--sky-deeper)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--frost)'; e.currentTarget.style.color = 'var(--slate)'; }}
                       >
                         <Pencil size={14} />
                       </button>
                       <button
                         onClick={() => handleToggleActive(user)}
                         title={user.active ? 'Deactivate' : 'Reactivate'}
-                        style={{ background: '#E4E7EC', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer', color: user.active ? '#E0A6AF' : '#8BB5AE' }}
+                        style={{
+                          background: 'var(--frost)',
+                          border: '1px solid var(--fog)',
+                          borderRadius: 8,
+                          padding: '6px 8px',
+                          cursor: 'pointer',
+                          color: user.active ? 'var(--rose-deeper)' : 'var(--sky-deeper)',
+                          transition: 'all 0.15s',
+                        }}
                       >
                         {user.active ? <UserX size={14} /> : <UserCheck size={14} />}
                       </button>
                       <button
                         onClick={() => setDeleteUser(user)}
                         title="Delete"
-                        style={{ background: '#FEF2F2', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer', color: '#EF4444' }}
+                        style={{
+                          background: '#FEF2F2',
+                          border: '1px solid #FECACA',
+                          borderRadius: 8,
+                          padding: '6px 8px',
+                          cursor: 'pointer',
+                          color: '#EF4444',
+                          transition: 'all 0.15s',
+                        }}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -232,23 +325,25 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif" }}>Add User</DialogTitle>
+            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)', letterSpacing: '-0.02em' }}>
+              Add User
+            </DialogTitle>
           </DialogHeader>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
             <div>
-              <Label htmlFor="add-name">Full Name</Label>
+              <Label htmlFor="add-name" style={{ color: 'var(--slate)' }}>Full Name</Label>
               <Input id="add-name" value={addForm.name} onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))} placeholder="Jane Smith" className="mt-1" />
             </div>
             <div>
-              <Label htmlFor="add-email">Email</Label>
+              <Label htmlFor="add-email" style={{ color: 'var(--slate)' }}>Email</Label>
               <Input id="add-email" type="email" value={addForm.email} onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))} placeholder="jane@example.com" className="mt-1" />
             </div>
             <div>
-              <Label htmlFor="add-password">Password</Label>
+              <Label htmlFor="add-password" style={{ color: 'var(--slate)' }}>Password</Label>
               <Input id="add-password" type="password" value={addForm.password} onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))} placeholder="••••••••" className="mt-1" />
             </div>
             <div>
-              <Label>Role</Label>
+              <Label style={{ color: 'var(--slate)' }}>Role</Label>
               <Select value={addForm.role} onValueChange={(v) => setAddForm((f) => ({ ...f, role: v ?? 'student' }))}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
@@ -262,7 +357,11 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
           </div>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-            <Button onClick={handleAdd} disabled={saving} style={{ background: '#1F1F1F', color: '#F0F2F5', fontFamily: "'Syne', sans-serif" }}>
+            <Button
+              onClick={handleAdd}
+              disabled={saving}
+              style={{ background: 'var(--rose)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", border: 'none' }}
+            >
               {saving ? 'Creating…' : 'Create User'}
             </Button>
           </DialogFooter>
@@ -273,19 +372,21 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
       <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif" }}>Edit User</DialogTitle>
+            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)', letterSpacing: '-0.02em' }}>
+              Edit User
+            </DialogTitle>
           </DialogHeader>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
             <div>
-              <Label htmlFor="edit-name">Full Name</Label>
+              <Label htmlFor="edit-name" style={{ color: 'var(--slate)' }}>Full Name</Label>
               <Input id="edit-name" value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="mt-1" />
             </div>
             <div>
-              <Label htmlFor="edit-email">Email</Label>
+              <Label htmlFor="edit-email" style={{ color: 'var(--slate)' }}>Email</Label>
               <Input id="edit-email" type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="mt-1" />
             </div>
             <div>
-              <Label>Role</Label>
+              <Label style={{ color: 'var(--slate)' }}>Role</Label>
               <Select value={editForm.role} onValueChange={(v) => setEditForm((f) => ({ ...f, role: v ?? f.role }))}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
@@ -299,7 +400,11 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
           </div>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setEditUser(null)}>Cancel</Button>
-            <Button onClick={handleEdit} disabled={saving} style={{ background: '#1F1F1F', color: '#F0F2F5', fontFamily: "'Syne', sans-serif" }}>
+            <Button
+              onClick={handleEdit}
+              disabled={saving}
+              style={{ background: 'var(--sky)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", border: 'none' }}
+            >
               {saving ? 'Saving…' : 'Save Changes'}
             </Button>
           </DialogFooter>
@@ -310,10 +415,12 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
       <Dialog open={!!deleteUser} onOpenChange={(o) => !o && setDeleteUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif" }}>Delete User?</DialogTitle>
+            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)', letterSpacing: '-0.02em' }}>
+              Delete User?
+            </DialogTitle>
           </DialogHeader>
-          <p style={{ fontSize: 14, color: '#4A4F5A', marginTop: 8, fontFamily: "'Syne', sans-serif" }}>
-            This will permanently delete <strong>{deleteUser?.name}</strong> and all their associated data. This cannot be undone.
+          <p style={{ fontSize: 14, color: 'var(--slate)', marginTop: 8, fontFamily: "'Syne', sans-serif" }}>
+            This will permanently delete <strong style={{ color: 'var(--charcoal)' }}>{deleteUser?.name}</strong> and all their associated data. This cannot be undone.
           </p>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setDeleteUser(null)}>Cancel</Button>

@@ -24,10 +24,10 @@ const localizer = dateFnsLocalizer({
   locales: { 'en-US': enUS },
 });
 
-// Distinct colors per tutor
+// Distinct colors per tutor — rose/sky alternating palette
 const TUTOR_COLORS = [
-  '#8BB5AE', '#E0A6AF', '#6A9E96', '#CC8A95', '#5B9E94',
-  '#D4858F', '#7DADA5', '#E8B0BA', '#4E908A', '#C87F8A',
+  '#A8CBDE', '#E0A6AF', '#7AAEC7', '#C8838E', '#5B9DB8',
+  '#D4858F', '#6BBAD6', '#E8B0BA', '#4D8FAE', '#C87F8A',
 ];
 
 function getTutorColor(tutorId: string, tutorIds: string[]) {
@@ -48,8 +48,8 @@ function EventComponent({ event }: { event: CalEvent }) {
   const [showTip, setShowTip] = useState(false);
   const s = event.resource;
   const statusColor =
-    s.status === 'approved' ? '#8BB5AE' :
-    s.status === 'denied'   ? '#F87171' : '#E0A6AF';
+    s.status === 'approved' ? 'var(--sky-deeper)' :
+    s.status === 'denied'   ? '#EF4444' : 'var(--rose-deeper)';
 
   return (
     <div
@@ -65,29 +65,30 @@ function EventComponent({ event }: { event: CalEvent }) {
             left: '50%',
             bottom: '110%',
             transform: 'translateX(-50%)',
-            background: '#1F1F1F',
-            color: '#F0F2F5',
-            borderRadius: 8,
+            background: 'var(--white)',
+            color: 'var(--charcoal)',
+            borderRadius: 10,
             padding: '10px 14px',
             fontSize: 12,
             pointerEvents: 'none',
             zIndex: 9999,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+            boxShadow: '0 4px 20px rgba(26,29,35,0.14)',
             whiteSpace: 'nowrap',
             minWidth: 190,
+            border: '1px solid var(--fog)',
           }}
         >
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+          <div style={{ fontWeight: 600, marginBottom: 4, fontFamily: "'Syne', sans-serif" }}>
             {s.tutor_name} → {s.student_name}
           </div>
-          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>
+          <div style={{ color: 'var(--slate)', fontSize: 11, fontFamily: "'Syne', sans-serif" }}>
             {format(new Date(s.proposed_time), "EEE MMM d, h:mm a")}
           </div>
-          <div style={{ marginTop: 5, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: statusColor }}>
+          <div style={{ marginTop: 5, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: statusColor, fontFamily: "'Syne', sans-serif" }}>
             {s.status}
           </div>
           {s.series_id && (
-            <div style={{ marginTop: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>Recurring series</div>
+            <div style={{ marginTop: 3, fontSize: 10, color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>Recurring series</div>
           )}
         </div>
       )}
@@ -232,23 +233,27 @@ export default function ScheduleClient({
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, fontWeight: 700, color: '#1F1F1F', margin: 0 }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 34, fontWeight: 700, color: 'var(--charcoal)', margin: 0, letterSpacing: '-0.025em' }}>
             Schedule
           </h1>
-          <p style={{ color: '#4A4F5A', marginTop: 6, fontSize: 15, fontFamily: "'Syne', sans-serif" }}>
+          <p style={{ color: 'var(--slate)', marginTop: 6, fontSize: 15, fontFamily: "'Syne', sans-serif" }}>
             All sessions across tutors and students
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} style={{ background: '#1F1F1F', color: '#F0F2F5', gap: 6, fontFamily: "'Syne', sans-serif" }}>
+        <button
+          onClick={() => setDialogOpen(true)}
+          className="btn-sky"
+          style={{ gap: 8 }}
+        >
           <Plus size={16} /> New Session
-        </Button>
+        </button>
       </div>
 
       {/* Tutor color legend */}
       {tutorIds.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
           {tutors.filter((t) => tutorIds.includes(t.id)).map((tutor) => (
-            <div key={tutor.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#4A4F5A', fontFamily: "'Syne', sans-serif" }}>
+            <div key={tutor.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
               <div style={{ width: 12, height: 12, borderRadius: 3, background: getTutorColor(tutor.id, tutorIds), flexShrink: 0 }} />
               {tutor.name}
             </div>
@@ -259,23 +264,23 @@ export default function ScheduleClient({
       {/* Calendar */}
       <div
         style={{
-          background: '#fff',
-          borderRadius: 12,
-          border: '1px solid #D5D9E1',
-          boxShadow: '0 1px 4px rgba(31,31,31,0.06)',
+          background: 'var(--white)',
+          borderRadius: 14,
+          border: '1px solid var(--fog)',
+          boxShadow: '0 2px 8px rgba(26,29,35,0.04)',
           overflow: 'hidden',
           height: 680,
         }}
       >
         <style>{`
-          .rbc-toolbar { padding: 16px 20px; border-bottom: 1px solid #D5D9E1; }
-          .rbc-toolbar button { font-family: 'Syne', sans-serif; font-size: 13px; color: #1F1F1F; border-color: #D5D9E1; }
-          .rbc-toolbar button.rbc-active { background: #1F1F1F; color: #F0F2F5; border-color: #1F1F1F; }
-          .rbc-toolbar-label { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 600; color: #1F1F1F; }
-          .rbc-header { font-size: 12px; font-weight: 600; color: #4A4F5A; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 0; }
-          .rbc-today { background: rgba(139,181,174,0.08) !important; }
-          .rbc-event { border: none !important; overflow: visible !important; }
-          .rbc-show-more { color: #8BB5AE; font-size: 12px; }
+          .rbc-toolbar { padding: 16px 20px; border-bottom: 1px solid var(--fog, #E2E7EF); }
+          .rbc-toolbar button { font-family: 'Syne', sans-serif; font-size: 13px; color: var(--charcoal, #1A1D23); border-color: var(--fog, #E2E7EF); border-radius: 8px; }
+          .rbc-toolbar button.rbc-active { background: var(--sky, #A8CBDE); color: var(--charcoal, #1A1D23); border-color: var(--sky, #A8CBDE); }
+          .rbc-toolbar-label { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 600; color: var(--charcoal, #1A1D23); }
+          .rbc-header { font-size: 12px; font-weight: 700; color: var(--mist, #8A91A0); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 0; }
+          .rbc-today { background: rgba(168,203,222,0.1) !important; }
+          .rbc-event { border: none !important; overflow: visible !important; border-radius: 6px !important; }
+          .rbc-show-more { color: var(--rose-deeper, #A85F6A); font-size: 12px; font-weight: 600; }
         `}</style>
         <Calendar
           localizer={localizer}
@@ -295,7 +300,7 @@ export default function ScheduleClient({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent style={{ maxWidth: 480 }}>
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif" }}>New Session</DialogTitle>
+            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)', letterSpacing: '-0.02em' }}>New Session</DialogTitle>
           </DialogHeader>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
             <div>
@@ -352,7 +357,7 @@ export default function ScheduleClient({
           </div>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={saving} style={{ background: '#1F1F1F', color: '#F0F2F5', fontFamily: "'Syne', sans-serif" }}>
+            <Button onClick={handleCreate} disabled={saving} style={{ background: 'var(--sky)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", border: 'none' }}>
               {saving ? 'Creating…' : form.recurrence === 'none' ? 'Create Session' : 'Create Recurring'}
             </Button>
           </DialogFooter>

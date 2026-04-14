@@ -32,10 +32,10 @@ export default async function AdminDashboardPage() {
     ]);
 
   const stats = [
-    { label: 'Active Tutors', value: tutorCount[0].count, icon: Users, color: '#8BB5AE', href: '/admin/users?role=tutor' },
-    { label: 'Active Students', value: studentCount[0].count, icon: Users, color: '#E0A6AF', href: '/admin/users?role=student' },
-    { label: 'Sessions This Week', value: upcomingThisWeek[0].count, icon: CalendarDays, color: '#8BB5AE', href: '/admin/schedule' },
-    { label: 'Pending Approvals', value: pendingCount[0].count, icon: Clock, color: '#E0A6AF', href: '/admin/schedule' },
+    { label: 'Active Tutors', value: tutorCount[0].count, icon: Users, accent: 'sky', href: '/admin/users?role=tutor' },
+    { label: 'Active Students', value: studentCount[0].count, icon: Users, accent: 'rose', href: '/admin/users?role=student' },
+    { label: 'Sessions This Week', value: upcomingThisWeek[0].count, icon: CalendarDays, accent: 'sky', href: '/admin/schedule' },
+    { label: 'Pending Approvals', value: pendingCount[0].count, icon: Clock, accent: 'rose', href: '/admin/schedule' },
   ];
 
   const quickActions = [
@@ -52,58 +52,101 @@ export default async function AdminDashboardPage() {
         <h1
           style={{
             fontFamily: "'Cormorant Garamond', serif",
-            fontSize: 32,
+            fontSize: 34,
             fontWeight: 700,
-            color: '#1F1F1F',
+            color: 'var(--charcoal)',
             margin: 0,
             lineHeight: 1.2,
+            letterSpacing: '-0.025em',
           }}
         >
           Dashboard
         </h1>
-        <p style={{ color: '#4A4F5A', marginTop: 6, fontSize: 15, fontFamily: "'Syne', sans-serif" }}>
+        <p style={{ color: 'var(--slate)', marginTop: 6, fontSize: 15 }}>
           {format(new Date(), "EEEE, MMMM d, yyyy")}
         </p>
       </div>
 
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 40 }}>
-        {stats.map(({ label, value, icon: Icon, color, href }) => (
-          <Link key={label} href={href} style={{ textDecoration: 'none' }}>
-            <div
-              style={{
-                background: '#fff',
-                borderRadius: 12,
-                padding: '24px 20px',
-                border: '1px solid #D5D9E1',
-                boxShadow: '0 1px 4px rgba(31,31,31,0.06)',
-                transition: 'box-shadow 0.15s, transform 0.15s',
-                cursor: 'pointer',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <span style={{ fontSize: 13, color: '#4A4F5A', fontWeight: 500, fontFamily: "'Syne', sans-serif" }}>{label}</span>
-                <div style={{ background: color + '22', borderRadius: 8, padding: 8 }}>
-                  <Icon size={16} style={{ color }} />
+        {stats.map(({ label, value, icon: Icon, accent, href }) => {
+          const isRose = accent === 'rose';
+          return (
+            <Link key={label} href={href} style={{ textDecoration: 'none' }}>
+              <div
+                style={{
+                  background: 'var(--white)',
+                  borderRadius: 14,
+                  padding: '22px 20px',
+                  border: isRose
+                    ? '1px solid rgba(224,166,175,0.3)'
+                    : '1px solid rgba(168,203,222,0.3)',
+                  boxShadow: '0 2px 8px rgba(26,29,35,0.04)',
+                  transition: 'box-shadow 0.15s, transform 0.15s',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 20px rgba(26,29,35,0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(26,29,35,0.04)';
+                }}
+              >
+                {/* Soft corner gradient */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: 80,
+                    height: 80,
+                    background: isRose
+                      ? 'radial-gradient(ellipse at top right, rgba(224,166,175,0.2) 0%, transparent 70%)'
+                      : 'radial-gradient(ellipse at top right, rgba(168,203,222,0.2) 0%, transparent 70%)',
+                  }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <span style={{ fontSize: 13, color: 'var(--slate)', fontWeight: 500 }}>{label}</span>
+                  <div
+                    style={{
+                      background: isRose ? 'rgba(224,166,175,0.18)' : 'rgba(168,203,222,0.18)',
+                      borderRadius: 8,
+                      padding: 8,
+                    }}
+                  >
+                    <Icon size={16} style={{ color: isRose ? 'var(--rose-deeper)' : 'var(--sky-deeper)' }} />
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontSize: 36,
+                    fontWeight: 700,
+                    color: 'var(--charcoal)',
+                    fontFamily: "'Cormorant Garamond', serif",
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  {String(value)}
                 </div>
               </div>
-              <div style={{ fontSize: 34, fontWeight: 700, color: '#1F1F1F', fontFamily: "'Cormorant Garamond', serif" }}>
-                {String(value)}
-              </div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
 
-      {/* Lower section: upcoming sessions + quick actions */}
+      {/* Lower section */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 28 }}>
         {/* Upcoming sessions */}
         <div
           style={{
-            background: '#fff',
-            borderRadius: 12,
-            border: '1px solid #D5D9E1',
-            boxShadow: '0 1px 4px rgba(31,31,31,0.06)',
+            background: 'var(--white)',
+            borderRadius: 14,
+            border: '1px solid var(--fog)',
+            boxShadow: '0 2px 8px rgba(26,29,35,0.04)',
             overflow: 'hidden',
           }}
         >
@@ -112,8 +155,9 @@ export default async function AdminDashboardPage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '20px 24px',
-              borderBottom: '1px solid #D5D9E1',
+              padding: '18px 24px',
+              borderBottom: '1px solid var(--fog)',
+              background: 'linear-gradient(90deg, var(--sky-ultra) 0%, transparent 100%)',
             }}
           >
             <h2
@@ -121,31 +165,44 @@ export default async function AdminDashboardPage() {
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: 18,
                 fontWeight: 600,
-                color: '#1F1F1F',
+                color: 'var(--charcoal)',
                 margin: 0,
+                letterSpacing: '-0.01em',
               }}
             >
               Upcoming Sessions
             </h2>
             <Link
               href="/admin/schedule"
-              style={{ fontSize: 13, color: '#8BB5AE', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontFamily: "'Syne', sans-serif" }}
+              style={{
+                fontSize: 13,
+                color: 'var(--sky-deeper)',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
             >
               View all <ArrowRight size={13} />
             </Link>
           </div>
 
           {upcomingFive.length === 0 ? (
-            <div style={{ padding: 32, textAlign: 'center', color: '#8A9099', fontSize: 14, fontFamily: "'Syne', sans-serif" }}>
+            <div style={{ padding: 32, textAlign: 'center', color: 'var(--mist)', fontSize: 14 }}>
               No upcoming sessions
             </div>
           ) : (
             <div>
               {upcomingFive.map((s: Record<string, unknown>, i: number) => {
-                const statusColor =
-                  s.status === 'approved' ? '#8BB5AE' :
-                  s.status === 'denied'   ? '#EF4444' : '#E0A6AF';
+                const status = s.status as string;
                 const isLast = i === upcomingFive.length - 1;
+                const statusStyle =
+                  status === 'approved'
+                    ? { color: 'var(--sky-deeper)', bg: 'rgba(168,203,222,0.18)' }
+                    : status === 'denied'
+                    ? { color: '#991B1B', bg: '#FEF2F2' }
+                    : { color: 'var(--rose-deeper)', bg: 'rgba(224,166,175,0.18)' };
+
                 return (
                   <div
                     key={s.id as string}
@@ -153,15 +210,15 @@ export default async function AdminDashboardPage() {
                       display: 'flex',
                       alignItems: 'center',
                       padding: '14px 24px',
-                      borderBottom: isLast ? 'none' : '1px solid #E4E7EC',
+                      borderBottom: isLast ? 'none' : '1px solid var(--fog)',
                       gap: 16,
                     }}
                   >
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>
                         {s.tutor_name as string} → {s.student_name as string}
                       </div>
-                      <div style={{ fontSize: 13, color: '#4A4F5A', marginTop: 2, fontFamily: "'Syne', sans-serif" }}>
+                      <div style={{ fontSize: 13, color: 'var(--slate)', marginTop: 2 }}>
                         {format(new Date(s.proposed_time as string), "EEE MMM d, h:mm a")}
                       </div>
                     </div>
@@ -171,14 +228,13 @@ export default async function AdminDashboardPage() {
                         fontWeight: 600,
                         textTransform: 'uppercase',
                         letterSpacing: '0.06em',
-                        color: statusColor,
-                        background: statusColor + '22',
-                        padding: '3px 8px',
+                        color: statusStyle.color,
+                        background: statusStyle.bg,
+                        padding: '3px 10px',
                         borderRadius: 20,
-                        fontFamily: "'Syne', sans-serif",
                       }}
                     >
-                      {s.status as string}
+                      {status}
                     </span>
                   </div>
                 );
@@ -190,21 +246,28 @@ export default async function AdminDashboardPage() {
         {/* Quick actions */}
         <div
           style={{
-            background: '#fff',
-            borderRadius: 12,
-            border: '1px solid #D5D9E1',
-            boxShadow: '0 1px 4px rgba(31,31,31,0.06)',
+            background: 'var(--white)',
+            borderRadius: 14,
+            border: '1px solid var(--fog)',
+            boxShadow: '0 2px 8px rgba(26,29,35,0.04)',
             overflow: 'hidden',
           }}
         >
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #D5D9E1' }}>
+          <div
+            style={{
+              padding: '18px 24px',
+              borderBottom: '1px solid var(--fog)',
+              background: 'linear-gradient(90deg, var(--rose-ultra) 0%, transparent 100%)',
+            }}
+          >
             <h2
               style={{
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: 18,
                 fontWeight: 600,
-                color: '#1F1F1F',
+                color: 'var(--charcoal)',
                 margin: 0,
+                letterSpacing: '-0.01em',
               }}
             >
               Quick Actions
@@ -219,18 +282,20 @@ export default async function AdminDashboardPage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '12px 12px',
-                  borderRadius: 8,
+                  padding: '11px 12px',
+                  borderRadius: 10,
                   textDecoration: 'none',
                   marginBottom: 4,
                   transition: 'background 0.15s',
                 }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--frost)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
               >
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>{label}</div>
-                  <div style={{ fontSize: 12, color: '#8A9099', marginTop: 2, fontFamily: "'Syne', sans-serif" }}>{description}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>{label}</div>
+                  <div style={{ fontSize: 12, color: 'var(--mist)', marginTop: 2 }}>{description}</div>
                 </div>
-                <ArrowRight size={15} style={{ color: '#8BB5AE', flexShrink: 0 }} />
+                <ArrowRight size={14} style={{ color: 'var(--rose)', flexShrink: 0 }} />
               </Link>
             ))}
           </div>

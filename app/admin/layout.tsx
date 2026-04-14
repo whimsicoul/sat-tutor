@@ -17,12 +17,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#F0F2F5' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--page-bg)' }}>
       {/* Sidebar */}
       <aside
         style={{
-          width: 240,
-          background: '#1F1F1F',
+          width: 248,
+          background: 'var(--white)',
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
@@ -30,24 +30,68 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           top: 0,
           height: '100vh',
           overflowY: 'auto',
+          borderRight: '1px solid var(--fog)',
+          boxShadow: '2px 0 12px rgba(26,29,35,0.03)',
         }}
       >
         {/* Logo */}
-        <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(139,181,174,0.2)' }}>
+        <div
+          style={{
+            padding: '28px 24px 20px',
+            borderBottom: '1px solid var(--fog)',
+            background: 'linear-gradient(135deg, var(--rose-ultra) 0%, var(--sky-ultra) 100%)',
+          }}
+        >
           <div
             style={{
-              fontFamily: "'Cormorant Garamond', serif",
-              fontSize: 18,
-              fontWeight: 700,
-              color: '#8BB5AE',
-              letterSpacing: '0.01em',
-              lineHeight: 1.2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              marginBottom: 4,
             }}
           >
-            DC SAT Tutor
-          </div>
-          <div style={{ fontSize: 11, color: 'rgba(240,242,245,0.35)', marginTop: 4, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Syne', sans-serif" }}>
-            Admin Portal
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 12,
+                fontWeight: 700,
+                color: 'var(--white)',
+                flexShrink: 0,
+              }}
+            >
+              DC
+            </div>
+            <div>
+              <div
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: 'var(--charcoal)',
+                  lineHeight: 1.2,
+                }}
+              >
+                DC SAT Tutor
+              </div>
+              <div
+                style={{
+                  fontSize: 10,
+                  color: 'var(--mist)',
+                  marginTop: 2,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  fontFamily: "'Syne', sans-serif",
+                }}
+              >
+                Admin Portal
+              </div>
+            </div>
           </div>
         </div>
 
@@ -64,26 +108,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   alignItems: 'center',
                   gap: 10,
                   padding: '10px 12px',
-                  borderRadius: 8,
+                  borderRadius: 10,
                   marginBottom: 2,
                   textDecoration: 'none',
                   fontSize: 14,
                   fontWeight: active ? 600 : 400,
-                  color: active ? '#8BB5AE' : 'rgba(240,242,245,0.55)',
-                  background: active ? 'rgba(139,181,174,0.12)' : 'transparent',
+                  color: active ? 'var(--rose-deeper)' : 'var(--slate)',
+                  background: active ? 'rgba(224,166,175,0.14)' : 'transparent',
                   transition: 'all 0.15s',
                   fontFamily: "'Syne', sans-serif",
+                  borderLeft: active ? '2px solid var(--rose)' : '2px solid transparent',
                 }}
               >
-                <Icon size={17} />
+                <Icon size={16} />
                 {label}
               </Link>
             );
           })}
         </nav>
 
-        {/* Sign out */}
-        <div style={{ padding: '12px 12px 24px' }}>
+        {/* Divider + Sign out */}
+        <div style={{ padding: '12px 12px 24px', borderTop: '1px solid var(--fog)' }}>
           <button
             onClick={() => signOut({ callbackUrl: '/login' })}
             style={{
@@ -91,18 +136,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               alignItems: 'center',
               gap: 10,
               padding: '10px 12px',
-              borderRadius: 8,
+              borderRadius: 10,
               width: '100%',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
               fontSize: 14,
-              color: 'rgba(240,242,245,0.4)',
-              transition: 'color 0.15s',
+              color: 'var(--mist)',
+              transition: 'color 0.15s, background 0.15s',
               fontFamily: "'Syne', sans-serif",
             }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--charcoal)';
+              e.currentTarget.style.background = 'var(--frost)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--mist)';
+              e.currentTarget.style.background = 'transparent';
+            }}
           >
-            <LogOut size={17} />
+            <LogOut size={16} />
             Sign Out
           </button>
         </div>

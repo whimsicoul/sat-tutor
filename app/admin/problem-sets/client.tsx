@@ -84,33 +84,37 @@ export default function ProblemSetsClient({
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
         <div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, fontWeight: 700, color: '#1F1F1F', margin: 0 }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 34, fontWeight: 700, color: 'var(--charcoal)', margin: 0, letterSpacing: '-0.025em' }}>
             Problem Sets
           </h1>
-          <p style={{ color: '#4A4F5A', marginTop: 6, fontSize: 15, fontFamily: "'Syne', sans-serif" }}>
+          <p style={{ color: 'var(--slate)', marginTop: 6, fontSize: 15 }}>
             Upload and assign PDF work to students
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} style={{ background: '#1F1F1F', color: '#F0F2F5', gap: 6, fontFamily: "'Syne', sans-serif" }}>
+        <button
+          onClick={() => setDialogOpen(true)}
+          className="btn-rose"
+          style={{ gap: 8 }}
+        >
           <Plus size={16} /> Create Problem Set
-        </Button>
+        </button>
       </div>
 
       {/* Table */}
       <div
         style={{
-          background: '#fff',
-          borderRadius: 12,
-          border: '1px solid #D5D9E1',
-          boxShadow: '0 1px 4px rgba(31,31,31,0.06)',
+          background: 'var(--white)',
+          borderRadius: 14,
+          border: '1px solid var(--fog)',
+          boxShadow: '0 2px 8px rgba(26,29,35,0.04)',
           overflow: 'hidden',
         }}
       >
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #D5D9E1', background: '#F0F2F5' }}>
+            <tr style={{ borderBottom: '1px solid var(--fog)', background: 'var(--frost)' }}>
               {['Title', 'Student', 'Tutor', 'Files', 'Created'].map((h) => (
-                <th key={h} style={{ textAlign: 'left', padding: '12px 20px', fontSize: 12, fontWeight: 600, color: '#4A4F5A', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Syne', sans-serif" }}>
+                <th key={h} style={{ textAlign: 'left', padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   {h}
                 </th>
               ))}
@@ -119,7 +123,7 @@ export default function ProblemSetsClient({
           <tbody>
             {problemSets.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: 48, color: '#8A9099', fontSize: 14, fontFamily: "'Syne', sans-serif" }}>
+                <td colSpan={5} style={{ textAlign: 'center', padding: 48, color: 'var(--mist)', fontSize: 14 }}>
                   No problem sets yet
                 </td>
               </tr>
@@ -127,11 +131,13 @@ export default function ProblemSetsClient({
               problemSets.map((ps, i) => (
                 <tr
                   key={ps.id}
-                  style={{ borderBottom: i < problemSets.length - 1 ? '1px solid #E4E7EC' : 'none' }}
+                  style={{ borderBottom: i < problemSets.length - 1 ? '1px solid var(--fog)' : 'none', transition: 'background 0.1s' }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'var(--frost)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
                 >
-                  <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 600, color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>{ps.title}</td>
-                  <td style={{ padding: '14px 20px', fontSize: 14, color: '#4A4F5A', fontFamily: "'Syne', sans-serif" }}>{ps.student_name}</td>
-                  <td style={{ padding: '14px 20px', fontSize: 14, color: '#4A4F5A', fontFamily: "'Syne', sans-serif" }}>{ps.tutor_name}</td>
+                  <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>{ps.title}</td>
+                  <td style={{ padding: '14px 20px', fontSize: 14, color: 'var(--slate)' }}>{ps.student_name}</td>
+                  <td style={{ padding: '14px 20px', fontSize: 14, color: 'var(--slate)' }}>{ps.tutor_name}</td>
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <a
@@ -139,7 +145,7 @@ export default function ProblemSetsClient({
                         target="_blank"
                         rel="noopener noreferrer"
                         title="Problem PDF"
-                        style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#1F1F1F', textDecoration: 'none', background: '#F0F2F5', padding: '4px 8px', borderRadius: 6, fontFamily: "'Syne', sans-serif" }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--sky-deeper)', textDecoration: 'none', background: 'rgba(168,203,222,0.14)', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(168,203,222,0.3)' }}
                       >
                         <FileText size={13} /> Problems <ExternalLink size={11} />
                       </a>
@@ -149,14 +155,14 @@ export default function ProblemSetsClient({
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Answer Key PDF"
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#9B4C5A', textDecoration: 'none', background: 'rgba(224,166,175,0.15)', padding: '4px 8px', borderRadius: 6, fontFamily: "'Syne', sans-serif" }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--rose-deeper)', textDecoration: 'none', background: 'rgba(224,166,175,0.14)', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(224,166,175,0.3)' }}
                         >
                           <Key size={13} /> Answers <ExternalLink size={11} />
                         </a>
                       )}
                     </div>
                   </td>
-                  <td style={{ padding: '14px 20px', fontSize: 13, color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
+                  <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--mist)' }}>
                     {format(new Date(ps.created_at), 'MMM d, yyyy')}
                   </td>
                 </tr>
@@ -170,7 +176,7 @@ export default function ProblemSetsClient({
       <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) resetForm(); setDialogOpen(o); }}>
         <DialogContent style={{ maxWidth: 500 }}>
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif" }}>Create Problem Set</DialogTitle>
+            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)', letterSpacing: '-0.02em' }}>Create Problem Set</DialogTitle>
           </DialogHeader>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
             <div>
@@ -248,7 +254,7 @@ export default function ProblemSetsClient({
           </div>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => { resetForm(); setDialogOpen(false); }}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={saving} style={{ background: '#1F1F1F', color: '#F0F2F5', fontFamily: "'Syne', sans-serif" }}>
+            <Button onClick={handleCreate} disabled={saving} style={{ background: 'var(--rose)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", border: 'none' }}>
               {saving ? 'Creating…' : 'Create'}
             </Button>
           </DialogFooter>

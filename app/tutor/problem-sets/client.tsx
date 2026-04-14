@@ -14,14 +14,14 @@ interface UploadedFile { url: string; name: string; }
 const inputStyle = {
   width: '100%',
   padding: '0.625rem 0.875rem',
-  borderRadius: '0.375rem',
+  borderRadius: '0.5rem',
   fontSize: '0.875rem',
   outline: 'none',
-  background: '#FFFFFF',
-  border: '1px solid #D5D9E1',
-  color: '#1F1F1F',
+  background: 'var(--white)',
+  border: '1px solid var(--fog)',
+  color: 'var(--charcoal)',
   fontFamily: "'Syne', sans-serif",
-  transition: 'border-color 0.15s',
+  transition: 'border-color 0.15s, box-shadow 0.15s',
 };
 
 export default function TutorProblemSetsClient({
@@ -77,34 +77,23 @@ export default function TutorProblemSetsClient({
     <div className="space-y-10">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-2 mb-1">
-          <div className="h-px w-6" style={{ background: '#8BB5AE' }} />
-          <span
-            className="text-xs tracking-widest uppercase font-medium"
-            style={{ color: '#8BB5AE', fontFamily: "'Syne', sans-serif" }}
-          >
-            Tutor Portal
-          </span>
-        </div>
+        <div className="eyebrow-sky mb-3">Tutor Portal</div>
         <h1 className="portal-section-title">Problem Sets</h1>
-        <p className="text-sm mt-1" style={{ color: '#4A4F5A', fontFamily: "'Syne', sans-serif" }}>
+        <p className="text-sm mt-2" style={{ color: 'var(--slate)' }}>
           Upload and assign practice materials to your students.
         </p>
       </div>
 
       {/* Assign form */}
-      <div className="portal-card p-6">
-        <div className="flex items-center gap-2 mb-5">
+      <div className="portal-card-rose p-6">
+        <div className="flex items-center gap-2.5 mb-5">
           <div
-            className="w-7 h-7 rounded flex items-center justify-center"
-            style={{ background: '#F0F2F5', border: '1px solid #D5D9E1' }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: 'rgba(224,166,175,0.2)', border: '1px solid rgba(224,166,175,0.3)' }}
           >
-            <Plus className="h-4 w-4" style={{ color: '#8BB5AE' }} />
+            <Plus className="h-4 w-4" style={{ color: 'var(--rose-deeper)' }} />
           </div>
-          <h2
-            className="text-sm font-semibold"
-            style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}
-          >
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
             Assign New Problem Set
           </h2>
         </div>
@@ -112,7 +101,10 @@ export default function TutorProblemSetsClient({
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
+              <label
+                className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                style={{ color: 'var(--mist)' }}
+              >
                 Title
               </label>
               <input
@@ -121,12 +113,15 @@ export default function TutorProblemSetsClient({
                 placeholder="e.g. SAT Math Practice #3"
                 required
                 style={inputStyle}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#8BB5AE'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#D5D9E1'; }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--rose)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(224,166,175,0.15)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--fog)'; e.currentTarget.style.boxShadow = 'none'; }}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
+              <label
+                className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                style={{ color: 'var(--mist)' }}
+              >
                 Student
               </label>
               <select
@@ -134,8 +129,8 @@ export default function TutorProblemSetsClient({
                 onChange={(e) => setStudentId(e.target.value)}
                 required
                 style={{ ...inputStyle, appearance: 'none' as const }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#8BB5AE'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#D5D9E1'; }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--rose)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(224,166,175,0.15)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--fog)'; e.currentTarget.style.boxShadow = 'none'; }}
               >
                 <option value="">Select a student</option>
                 {students.map((s) => (
@@ -148,28 +143,35 @@ export default function TutorProblemSetsClient({
           <div className="grid sm:grid-cols-2 gap-4">
             {/* Problem PDF */}
             <div>
-              <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
+              <label
+                className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                style={{ color: 'var(--mist)' }}
+              >
                 Problem Set PDF
               </label>
               {problemFile ? (
                 <div
-                  className="flex items-center gap-2 px-3.5 py-2.5 rounded text-sm"
-                  style={{ background: 'rgba(139,181,174,0.12)', border: '1px solid #8BB5AE', color: '#2A6B62', fontFamily: "'Syne', sans-serif" }}
+                  className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-sm"
+                  style={{
+                    background: 'rgba(168,203,222,0.12)',
+                    border: '1px solid rgba(168,203,222,0.35)',
+                    color: 'var(--sky-deeper)',
+                  }}
                 >
                   <FileText className="h-4 w-4 shrink-0" />
                   <span className="flex-1 truncate text-xs">{problemFile.name}</span>
                   <button
                     type="button"
                     onClick={() => setProblemFile(null)}
-                    style={{ color: '#2A6B62', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}
+                    style={{ color: 'var(--sky-deeper)', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, fontSize: 16 }}
                   >
                     ×
                   </button>
                 </div>
               ) : (
                 <div
-                  className="rounded border-2 border-dashed flex items-center justify-center p-4"
-                  style={{ borderColor: '#D5D9E1', background: '#F8F9FB' }}
+                  className="rounded-xl border-2 border-dashed flex items-center justify-center p-4"
+                  style={{ borderColor: 'rgba(168,203,222,0.4)', background: 'var(--sky-ultra)' }}
                 >
                   <UploadButton<OurFileRouter, 'pdfUploader'>
                     endpoint="pdfUploader"
@@ -179,7 +181,7 @@ export default function TutorProblemSetsClient({
                     }}
                     onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
                     appearance={{
-                      button: 'bg-[#1F1F1F] text-[#F0F2F5] text-xs font-medium py-2 px-4 rounded font-[Syne]',
+                      button: 'bg-[#A8CBDE] text-[#1A1D23] text-xs font-semibold py-2 px-4 rounded-lg font-[Syne]',
                     }}
                   />
                 </div>
@@ -188,28 +190,38 @@ export default function TutorProblemSetsClient({
 
             {/* Answer Key */}
             <div>
-              <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
-                Answer Key <span style={{ color: '#B0B8C4', textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
+              <label
+                className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                style={{ color: 'var(--mist)' }}
+              >
+                Answer Key{' '}
+                <span style={{ color: 'var(--cloud)', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>
+                  (optional)
+                </span>
               </label>
               {answerFile ? (
                 <div
-                  className="flex items-center gap-2 px-3.5 py-2.5 rounded text-sm"
-                  style={{ background: 'rgba(224,166,175,0.12)', border: '1px solid #E0A6AF', color: '#9B4C5A', fontFamily: "'Syne', sans-serif" }}
+                  className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-sm"
+                  style={{
+                    background: 'rgba(224,166,175,0.12)',
+                    border: '1px solid rgba(224,166,175,0.35)',
+                    color: 'var(--rose-deeper)',
+                  }}
                 >
                   <Key className="h-4 w-4 shrink-0" />
                   <span className="flex-1 truncate text-xs">{answerFile.name}</span>
                   <button
                     type="button"
                     onClick={() => setAnswerFile(null)}
-                    style={{ color: '#9B4C5A', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}
+                    style={{ color: 'var(--rose-deeper)', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, fontSize: 16 }}
                   >
                     ×
                   </button>
                 </div>
               ) : (
                 <div
-                  className="rounded border-2 border-dashed flex items-center justify-center p-4"
-                  style={{ borderColor: '#D5D9E1', background: '#F8F9FB' }}
+                  className="rounded-xl border-2 border-dashed flex items-center justify-center p-4"
+                  style={{ borderColor: 'rgba(224,166,175,0.4)', background: 'var(--rose-ultra)' }}
                 >
                   <UploadButton<OurFileRouter, 'pdfUploader'>
                     endpoint="pdfUploader"
@@ -219,7 +231,7 @@ export default function TutorProblemSetsClient({
                     }}
                     onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
                     appearance={{
-                      button: 'bg-[#4A4F5A] text-[#F0F2F5] text-xs font-medium py-2 px-4 rounded font-[Syne]',
+                      button: 'bg-[#E0A6AF] text-[#1A1D23] text-xs font-semibold py-2 px-4 rounded-lg font-[Syne]',
                     }}
                   />
                 </div>
@@ -231,13 +243,12 @@ export default function TutorProblemSetsClient({
             <button
               type="submit"
               disabled={saving || !problemFile}
-              className="flex items-center gap-2 px-5 py-2.5 rounded text-sm font-semibold transition-all"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
               style={{
-                background: saving || !problemFile ? '#D5D9E1' : '#1F1F1F',
-                color: saving || !problemFile ? '#8A9099' : '#F0F2F5',
+                background: saving || !problemFile ? 'var(--fog)' : 'var(--rose)',
+                color: saving || !problemFile ? 'var(--mist)' : 'var(--charcoal)',
                 border: 'none',
                 cursor: saving || !problemFile ? 'not-allowed' : 'pointer',
-                fontFamily: "'Syne', sans-serif",
               }}
             >
               <Upload className="h-4 w-4" />
@@ -250,13 +261,10 @@ export default function TutorProblemSetsClient({
       {/* Existing problem sets */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2
-            className="text-xs font-semibold tracking-widest uppercase"
-            style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}
-          >
+          <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--mist)' }}>
             All Assigned Sets
             {problemSets.length > 0 && (
-              <span className="ml-2 normal-case" style={{ color: '#8BB5AE' }}>
+              <span className="ml-2 normal-case font-semibold" style={{ color: 'var(--rose-deeper)' }}>
                 ({problemSets.length})
               </span>
             )}
@@ -266,15 +274,15 @@ export default function TutorProblemSetsClient({
         {problemSets.length === 0 ? (
           <div className="portal-card flex flex-col items-center justify-center py-16 text-center">
             <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
-              style={{ background: '#F0F2F5', border: '1px solid #D5D9E1' }}
+              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
+              style={{ background: 'var(--rose-ultra)', border: '1px solid rgba(224,166,175,0.25)' }}
             >
-              <FileText className="h-5 w-5" style={{ color: '#8BB5AE' }} />
+              <FileText className="h-5 w-5" style={{ color: 'var(--rose-deeper)' }} />
             </div>
-            <p className="text-sm font-medium" style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>
+            <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
               No problem sets yet
             </p>
-            <p className="text-xs mt-1" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>
               Use the form above to assign your first set.
             </p>
           </div>
@@ -283,22 +291,21 @@ export default function TutorProblemSetsClient({
             {problemSets.map((ps, idx) => (
               <div
                 key={ps.id}
-                className="portal-card flex items-center gap-4 px-5 py-4"
+                className="portal-card flex items-center gap-4 px-5 py-4 transition-all"
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(224,166,175,0.3)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--fog)'; }}
               >
                 <div
                   className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-xs font-semibold"
-                  style={{ background: '#F0F2F5', color: '#8A9099', border: '1px solid #D5D9E1', fontFamily: "'Syne', sans-serif" }}
+                  style={{ background: 'rgba(224,166,175,0.14)', color: 'var(--rose-deeper)', border: '1px solid rgba(224,166,175,0.25)' }}
                 >
                   {String(idx + 1).padStart(2, '0')}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p
-                    className="text-sm font-semibold truncate"
-                    style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}
-                  >
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--charcoal)' }}>
                     {ps.title}
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--mist)' }}>
                     {ps.student_name} · {format(new Date(ps.created_at), 'MMM d, yyyy')}
                   </p>
                 </div>
@@ -307,14 +314,15 @@ export default function TutorProblemSetsClient({
                     href={ps.problem_pdf_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-medium transition-all"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
                     style={{
-                      background: '#F0F2F5',
-                      color: '#1F1F1F',
-                      border: '1px solid #D5D9E1',
+                      background: 'rgba(168,203,222,0.14)',
+                      color: 'var(--sky-deeper)',
+                      border: '1px solid rgba(168,203,222,0.3)',
                       textDecoration: 'none',
-                      fontFamily: "'Syne', sans-serif",
                     }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(168,203,222,0.25)'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(168,203,222,0.14)'; }}
                   >
                     <BookOpen className="h-3.5 w-3.5" />
                     Problems
@@ -324,14 +332,15 @@ export default function TutorProblemSetsClient({
                       href={ps.answer_pdf_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-medium transition-all"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
                       style={{
-                        background: 'rgba(224,166,175,0.12)',
-                        color: '#9B4C5A',
-                        border: '1px solid #E0A6AF',
+                        background: 'rgba(224,166,175,0.14)',
+                        color: 'var(--rose-deeper)',
+                        border: '1px solid rgba(224,166,175,0.3)',
                         textDecoration: 'none',
-                        fontFamily: "'Syne', sans-serif",
                       }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(224,166,175,0.25)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(224,166,175,0.14)'; }}
                     >
                       <Key className="h-3.5 w-3.5" />
                       Key
@@ -339,15 +348,15 @@ export default function TutorProblemSetsClient({
                   )}
                   <button
                     onClick={() => handleDelete(ps.id)}
-                    className="w-8 h-8 flex items-center justify-center rounded transition-all"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
                     style={{
                       background: 'transparent',
                       border: '1px solid transparent',
-                      color: '#B0B8C4',
+                      color: 'var(--cloud)',
                       cursor: 'pointer',
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.color = '#991B1B'; e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.borderColor = '#FECACA'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#B0B8C4'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--cloud)'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

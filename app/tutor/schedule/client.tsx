@@ -16,14 +16,14 @@ const STATUS_CONFIG = {
 const inputStyle = {
   width: '100%',
   padding: '0.625rem 0.875rem',
-  borderRadius: '0.375rem',
+  borderRadius: '0.5rem',
   fontSize: '0.875rem',
   outline: 'none',
-  background: '#FFFFFF',
-  border: '1px solid #D5D9E1',
-  color: '#1F1F1F',
+  background: 'var(--white)',
+  border: '1px solid var(--fog)',
+  color: 'var(--charcoal)',
   fontFamily: "'Syne', sans-serif",
-  transition: 'border-color 0.15s',
+  transition: 'border-color 0.15s, box-shadow 0.15s',
 };
 
 export default function TutorScheduleClient({
@@ -81,34 +81,23 @@ export default function TutorScheduleClient({
     <div className="space-y-10">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-2 mb-1">
-          <div className="h-px w-6" style={{ background: '#8BB5AE' }} />
-          <span
-            className="text-xs tracking-widest uppercase font-medium"
-            style={{ color: '#8BB5AE', fontFamily: "'Syne', sans-serif" }}
-          >
-            Tutor Portal
-          </span>
-        </div>
+        <div className="eyebrow-sky mb-3">Tutor Portal</div>
         <h1 className="portal-section-title">Schedule</h1>
-        <p className="text-sm mt-1" style={{ color: '#4A4F5A', fontFamily: "'Syne', sans-serif" }}>
+        <p className="text-sm mt-2" style={{ color: 'var(--slate)' }}>
           Propose sessions and track student responses.
         </p>
       </div>
 
       {/* Propose form */}
-      <div className="portal-card p-6">
-        <div className="flex items-center gap-2 mb-5">
+      <div className="portal-card-sky p-6">
+        <div className="flex items-center gap-2.5 mb-5">
           <div
-            className="w-7 h-7 rounded flex items-center justify-center"
-            style={{ background: '#F0F2F5', border: '1px solid #D5D9E1' }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: 'rgba(168,203,222,0.2)', border: '1px solid rgba(168,203,222,0.3)' }}
           >
-            <Send className="h-3.5 w-3.5" style={{ color: '#8BB5AE' }} />
+            <Send className="h-3.5 w-3.5" style={{ color: 'var(--sky-deeper)' }} />
           </div>
-          <h2
-            className="text-sm font-semibold"
-            style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}
-          >
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
             Propose a New Session
           </h2>
         </div>
@@ -116,7 +105,10 @@ export default function TutorScheduleClient({
         <form onSubmit={handlePropose} className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
+              <label
+                className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                style={{ color: 'var(--mist)' }}
+              >
                 Student
               </label>
               <select
@@ -124,8 +116,8 @@ export default function TutorScheduleClient({
                 onChange={(e) => setStudentId(e.target.value)}
                 required
                 style={{ ...inputStyle, appearance: 'none' as const }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#8BB5AE'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#D5D9E1'; }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--sky)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(168,203,222,0.15)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--fog)'; e.currentTarget.style.boxShadow = 'none'; }}
               >
                 <option value="">Select a student</option>
                 {students.map((s) => (
@@ -134,7 +126,10 @@ export default function TutorScheduleClient({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
+              <label
+                className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                style={{ color: 'var(--mist)' }}
+              >
                 Date &amp; Time
               </label>
               <input
@@ -143,21 +138,20 @@ export default function TutorScheduleClient({
                 onChange={(e) => setDateTime(e.target.value)}
                 required
                 style={inputStyle}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#8BB5AE'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#D5D9E1'; }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--sky)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(168,203,222,0.15)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--fog)'; e.currentTarget.style.boxShadow = 'none'; }}
               />
             </div>
           </div>
           <button
             type="submit"
             disabled={proposing}
-            className="flex items-center gap-2 px-5 py-2.5 rounded text-sm font-semibold transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
             style={{
-              background: proposing ? '#D5D9E1' : '#1F1F1F',
-              color: proposing ? '#8A9099' : '#F0F2F5',
+              background: proposing ? 'var(--fog)' : 'var(--sky)',
+              color: proposing ? 'var(--mist)' : 'var(--charcoal)',
               border: 'none',
               cursor: proposing ? 'not-allowed' : 'pointer',
-              fontFamily: "'Syne', sans-serif",
             }}
           >
             <Calendar className="h-4 w-4" />
@@ -170,15 +164,15 @@ export default function TutorScheduleClient({
       {sessions.length === 0 ? (
         <div className="portal-card flex flex-col items-center justify-center py-16 text-center">
           <div
-            className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
-            style={{ background: '#F0F2F5', border: '1px solid #D5D9E1' }}
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+            style={{ background: 'var(--sky-ultra)', border: '1px solid rgba(168,203,222,0.25)' }}
           >
-            <Calendar className="h-6 w-6" style={{ color: '#8BB5AE' }} />
+            <Calendar className="h-6 w-6" style={{ color: 'var(--sky-deeper)' }} />
           </div>
-          <p className="text-sm font-medium" style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>
+          <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
             No sessions proposed yet
           </p>
-          <p className="text-xs mt-1" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
+          <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>
             Use the form above to propose your first session.
           </p>
         </div>
@@ -194,12 +188,11 @@ export default function TutorScheduleClient({
               <div key={status} className="space-y-2">
                 <div className="flex items-center gap-2 mb-3">
                   <span
-                    className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.cls}`}
-                    style={{ fontFamily: "'Syne', sans-serif" }}
+                    className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${cfg.cls}`}
                   >
                     <Icon className="h-3 w-3" />
                     {cfg.label}
-                    <span className="ml-0.5 opacity-70">· {list.length}</span>
+                    <span className="ml-0.5 opacity-65">· {list.length}</span>
                   </span>
                 </div>
 
@@ -216,17 +209,14 @@ export default function TutorScheduleClient({
                       key={s.id}
                       className="portal-card flex items-center gap-4 px-5 py-4 flex-wrap"
                       style={{
-                        borderLeft: status === 'pending' ? '3px solid #8BB5AE' : undefined,
+                        borderLeft: status === 'pending' ? '3px solid var(--sky)' : undefined,
                       }}
                     >
                       <div className="flex-1 min-w-0">
-                        <p
-                          className="text-sm font-semibold"
-                          style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}
-                        >
+                        <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
                           {format(dt, 'EEEE, MMMM d, yyyy')}
                         </p>
-                        <p className="text-xs mt-0.5" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--mist)' }}>
                           {format(dt, 'h:mm a')} · {s.student_name}
                         </p>
                       </div>
@@ -234,14 +224,15 @@ export default function TutorScheduleClient({
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => downloadICS(s.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
                             style={{
-                              background: '#F0F2F5',
-                              color: '#1F1F1F',
-                              border: '1px solid #D5D9E1',
+                              background: 'var(--frost)',
+                              color: 'var(--slate)',
+                              border: '1px solid var(--fog)',
                               cursor: 'pointer',
-                              fontFamily: "'Syne', sans-serif",
                             }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sky-pale)'; e.currentTarget.style.color = 'var(--sky-deeper)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--frost)'; e.currentTarget.style.color = 'var(--slate)'; }}
                           >
                             <Download className="h-3.5 w-3.5" />
                             .ics
@@ -250,14 +241,15 @@ export default function TutorScheduleClient({
                             href={gcUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
                             style={{
-                              background: '#F0F2F5',
-                              color: '#1F1F1F',
-                              border: '1px solid #D5D9E1',
+                              background: 'var(--frost)',
+                              color: 'var(--slate)',
+                              border: '1px solid var(--fog)',
                               textDecoration: 'none',
-                              fontFamily: "'Syne', sans-serif",
                             }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--sky-pale)'; (e.currentTarget as HTMLAnchorElement).style.color = 'var(--sky-deeper)'; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--frost)'; (e.currentTarget as HTMLAnchorElement).style.color = 'var(--slate)'; }}
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
                             Google Cal
