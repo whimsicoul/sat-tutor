@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AdminUser } from './page';
 
 const roleBadge = (role: string, active: boolean) => {
@@ -51,7 +50,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
   const [deleteUser, setDeleteUser] = useState<AdminUser | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [addForm, setAddForm] = useState({ name: '', email: '', password: '', role: 'student' });
+  const [addForm, setAddForm] = useState({ name: '', email: '', password: '', role: 'tutor' });
   const [editForm, setEditForm] = useState({ name: '', email: '', role: '' });
   const [showAddPassword, setShowAddPassword] = useState(false);
 
@@ -69,7 +68,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
       const user = await res.json();
       setUsers((prev) => [user, ...prev]);
       setAddOpen(false);
-      setAddForm({ name: '', email: '', password: '', role: 'student' });
+      setAddForm({ name: '', email: '', password: '', role: 'tutor' });
       toast.success('User created');
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Error creating user');
@@ -368,15 +367,20 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
             </div>
             <div>
               <Label style={{ color: 'var(--slate)' }}>Role</Label>
-              <Select value={addForm.role} onValueChange={(v) => setAddForm((f) => ({ ...f, role: v ?? 'student' }))}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="student">Student</SelectItem>
-                  <SelectItem value="tutor">Tutor</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                value={addForm.role}
+                onChange={(e) => setAddForm((f) => ({ ...f, role: e.target.value }))}
+                style={{
+                  display: 'block', width: '100%', marginTop: 4,
+                  height: 32, padding: '0 8px', borderRadius: 8,
+                  border: '1px solid var(--fog)', background: 'transparent',
+                  fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer',
+                  fontFamily: "'Syne', sans-serif",
+                }}
+              >
+                <option value="student">Student</option>
+                <option value="tutor">Tutor</option>
+              </select>
             </div>
           </div>
           <DialogFooter className="mt-4">
@@ -411,15 +415,20 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
             </div>
             <div>
               <Label style={{ color: 'var(--slate)' }}>Role</Label>
-              <Select value={editForm.role} onValueChange={(v) => setEditForm((f) => ({ ...f, role: v ?? f.role }))}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="student">Student</SelectItem>
-                  <SelectItem value="tutor">Tutor</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                value={editForm.role}
+                onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}
+                style={{
+                  display: 'block', width: '100%', marginTop: 4,
+                  height: 32, padding: '0 8px', borderRadius: 8,
+                  border: '1px solid var(--fog)', background: 'transparent',
+                  fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer',
+                  fontFamily: "'Syne', sans-serif",
+                }}
+              >
+                <option value="student">Student</option>
+                <option value="tutor">Tutor</option>
+              </select>
             </div>
           </div>
           <DialogFooter className="mt-4">
