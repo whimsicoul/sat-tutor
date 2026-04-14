@@ -13,9 +13,9 @@ const inputStyle = {
   fontSize: '0.875rem',
   outline: 'none',
   background: '#FFFFFF',
-  border: '1px solid #E0D8CB',
-  color: '#12192C',
-  fontFamily: "'DM Sans', sans-serif",
+  border: '1px solid #D5D9E1',
+  color: '#1F1F1F',
+  fontFamily: "'Syne', sans-serif",
   transition: 'border-color 0.15s',
 };
 
@@ -60,16 +60,16 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <div className="h-px w-6" style={{ background: '#C9A84C' }} />
+          <div className="h-px w-6" style={{ background: '#8BB5AE' }} />
           <span
             className="text-xs tracking-widest uppercase font-medium"
-            style={{ color: '#C9A84C', fontFamily: "'DM Sans', sans-serif" }}
+            style={{ color: '#8BB5AE', fontFamily: "'Syne', sans-serif" }}
           >
             Tutor Portal
           </span>
         </div>
         <h1 className="portal-section-title">Testimonials</h1>
-        <p className="text-sm mt-1" style={{ color: '#4A5568', fontFamily: "'DM Sans', sans-serif" }}>
+        <p className="text-sm mt-1" style={{ color: '#4A4F5A', fontFamily: "'Syne', sans-serif" }}>
           Manage the student testimonials shown on the public home page.
         </p>
       </div>
@@ -79,13 +79,13 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
         <div className="flex items-center gap-2 mb-5">
           <div
             className="w-7 h-7 rounded flex items-center justify-center"
-            style={{ background: '#F8F6F1', border: '1px solid #E0D8CB' }}
+            style={{ background: '#F0F2F5', border: '1px solid #D5D9E1' }}
           >
-            <Plus className="h-4 w-4" style={{ color: '#C9A84C' }} />
+            <Plus className="h-4 w-4" style={{ color: '#8BB5AE' }} />
           </div>
           <h2
             className="text-sm font-semibold"
-            style={{ color: '#12192C', fontFamily: "'DM Sans', sans-serif" }}
+            style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}
           >
             Add New Testimonial
           </h2>
@@ -94,7 +94,7 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}>
+              <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
                 Student Name
               </label>
               <input
@@ -103,18 +103,18 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
                 placeholder="e.g. Alex M."
                 required
                 style={inputStyle}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#E0D8CB'; }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#8BB5AE'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#D5D9E1'; }}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}>
+              <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
                 Rating
               </label>
               {/* Star picker */}
               <div
                 className="flex items-center gap-1 px-3.5 py-2.5 rounded"
-                style={{ background: '#FFFFFF', border: '1px solid #E0D8CB' }}
+                style={{ background: '#FFFFFF', border: '1px solid #D5D9E1' }}
               >
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button
@@ -125,12 +125,12 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
                   >
                     <Star
                       className="h-5 w-5 transition-colors"
-                      fill={n <= rating ? '#C9A84C' : 'transparent'}
-                      stroke={n <= rating ? '#C9A84C' : '#D4C5A9'}
+                      fill={n <= rating ? '#8BB5AE' : 'transparent'}
+                      stroke={n <= rating ? '#8BB5AE' : '#D5D9E1'}
                     />
                   </button>
                 ))}
-                <span className="ml-2 text-xs" style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}>
+                <span className="ml-2 text-xs" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
                   {rating}/5
                 </span>
               </div>
@@ -138,7 +138,7 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}>
+            <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
               Testimonial
             </label>
             <textarea
@@ -148,8 +148,8 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
               rows={3}
               required
               style={{ ...inputStyle, resize: 'vertical' as const, minHeight: '80px' }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = '#E0D8CB'; }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = '#8BB5AE'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = '#D5D9E1'; }}
             />
           </div>
 
@@ -158,11 +158,11 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
             disabled={saving}
             className="flex items-center gap-2 px-5 py-2.5 rounded text-sm font-semibold transition-all"
             style={{
-              background: saving ? '#E0D8CB' : '#12192C',
-              color: saving ? '#8A95A3' : '#F8F6F1',
+              background: saving ? '#D5D9E1' : '#1F1F1F',
+              color: saving ? '#8A9099' : '#F0F2F5',
               border: 'none',
               cursor: saving ? 'not-allowed' : 'pointer',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "'Syne', sans-serif",
             }}
           >
             <MessageSquare className="h-4 w-4" />
@@ -175,11 +175,11 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
       <div className="space-y-4">
         <h2
           className="text-xs font-semibold tracking-widest uppercase"
-          style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}
+          style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}
         >
           All Testimonials
           {testimonials.length > 0 && (
-            <span className="ml-2 normal-case" style={{ color: '#C9A84C' }}>
+            <span className="ml-2 normal-case" style={{ color: '#8BB5AE' }}>
               ({testimonials.length})
             </span>
           )}
@@ -189,14 +189,14 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
           <div className="portal-card flex flex-col items-center justify-center py-16 text-center">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
-              style={{ background: '#F8F6F1', border: '1px solid #E0D8CB' }}
+              style={{ background: '#F0F2F5', border: '1px solid #D5D9E1' }}
             >
-              <MessageSquare className="h-5 w-5" style={{ color: '#C9A84C' }} />
+              <MessageSquare className="h-5 w-5" style={{ color: '#8BB5AE' }} />
             </div>
-            <p className="text-sm font-medium" style={{ color: '#12192C', fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-sm font-medium" style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>
               No testimonials yet
             </p>
-            <p className="text-xs mt-1" style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-xs mt-1" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
               Use the form above to add your first testimonial.
             </p>
           </div>
@@ -210,18 +210,18 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
                     <div className="flex items-center gap-3 flex-wrap mb-2">
                       <div
                         className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                        style={{ background: 'rgba(201,168,76,0.15)', color: '#C9A84C' }}
+                        style={{ background: 'rgba(139,181,174,0.15)', color: '#8BB5AE' }}
                       >
                         {t.author_name.charAt(0).toUpperCase()}
                       </div>
                       <div>
                         <p
                           className="text-sm font-semibold leading-tight"
-                          style={{ color: '#12192C', fontFamily: "'DM Sans', sans-serif" }}
+                          style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}
                         >
                           {t.author_name}
                         </p>
-                        <p className="text-xs" style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}>
+                        <p className="text-xs" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
                           {format(new Date(t.created_at), 'MMM d, yyyy')}
                         </p>
                       </div>
@@ -230,8 +230,8 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
                           <Star
                             key={i}
                             className="h-3.5 w-3.5"
-                            fill={i < t.rating ? '#C9A84C' : 'transparent'}
-                            stroke={i < t.rating ? '#C9A84C' : '#D4C5A9'}
+                            fill={i < t.rating ? '#8BB5AE' : 'transparent'}
+                            stroke={i < t.rating ? '#8BB5AE' : '#D5D9E1'}
                           />
                         ))}
                       </div>
@@ -240,7 +240,7 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
                     {/* Quote */}
                     <p
                       className="text-sm leading-relaxed pl-11"
-                      style={{ color: '#4A5568', fontFamily: "'Playfair Display', Georgia, serif", fontStyle: 'italic' }}
+                      style={{ color: '#4A4F5A', fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: 'italic', fontSize: '1rem' }}
                     >
                       &ldquo;{t.content}&rdquo;
                     </p>
@@ -253,11 +253,11 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
                     style={{
                       background: 'transparent',
                       border: '1px solid transparent',
-                      color: '#C0C9D3',
+                      color: '#B0B8C4',
                       cursor: 'pointer',
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.color = '#991B1B'; e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.borderColor = '#FECACA'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#C0C9D3'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = '#B0B8C4'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
-import { FileText, Download, BookOpen } from 'lucide-react';
+import { FileText, BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default async function StudentProblemSetsPage() {
@@ -21,16 +21,16 @@ export default async function StudentProblemSetsPage() {
       {/* Page header */}
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <div className="h-px w-6" style={{ background: '#C9A84C' }} />
+          <div className="h-px w-6" style={{ background: '#8BB5AE' }} />
           <span
             className="text-xs tracking-widest uppercase font-medium"
-            style={{ color: '#C9A84C', fontFamily: "'DM Sans', sans-serif" }}
+            style={{ color: '#8BB5AE', fontFamily: "'Syne', sans-serif" }}
           >
             Student Portal
           </span>
         </div>
         <h1 className="portal-section-title">Problem Sets</h1>
-        <p className="text-sm mt-1" style={{ color: '#4A5568', fontFamily: "'DM Sans', sans-serif" }}>
+        <p className="text-sm mt-1" style={{ color: '#4A4F5A', fontFamily: "'Syne', sans-serif" }}>
           Download and complete your assigned practice materials.
         </p>
       </div>
@@ -41,14 +41,14 @@ export default async function StudentProblemSetsPage() {
         >
           <div
             className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
-            style={{ background: '#F8F6F1', border: '1px solid #E0D8CB' }}
+            style={{ background: '#F0F2F5', border: '1px solid #D5D9E1' }}
           >
-            <FileText className="h-6 w-6" style={{ color: '#C9A84C' }} />
+            <FileText className="h-6 w-6" style={{ color: '#8BB5AE' }} />
           </div>
-          <p className="text-sm font-medium" style={{ color: '#12192C', fontFamily: "'DM Sans', sans-serif" }}>
+          <p className="text-sm font-medium" style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>
             No problem sets assigned yet
           </p>
-          <p className="text-xs mt-1" style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}>
+          <p className="text-xs mt-1" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
             Check back after your next session.
           </p>
         </div>
@@ -57,7 +57,7 @@ export default async function StudentProblemSetsPage() {
           {/* Count summary */}
           <div
             className="text-xs font-medium mb-4"
-            style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}
+            style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}
           >
             {problemSets.length} {problemSets.length === 1 ? 'set' : 'sets'} assigned
           </div>
@@ -72,10 +72,10 @@ export default async function StudentProblemSetsPage() {
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-sm font-semibold"
                 style={{
-                  background: '#F8F6F1',
-                  color: '#12192C',
-                  border: '1px solid #E0D8CB',
-                  fontFamily: "'DM Sans', sans-serif",
+                  background: '#F0F2F5',
+                  color: '#1F1F1F',
+                  border: '1px solid #D5D9E1',
+                  fontFamily: "'Syne', sans-serif",
                 }}
               >
                 {String(idx + 1).padStart(2, '0')}
@@ -85,11 +85,11 @@ export default async function StudentProblemSetsPage() {
               <div className="flex-1 min-w-0">
                 <p
                   className="text-sm font-semibold truncate"
-                  style={{ color: '#12192C', fontFamily: "'DM Sans', sans-serif" }}
+                  style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}
                 >
                   {ps.title as string}
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}>
+                <p className="text-xs mt-0.5" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
                   Assigned by {ps.tutor_name as string} · {format(new Date(ps.created_at as string), 'MMM d, yyyy')}
                 </p>
               </div>
@@ -101,9 +101,9 @@ export default async function StudentProblemSetsPage() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-all shrink-0"
                 style={{
-                  background: '#12192C',
-                  color: '#F8F6F1',
-                  fontFamily: "'DM Sans', sans-serif",
+                  background: '#1F1F1F',
+                  color: '#F0F2F5',
+                  fontFamily: "'Syne', sans-serif",
                   textDecoration: 'none',
                 }}
               >

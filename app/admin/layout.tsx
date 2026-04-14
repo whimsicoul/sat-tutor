@@ -17,12 +17,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--cream)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#F0F2F5' }}>
       {/* Sidebar */}
       <aside
         style={{
           width: 240,
-          background: 'var(--navy)',
+          background: '#1F1F1F',
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
@@ -33,20 +33,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }}
       >
         {/* Logo */}
-        <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
+        <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(139,181,174,0.2)' }}>
           <div
             style={{
-              fontFamily: "'Playfair Display', serif",
+              fontFamily: "'Cormorant Garamond', serif",
               fontSize: 18,
               fontWeight: 700,
-              color: 'var(--gold)',
+              color: '#8BB5AE',
               letterSpacing: '0.01em',
               lineHeight: 1.2,
             }}
           >
             DC SAT Tutor
           </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 4, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 11, color: 'rgba(240,242,245,0.35)', marginTop: 4, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'Syne', sans-serif" }}>
             Admin Portal
           </div>
         </div>
@@ -69,9 +69,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   textDecoration: 'none',
                   fontSize: 14,
                   fontWeight: active ? 600 : 400,
-                  color: active ? 'var(--gold)' : 'rgba(255,255,255,0.65)',
-                  background: active ? 'rgba(201,168,76,0.12)' : 'transparent',
+                  color: active ? '#8BB5AE' : 'rgba(240,242,245,0.55)',
+                  background: active ? 'rgba(139,181,174,0.12)' : 'transparent',
                   transition: 'all 0.15s',
+                  fontFamily: "'Syne', sans-serif",
                 }}
               >
                 <Icon size={17} />
@@ -96,8 +97,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               border: 'none',
               cursor: 'pointer',
               fontSize: 14,
-              color: 'rgba(255,255,255,0.45)',
+              color: 'rgba(240,242,245,0.4)',
               transition: 'color 0.15s',
+              fontFamily: "'Syne', sans-serif",
             }}
           >
             <LogOut size={17} />

@@ -26,8 +26,8 @@ const localizer = dateFnsLocalizer({
 
 // Distinct colors per tutor
 const TUTOR_COLORS = [
-  '#C9A84C', '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B',
-  '#EF4444', '#06B6D4', '#EC4899', '#84CC16', '#F97316',
+  '#8BB5AE', '#E0A6AF', '#6A9E96', '#CC8A95', '#5B9E94',
+  '#D4858F', '#7DADA5', '#E8B0BA', '#4E908A', '#C87F8A',
 ];
 
 function getTutorColor(tutorId: string, tutorIds: string[]) {
@@ -48,8 +48,8 @@ function EventComponent({ event }: { event: CalEvent }) {
   const [showTip, setShowTip] = useState(false);
   const s = event.resource;
   const statusColor =
-    s.status === 'approved' ? '#34D399' :
-    s.status === 'denied'   ? '#F87171' : '#FBBF24';
+    s.status === 'approved' ? '#8BB5AE' :
+    s.status === 'denied'   ? '#F87171' : '#E0A6AF';
 
   return (
     <div
@@ -65,8 +65,8 @@ function EventComponent({ event }: { event: CalEvent }) {
             left: '50%',
             bottom: '110%',
             transform: 'translateX(-50%)',
-            background: 'var(--navy)',
-            color: '#fff',
+            background: '#1F1F1F',
+            color: '#F0F2F5',
             borderRadius: 8,
             padding: '10px 14px',
             fontSize: 12,
@@ -232,14 +232,14 @@ export default function ScheduleClient({
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 700, color: 'var(--navy)', margin: 0 }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, fontWeight: 700, color: '#1F1F1F', margin: 0 }}>
             Schedule
           </h1>
-          <p style={{ color: 'var(--text-secondary)', marginTop: 6, fontSize: 15 }}>
+          <p style={{ color: '#4A4F5A', marginTop: 6, fontSize: 15, fontFamily: "'Syne', sans-serif" }}>
             All sessions across tutors and students
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} style={{ background: 'var(--navy)', color: '#fff', gap: 6 }}>
+        <Button onClick={() => setDialogOpen(true)} style={{ background: '#1F1F1F', color: '#F0F2F5', gap: 6, fontFamily: "'Syne', sans-serif" }}>
           <Plus size={16} /> New Session
         </Button>
       </div>
@@ -248,7 +248,7 @@ export default function ScheduleClient({
       {tutorIds.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
           {tutors.filter((t) => tutorIds.includes(t.id)).map((tutor) => (
-            <div key={tutor.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
+            <div key={tutor.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#4A4F5A', fontFamily: "'Syne', sans-serif" }}>
               <div style={{ width: 12, height: 12, borderRadius: 3, background: getTutorColor(tutor.id, tutorIds), flexShrink: 0 }} />
               {tutor.name}
             </div>
@@ -261,21 +261,21 @@ export default function ScheduleClient({
         style={{
           background: '#fff',
           borderRadius: 12,
-          border: '1px solid var(--cream-dark)',
-          boxShadow: '0 1px 4px rgba(18,25,44,0.06)',
+          border: '1px solid #D5D9E1',
+          boxShadow: '0 1px 4px rgba(31,31,31,0.06)',
           overflow: 'hidden',
           height: 680,
         }}
       >
         <style>{`
-          .rbc-toolbar { padding: 16px 20px; border-bottom: 1px solid var(--cream-dark); }
-          .rbc-toolbar button { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--navy); border-color: var(--cream-dark); }
-          .rbc-toolbar button.rbc-active { background: var(--navy); color: #fff; border-color: var(--navy); }
-          .rbc-toolbar-label { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 600; color: var(--navy); }
-          .rbc-header { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 0; }
-          .rbc-today { background: var(--gold-pale) !important; }
+          .rbc-toolbar { padding: 16px 20px; border-bottom: 1px solid #D5D9E1; }
+          .rbc-toolbar button { font-family: 'Syne', sans-serif; font-size: 13px; color: #1F1F1F; border-color: #D5D9E1; }
+          .rbc-toolbar button.rbc-active { background: #1F1F1F; color: #F0F2F5; border-color: #1F1F1F; }
+          .rbc-toolbar-label { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 600; color: #1F1F1F; }
+          .rbc-header { font-size: 12px; font-weight: 600; color: #4A4F5A; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 0; }
+          .rbc-today { background: rgba(139,181,174,0.08) !important; }
           .rbc-event { border: none !important; overflow: visible !important; }
-          .rbc-show-more { color: var(--gold); font-size: 12px; }
+          .rbc-show-more { color: #8BB5AE; font-size: 12px; }
         `}</style>
         <Calendar
           localizer={localizer}
@@ -295,7 +295,7 @@ export default function ScheduleClient({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent style={{ maxWidth: 480 }}>
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Playfair Display', serif" }}>New Session</DialogTitle>
+            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif" }}>New Session</DialogTitle>
           </DialogHeader>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
             <div>
@@ -344,7 +344,7 @@ export default function ScheduleClient({
               <div>
                 <Label>
                   End Date{' '}
-                  <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(leave blank for 6 months)</span>
+                  <span style={{ color: '#8A9099', fontWeight: 400 }}>(leave blank for 6 months)</span>
                 </Label>
                 <Input type="date" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} className="mt-1" />
               </div>
@@ -352,7 +352,7 @@ export default function ScheduleClient({
           </div>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={saving} style={{ background: 'var(--navy)', color: '#fff' }}>
+            <Button onClick={handleCreate} disabled={saving} style={{ background: '#1F1F1F', color: '#F0F2F5', fontFamily: "'Syne', sans-serif" }}>
               {saving ? 'Creating…' : form.recurrence === 'none' ? 'Create Session' : 'Create Recurring'}
             </Button>
           </DialogFooter>

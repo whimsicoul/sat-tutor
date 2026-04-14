@@ -90,21 +90,21 @@ export default function AssignmentsClient({
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
         <div>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 700, color: 'var(--navy)', margin: 0 }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, fontWeight: 700, color: '#1F1F1F', margin: 0 }}>
             Assignments
           </h1>
-          <p style={{ color: 'var(--text-secondary)', marginTop: 6, fontSize: 15 }}>
+          <p style={{ color: '#4A4F5A', marginTop: 6, fontSize: 15, fontFamily: "'Syne', sans-serif" }}>
             Pair tutors with their students
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} style={{ background: 'var(--navy)', color: '#fff', gap: 6 }}>
+        <Button onClick={() => setDialogOpen(true)} style={{ background: '#1F1F1F', color: '#F0F2F5', gap: 6, fontFamily: "'Syne', sans-serif" }}>
           <Plus size={16} /> Assign Tutor
         </Button>
       </div>
 
       {/* Tutor cards */}
       {tutors.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 64, color: 'var(--text-muted)', fontSize: 15 }}>
+        <div style={{ textAlign: 'center', padding: 64, color: '#8A9099', fontSize: 15, fontFamily: "'Syne', sans-serif" }}>
           No tutors found. Add tutors in the Users section first.
         </div>
       ) : (
@@ -117,8 +117,8 @@ export default function AssignmentsClient({
                 style={{
                   background: '#fff',
                   borderRadius: 12,
-                  border: '1px solid var(--cream-dark)',
-                  boxShadow: '0 1px 4px rgba(18,25,44,0.06)',
+                  border: '1px solid #D5D9E1',
+                  boxShadow: '0 1px 4px rgba(31,31,31,0.06)',
                   overflow: 'hidden',
                 }}
               >
@@ -126,8 +126,8 @@ export default function AssignmentsClient({
                 <div
                   style={{
                     padding: '18px 20px',
-                    borderBottom: '1px solid var(--cream-dark)',
-                    background: 'var(--cream)',
+                    borderBottom: '1px solid #D5D9E1',
+                    background: '#F0F2F5',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
@@ -136,7 +136,7 @@ export default function AssignmentsClient({
                   <div
                     style={{
                       width: 34, height: 34, borderRadius: '50%',
-                      background: 'var(--navy)', color: 'var(--gold)',
+                      background: '#1F1F1F', color: '#8BB5AE',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 14, fontWeight: 700,
                     }}
@@ -144,8 +144,8 @@ export default function AssignmentsClient({
                     {tutor.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--navy)' }}>{tutor.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    <div style={{ fontWeight: 600, fontSize: 15, color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>{tutor.name}</div>
+                    <div style={{ fontSize: 12, color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
                       {tutorAssignments.length} student{tutorAssignments.length !== 1 ? 's' : ''}
                     </div>
                   </div>
@@ -154,7 +154,7 @@ export default function AssignmentsClient({
                 {/* Students */}
                 <div style={{ padding: tutorAssignments.length === 0 ? '24px 20px' : '8px 0' }}>
                   {tutorAssignments.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                    <div style={{ textAlign: 'center', color: '#8A9099', fontSize: 13, fontFamily: "'Syne', sans-serif" }}>
                       No students assigned yet
                     </div>
                   ) : (
@@ -164,12 +164,12 @@ export default function AssignmentsClient({
                         style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                           padding: '10px 20px',
-                          borderBottom: i < tutorAssignments.length - 1 ? '1px solid var(--cream-mid)' : 'none',
+                          borderBottom: i < tutorAssignments.length - 1 ? '1px solid #E4E7EC' : 'none',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <User size={14} style={{ color: 'var(--text-muted)' }} />
-                          <span style={{ fontSize: 14, color: 'var(--navy)' }}>{a.student_name}</span>
+                          <User size={14} style={{ color: '#8A9099' }} />
+                          <span style={{ fontSize: 14, color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>{a.student_name}</span>
                         </div>
                         <button
                           onClick={() => handleRemove(a.id, tutor.name, a.student_name)}
@@ -195,7 +195,7 @@ export default function AssignmentsClient({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Playfair Display', serif" }}>Assign Tutor to Student</DialogTitle>
+            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif" }}>Assign Tutor to Student</DialogTitle>
           </DialogHeader>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
             <div>
@@ -231,7 +231,7 @@ export default function AssignmentsClient({
           </div>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleAssign} disabled={saving} style={{ background: 'var(--navy)', color: '#fff' }}>
+            <Button onClick={handleAssign} disabled={saving} style={{ background: '#1F1F1F', color: '#F0F2F5', fontFamily: "'Syne', sans-serif" }}>
               {saving ? 'Assigning…' : 'Assign'}
             </Button>
           </DialogFooter>

@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import sql from '@/lib/db';
 import Link from 'next/link';
-import { Users, CalendarDays, Clock, BookOpen, ArrowRight } from 'lucide-react';
+import { Users, CalendarDays, Clock, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default async function AdminDashboardPage() {
@@ -32,10 +32,10 @@ export default async function AdminDashboardPage() {
     ]);
 
   const stats = [
-    { label: 'Active Tutors', value: tutorCount[0].count, icon: Users, color: '#C9A84C', href: '/admin/users?role=tutor' },
-    { label: 'Active Students', value: studentCount[0].count, icon: Users, color: '#3B82F6', href: '/admin/users?role=student' },
-    { label: 'Sessions This Week', value: upcomingThisWeek[0].count, icon: CalendarDays, color: '#10B981', href: '/admin/schedule' },
-    { label: 'Pending Approvals', value: pendingCount[0].count, icon: Clock, color: '#F59E0B', href: '/admin/schedule' },
+    { label: 'Active Tutors', value: tutorCount[0].count, icon: Users, color: '#8BB5AE', href: '/admin/users?role=tutor' },
+    { label: 'Active Students', value: studentCount[0].count, icon: Users, color: '#E0A6AF', href: '/admin/users?role=student' },
+    { label: 'Sessions This Week', value: upcomingThisWeek[0].count, icon: CalendarDays, color: '#8BB5AE', href: '/admin/schedule' },
+    { label: 'Pending Approvals', value: pendingCount[0].count, icon: Clock, color: '#E0A6AF', href: '/admin/schedule' },
   ];
 
   const quickActions = [
@@ -46,22 +46,22 @@ export default async function AdminDashboardPage() {
   ];
 
   return (
-    <div style={{ padding: '40px 48px', maxWidth: 1100 }}>
+    <div style={{ padding: '40px 48px', maxWidth: 1100, fontFamily: "'Syne', sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom: 36 }}>
         <h1
           style={{
-            fontFamily: "'Playfair Display', serif",
+            fontFamily: "'Cormorant Garamond', serif",
             fontSize: 32,
             fontWeight: 700,
-            color: 'var(--navy)',
+            color: '#1F1F1F',
             margin: 0,
             lineHeight: 1.2,
           }}
         >
           Dashboard
         </h1>
-        <p style={{ color: 'var(--text-secondary)', marginTop: 6, fontSize: 15 }}>
+        <p style={{ color: '#4A4F5A', marginTop: 6, fontSize: 15, fontFamily: "'Syne', sans-serif" }}>
           {format(new Date(), "EEEE, MMMM d, yyyy")}
         </p>
       </div>
@@ -75,19 +75,19 @@ export default async function AdminDashboardPage() {
                 background: '#fff',
                 borderRadius: 12,
                 padding: '24px 20px',
-                border: '1px solid var(--cream-dark)',
-                boxShadow: '0 1px 4px rgba(18,25,44,0.06)',
+                border: '1px solid #D5D9E1',
+                boxShadow: '0 1px 4px rgba(31,31,31,0.06)',
                 transition: 'box-shadow 0.15s, transform 0.15s',
                 cursor: 'pointer',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
-                <div style={{ background: color + '18', borderRadius: 8, padding: 8 }}>
+                <span style={{ fontSize: 13, color: '#4A4F5A', fontWeight: 500, fontFamily: "'Syne', sans-serif" }}>{label}</span>
+                <div style={{ background: color + '22', borderRadius: 8, padding: 8 }}>
                   <Icon size={16} style={{ color }} />
                 </div>
               </div>
-              <div style={{ fontSize: 34, fontWeight: 700, color: 'var(--navy)', fontFamily: "'Playfair Display', serif" }}>
+              <div style={{ fontSize: 34, fontWeight: 700, color: '#1F1F1F', fontFamily: "'Cormorant Garamond', serif" }}>
                 {String(value)}
               </div>
             </div>
@@ -102,8 +102,8 @@ export default async function AdminDashboardPage() {
           style={{
             background: '#fff',
             borderRadius: 12,
-            border: '1px solid var(--cream-dark)',
-            boxShadow: '0 1px 4px rgba(18,25,44,0.06)',
+            border: '1px solid #D5D9E1',
+            boxShadow: '0 1px 4px rgba(31,31,31,0.06)',
             overflow: 'hidden',
           }}
         >
@@ -113,15 +113,15 @@ export default async function AdminDashboardPage() {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '20px 24px',
-              borderBottom: '1px solid var(--cream-dark)',
+              borderBottom: '1px solid #D5D9E1',
             }}
           >
             <h2
               style={{
-                fontFamily: "'Playfair Display', serif",
+                fontFamily: "'Cormorant Garamond', serif",
                 fontSize: 18,
                 fontWeight: 600,
-                color: 'var(--navy)',
+                color: '#1F1F1F',
                 margin: 0,
               }}
             >
@@ -129,22 +129,22 @@ export default async function AdminDashboardPage() {
             </h2>
             <Link
               href="/admin/schedule"
-              style={{ fontSize: 13, color: 'var(--gold)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+              style={{ fontSize: 13, color: '#8BB5AE', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontFamily: "'Syne', sans-serif" }}
             >
               View all <ArrowRight size={13} />
             </Link>
           </div>
 
           {upcomingFive.length === 0 ? (
-            <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
+            <div style={{ padding: 32, textAlign: 'center', color: '#8A9099', fontSize: 14, fontFamily: "'Syne', sans-serif" }}>
               No upcoming sessions
             </div>
           ) : (
             <div>
               {upcomingFive.map((s: Record<string, unknown>, i: number) => {
                 const statusColor =
-                  s.status === 'approved' ? '#10B981' :
-                  s.status === 'denied'   ? '#EF4444' : '#F59E0B';
+                  s.status === 'approved' ? '#8BB5AE' :
+                  s.status === 'denied'   ? '#EF4444' : '#E0A6AF';
                 const isLast = i === upcomingFive.length - 1;
                 return (
                   <div
@@ -153,15 +153,15 @@ export default async function AdminDashboardPage() {
                       display: 'flex',
                       alignItems: 'center',
                       padding: '14px 24px',
-                      borderBottom: isLast ? 'none' : '1px solid var(--cream-mid)',
+                      borderBottom: isLast ? 'none' : '1px solid #E4E7EC',
                       gap: 16,
                     }}
                   >
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--navy)' }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>
                         {s.tutor_name as string} → {s.student_name as string}
                       </div>
-                      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
+                      <div style={{ fontSize: 13, color: '#4A4F5A', marginTop: 2, fontFamily: "'Syne', sans-serif" }}>
                         {format(new Date(s.proposed_time as string), "EEE MMM d, h:mm a")}
                       </div>
                     </div>
@@ -172,9 +172,10 @@ export default async function AdminDashboardPage() {
                         textTransform: 'uppercase',
                         letterSpacing: '0.06em',
                         color: statusColor,
-                        background: statusColor + '18',
+                        background: statusColor + '22',
                         padding: '3px 8px',
                         borderRadius: 20,
+                        fontFamily: "'Syne', sans-serif",
                       }}
                     >
                       {s.status as string}
@@ -191,18 +192,18 @@ export default async function AdminDashboardPage() {
           style={{
             background: '#fff',
             borderRadius: 12,
-            border: '1px solid var(--cream-dark)',
-            boxShadow: '0 1px 4px rgba(18,25,44,0.06)',
+            border: '1px solid #D5D9E1',
+            boxShadow: '0 1px 4px rgba(31,31,31,0.06)',
             overflow: 'hidden',
           }}
         >
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--cream-dark)' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #D5D9E1' }}>
             <h2
               style={{
-                fontFamily: "'Playfair Display', serif",
+                fontFamily: "'Cormorant Garamond', serif",
                 fontSize: 18,
                 fontWeight: 600,
-                color: 'var(--navy)',
+                color: '#1F1F1F',
                 margin: 0,
               }}
             >
@@ -226,10 +227,10 @@ export default async function AdminDashboardPage() {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--navy)' }}>{label}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{description}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>{label}</div>
+                  <div style={{ fontSize: 12, color: '#8A9099', marginTop: 2, fontFamily: "'Syne', sans-serif" }}>{description}</div>
                 </div>
-                <ArrowRight size={15} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+                <ArrowRight size={15} style={{ color: '#8BB5AE', flexShrink: 0 }} />
               </Link>
             ))}
           </div>

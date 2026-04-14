@@ -57,16 +57,16 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <div className="h-px w-6" style={{ background: '#C9A84C' }} />
+          <div className="h-px w-6" style={{ background: '#8BB5AE' }} />
           <span
             className="text-xs tracking-widest uppercase font-medium"
-            style={{ color: '#C9A84C', fontFamily: "'DM Sans', sans-serif" }}
+            style={{ color: '#8BB5AE', fontFamily: "'Syne', sans-serif" }}
           >
             Student Portal
           </span>
         </div>
         <h1 className="portal-section-title">Schedule</h1>
-        <p className="text-sm mt-1" style={{ color: '#4A5568', fontFamily: "'DM Sans', sans-serif" }}>
+        <p className="text-sm mt-1" style={{ color: '#4A4F5A', fontFamily: "'Syne', sans-serif" }}>
           Review and respond to proposed tutoring sessions.
         </p>
       </div>
@@ -75,14 +75,14 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
         <div className="portal-card flex flex-col items-center justify-center py-20 text-center">
           <div
             className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
-            style={{ background: '#F8F6F1', border: '1px solid #E0D8CB' }}
+            style={{ background: '#F0F2F5', border: '1px solid #D5D9E1' }}
           >
-            <Calendar className="h-6 w-6" style={{ color: '#C9A84C' }} />
+            <Calendar className="h-6 w-6" style={{ color: '#8BB5AE' }} />
           </div>
-          <p className="text-sm font-medium" style={{ color: '#12192C', fontFamily: "'DM Sans', sans-serif" }}>
+          <p className="text-sm font-medium" style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}>
             No sessions scheduled yet
           </p>
-          <p className="text-xs mt-1" style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}>
+          <p className="text-xs mt-1" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
             Your tutor will propose sessions here.
           </p>
         </div>
@@ -93,7 +93,7 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
             <div className="space-y-3">
               <h2
                 className="text-xs font-semibold tracking-widest uppercase"
-                style={{ color: '#C9A84C', fontFamily: "'DM Sans', sans-serif" }}
+                style={{ color: '#8BB5AE', fontFamily: "'Syne', sans-serif" }}
               >
                 Awaiting Your Response ({pending.length})
               </h2>
@@ -103,23 +103,23 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
                   <div
                     key={s.id}
                     className="portal-card p-5"
-                    style={{ borderLeft: '3px solid #C9A84C' }}
+                    style={{ borderLeft: '3px solid #8BB5AE' }}
                   >
                     <div className="flex items-start justify-between gap-4 mb-4">
                       <div>
                         <p
                           className="text-sm font-semibold"
-                          style={{ color: '#12192C', fontFamily: "'DM Sans', sans-serif" }}
+                          style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}
                         >
                           {format(dt, 'EEEE, MMMM d, yyyy')}
                         </p>
-                        <p className="text-xs mt-0.5" style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}>
+                        <p className="text-xs mt-0.5" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
                           {format(dt, 'h:mm a')} · with {s.tutor_name}
                         </p>
                       </div>
                       <span
                         className="text-xs font-medium px-2.5 py-1 rounded-full status-pending"
-                        style={{ fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}
+                        style={{ fontFamily: "'Syne', sans-serif", whiteSpace: 'nowrap' }}
                       >
                         Pending
                       </span>
@@ -129,11 +129,11 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
                         onClick={() => updateStatus(s.id, 'approved')}
                         className="flex items-center gap-1.5 px-4 py-2 rounded text-sm font-medium transition-all"
                         style={{
-                          background: '#065F46',
-                          color: '#D1FAE5',
-                          border: 'none',
+                          background: 'rgba(139,181,174,0.15)',
+                          color: '#2A6B62',
+                          border: '1px solid #8BB5AE',
                           cursor: 'pointer',
-                          fontFamily: "'DM Sans', sans-serif",
+                          fontFamily: "'Syne', sans-serif",
                         }}
                       >
                         <CheckCircle className="h-4 w-4" />
@@ -144,10 +144,10 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
                         className="flex items-center gap-1.5 px-4 py-2 rounded text-sm font-medium transition-all"
                         style={{
                           background: 'transparent',
-                          color: '#991B1B',
-                          border: '1px solid #FECACA',
+                          color: '#9B4C5A',
+                          border: '1px solid #E0A6AF',
                           cursor: 'pointer',
-                          fontFamily: "'DM Sans', sans-serif",
+                          fontFamily: "'Syne', sans-serif",
                         }}
                       >
                         <XCircle className="h-4 w-4" />
@@ -165,7 +165,7 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
             <div className="space-y-3">
               <h2
                 className="text-xs font-semibold tracking-widest uppercase"
-                style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}
+                style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}
               >
                 All Sessions
               </h2>
@@ -185,18 +185,18 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
                       <div>
                         <p
                           className="text-sm font-semibold"
-                          style={{ color: '#12192C', fontFamily: "'DM Sans', sans-serif" }}
+                          style={{ color: '#1F1F1F', fontFamily: "'Syne', sans-serif" }}
                         >
                           {format(dt, 'EEEE, MMMM d, yyyy')}
                         </p>
-                        <p className="text-xs mt-0.5" style={{ color: '#8A95A3', fontFamily: "'DM Sans', sans-serif" }}>
+                        <p className="text-xs mt-0.5" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
                           {format(dt, 'h:mm a')} · with {s.tutor_name}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
                           className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${cfg.className}`}
-                          style={{ fontFamily: "'DM Sans', sans-serif" }}
+                          style={{ fontFamily: "'Syne', sans-serif" }}
                         >
                           <Icon className="h-3 w-3" />
                           {cfg.label}
@@ -207,11 +207,11 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
                               onClick={() => downloadICS(s.id)}
                               className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all"
                               style={{
-                                background: '#F8F6F1',
-                                color: '#12192C',
-                                border: '1px solid #E0D8CB',
+                                background: '#F0F2F5',
+                                color: '#1F1F1F',
+                                border: '1px solid #D5D9E1',
                                 cursor: 'pointer',
-                                fontFamily: "'DM Sans', sans-serif",
+                                fontFamily: "'Syne', sans-serif",
                               }}
                             >
                               <Download className="h-3.5 w-3.5" />
@@ -223,11 +223,11 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
                               rel="noopener noreferrer"
                               className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all"
                               style={{
-                                background: '#F8F6F1',
-                                color: '#12192C',
-                                border: '1px solid #E0D8CB',
+                                background: '#F0F2F5',
+                                color: '#1F1F1F',
+                                border: '1px solid #D5D9E1',
                                 textDecoration: 'none',
-                                fontFamily: "'DM Sans', sans-serif",
+                                fontFamily: "'Syne', sans-serif",
                               }}
                             >
                               <ExternalLink className="h-3.5 w-3.5" />

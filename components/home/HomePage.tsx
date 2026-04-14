@@ -13,46 +13,46 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
     <div
       className="min-h-screen"
       style={{
-        fontFamily: "'Georgia', 'Times New Roman', serif",
-        background: '#F8F7F4',
-        color: '#1A1A2E',
+        fontFamily: "'Syne', system-ui, sans-serif",
+        background: '#F0F2F5',
+        color: '#1F1F1F',
       }}
     >
       {/* Navbar */}
       <header
         className="sticky top-0 z-50 border-b"
         style={{
-          background: 'rgba(248,247,244,0.95)',
+          background: 'rgba(240,242,245,0.95)',
           backdropFilter: 'blur(8px)',
-          borderColor: '#D4C5A9',
+          borderColor: '#D5D9E1',
         }}
       >
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div
               className="w-8 h-8 rounded flex items-center justify-center text-white text-sm font-bold"
-              style={{ background: '#1A1A2E' }}
+              style={{ background: '#1F1F1F' }}
             >
               DC
             </div>
             <span
               className="text-lg font-semibold tracking-tight"
-              style={{ fontFamily: "'Georgia', serif", color: '#1A1A2E' }}
+              style={{ fontFamily: "'Syne', sans-serif", color: '#1F1F1F' }}
             >
               DC SAT Tutor
             </span>
           </div>
           <div className="flex items-center gap-6">
-            <nav className="hidden md:flex items-center gap-6 text-sm" style={{ color: '#5C5C7A' }}>
-              <a href="#about" className="hover:text-[#1A1A2E] transition-colors">About</a>
-              <a href="#testimonials" className="hover:text-[#1A1A2E] transition-colors">Results</a>
+            <nav className="hidden md:flex items-center gap-6 text-sm" style={{ color: '#6A7280' }}>
+              <a href="#about" className="hover:text-[#1F1F1F] transition-colors">About</a>
+              <a href="#testimonials" className="hover:text-[#1F1F1F] transition-colors">Results</a>
             </nav>
             <Link href="/login">
               <button
                 className="text-sm font-medium px-4 py-2 rounded transition-all"
                 style={{
-                  background: '#1A1A2E',
-                  color: '#F8F7F4',
+                  background: '#1F1F1F',
+                  color: '#F0F2F5',
                   letterSpacing: '0.02em',
                 }}
               >
@@ -64,23 +64,27 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden" style={{ background: '#1A1A2E' }}>
-        {/* Decorative grid overlay */}
+      <section className="relative overflow-hidden" style={{ background: '#1F1F1F' }}>
+        {/* Teal mesh overlay */}
         <div
-          className="absolute inset-0 opacity-5"
+          className="absolute inset-0 opacity-10"
           style={{
-            backgroundImage: `
-              linear-gradient(#C9A84C 1px, transparent 1px),
-              linear-gradient(90deg, #C9A84C 1px, transparent 1px)
-            `,
-            backgroundSize: '60px 60px',
+            backgroundImage: `radial-gradient(ellipse 70% 60% at 80% 50%, #8BB5AE 0%, transparent 70%)`,
           }}
         />
-        {/* Diagonal accent */}
+        {/* Dusty rose corner accent */}
         <div
-          className="absolute right-0 top-0 w-1/2 h-full opacity-10"
+          className="absolute right-0 bottom-0 w-72 h-72 opacity-15"
           style={{
-            background: 'linear-gradient(135deg, transparent 40%, #C9A84C 100%)',
+            background: 'radial-gradient(ellipse at bottom right, #E0A6AF 0%, transparent 70%)',
+          }}
+        />
+        {/* Subtle dot grid */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, #8BB5AE 1px, transparent 0)`,
+            backgroundSize: '32px 32px',
           }}
         />
 
@@ -88,10 +92,10 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
           <div className="max-w-3xl">
             {/* Eyebrow label */}
             <div className="flex items-center gap-3 mb-8">
-              <div className="h-px w-12" style={{ background: '#C9A84C' }} />
+              <div className="h-px w-12" style={{ background: '#8BB5AE' }} />
               <span
                 className="text-xs tracking-widest uppercase font-medium"
-                style={{ color: '#C9A84C' }}
+                style={{ color: '#8BB5AE', fontFamily: "'Syne', sans-serif" }}
               >
                 Washington D.C. · SAT Preparation
               </span>
@@ -100,19 +104,19 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
             <h1
               className="text-5xl lg:text-7xl font-bold leading-[1.05] mb-8"
               style={{
-                color: '#F8F7F4',
-                fontFamily: "'Georgia', serif",
+                color: '#F0F2F5',
+                fontFamily: "'Cormorant Garamond', Georgia, serif",
                 letterSpacing: '-0.02em',
               }}
             >
               Score Higher.
               <br />
-              <span style={{ color: '#C9A84C' }}>Go Further.</span>
+              <span style={{ color: '#8BB5AE' }}>Go Further.</span>
             </h1>
 
             <p
               className="text-lg lg:text-xl leading-relaxed mb-10 max-w-xl"
-              style={{ color: '#A8A8C0', fontFamily: "'Georgia', serif" }}
+              style={{ color: 'rgba(240,242,245,0.6)', fontFamily: "'Syne', sans-serif" }}
             >
               Personalized SAT tutoring that transforms students into confident test-takers.
               Expert guidance, proven strategies, and real results.
@@ -123,8 +127,8 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
                 <button
                   className="inline-flex items-center gap-2 px-8 py-4 rounded text-base font-semibold transition-all hover:gap-4"
                   style={{
-                    background: '#C9A84C',
-                    color: '#1A1A2E',
+                    background: '#8BB5AE',
+                    color: '#1F1F1F',
                     letterSpacing: '0.01em',
                   }}
                 >
@@ -136,8 +140,8 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
                 href="#about"
                 className="inline-flex items-center gap-2 px-8 py-4 rounded text-base font-medium transition-colors"
                 style={{
-                  color: '#A8A8C0',
-                  border: '1px solid rgba(168,168,192,0.3)',
+                  color: 'rgba(240,242,245,0.6)',
+                  border: '1px solid rgba(240,242,245,0.15)',
                 }}
               >
                 Learn More
@@ -148,7 +152,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
           {/* Stats Row */}
           <div
             className="mt-20 pt-12 grid grid-cols-2 lg:grid-cols-4 gap-8"
-            style={{ borderTop: '1px solid rgba(201,168,76,0.2)' }}
+            style={{ borderTop: '1px solid rgba(139,181,174,0.2)' }}
           >
             {[
               { value: '200+', label: 'Average Score Increase' },
@@ -159,11 +163,11 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
               <div key={stat.label}>
                 <div
                   className="text-3xl lg:text-4xl font-bold mb-1"
-                  style={{ color: '#C9A84C', fontFamily: "'Georgia', serif" }}
+                  style={{ color: '#8BB5AE', fontFamily: "'Cormorant Garamond', Georgia, serif" }}
                 >
                   {stat.value}
                 </div>
-                <div className="text-xs tracking-wide uppercase" style={{ color: '#5C5C7A' }}>
+                <div className="text-xs tracking-wide uppercase" style={{ color: 'rgba(240,242,245,0.35)', fontFamily: "'Syne', sans-serif" }}>
                   {stat.label}
                 </div>
               </div>
@@ -173,18 +177,18 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
       </section>
 
       {/* About */}
-      <section id="about" className="py-24 lg:py-32" style={{ background: '#F8F7F4' }}>
+      <section id="about" className="py-24 lg:py-32" style={{ background: '#F0F2F5' }}>
         <div className="max-w-6xl mx-auto px-6">
           {/* Section header */}
           <div className="flex items-center gap-4 mb-16">
-            <div className="h-px flex-1" style={{ background: '#D4C5A9' }} />
+            <div className="h-px flex-1" style={{ background: '#D5D9E1' }} />
             <span
               className="text-xs tracking-widest uppercase font-medium px-4"
-              style={{ color: '#9B8B6E' }}
+              style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}
             >
               About
             </span>
-            <div className="h-px flex-1" style={{ background: '#D4C5A9' }} />
+            <div className="h-px flex-1" style={{ background: '#D5D9E1' }} />
           </div>
 
           <div className="grid lg:grid-cols-2 gap-16 items-start">
@@ -192,8 +196,8 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
               <h2
                 className="text-4xl lg:text-5xl font-bold leading-tight mb-6"
                 style={{
-                  fontFamily: "'Georgia', serif",
-                  color: '#1A1A2E',
+                  fontFamily: "'Cormorant Garamond', Georgia, serif",
+                  color: '#1F1F1F',
                   letterSpacing: '-0.02em',
                 }}
               >
@@ -201,7 +205,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
               </h2>
               <p
                 className="text-base leading-relaxed mb-6"
-                style={{ color: '#5C5C7A', fontFamily: "'Georgia', serif" }}
+                style={{ color: '#4A4F5A', fontFamily: "'Syne', sans-serif" }}
               >
                 At DC SAT Tutor, we believe every student deserves a customized path to their best
                 score. We don&apos;t believe in one-size-fits-all prep — we build strategies around
@@ -209,7 +213,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
               </p>
               <p
                 className="text-base leading-relaxed mb-10"
-                style={{ color: '#5C5C7A', fontFamily: "'Georgia', serif" }}
+                style={{ color: '#4A4F5A', fontFamily: "'Syne', sans-serif" }}
               >
                 From targeted problem sets to flexible scheduling, every tool in our program is
                 designed to build genuine understanding — not just test-taking tricks. Students
@@ -220,8 +224,8 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
                 <button
                   className="inline-flex items-center gap-2 px-6 py-3 rounded text-sm font-semibold transition-all"
                   style={{
-                    background: '#1A1A2E',
-                    color: '#F8F7F4',
+                    background: '#1F1F1F',
+                    color: '#F0F2F5',
                     letterSpacing: '0.02em',
                   }}
                 >
@@ -237,21 +241,25 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
                   icon: <BookOpen className="h-5 w-5" />,
                   title: 'Custom Problem Sets',
                   desc: 'Targeted practice materials assigned to each student based on their diagnostic performance.',
+                  accent: '#8BB5AE',
                 },
                 {
                   icon: <TrendingUp className="h-5 w-5" />,
                   title: 'Proven Results',
                   desc: 'Students see measurable score improvements, tracked session by session.',
+                  accent: '#E0A6AF',
                 },
                 {
                   icon: <Award className="h-5 w-5" />,
                   title: 'Expert Instruction',
                   desc: 'Deep knowledge of the current SAT format and scoring, with strategies that work.',
+                  accent: '#E0A6AF',
                 },
                 {
                   icon: <Users className="h-5 w-5" />,
                   title: 'Flexible Scheduling',
                   desc: 'Propose, confirm, and manage sessions through the student and tutor portals.',
+                  accent: '#8BB5AE',
                 },
               ].map((feature) => (
                 <div
@@ -259,23 +267,23 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
                   className="p-5 rounded-lg"
                   style={{
                     background: '#FFFFFF',
-                    border: '1px solid #E8E0D4',
-                    boxShadow: '0 2px 8px rgba(26,26,46,0.04)',
+                    border: '1px solid #E4E7EC',
+                    boxShadow: '0 2px 8px rgba(31,31,31,0.04)',
                   }}
                 >
                   <div
-                    className="w-9 h-9 rounded-md flex items-center justify-center mb-3 text-white"
-                    style={{ background: '#1A1A2E' }}
+                    className="w-9 h-9 rounded-md flex items-center justify-center mb-3"
+                    style={{ background: feature.accent + '22', color: feature.accent }}
                   >
                     {feature.icon}
                   </div>
                   <h3
                     className="text-sm font-semibold mb-1.5"
-                    style={{ fontFamily: "'Georgia', serif", color: '#1A1A2E' }}
+                    style={{ fontFamily: "'Syne', sans-serif", color: '#1F1F1F' }}
                   >
                     {feature.title}
                   </h3>
-                  <p className="text-xs leading-relaxed" style={{ color: '#8A7A6A' }}>
+                  <p className="text-xs leading-relaxed" style={{ color: '#8A9099' }}>
                     {feature.desc}
                   </p>
                 </div>
@@ -289,26 +297,26 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
       <section
         id="testimonials"
         className="py-24 lg:py-32"
-        style={{ background: '#F0EDE6' }}
+        style={{ background: '#E8EBF0' }}
       >
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex items-center gap-4 mb-4">
-            <div className="h-px flex-1" style={{ background: '#D4C5A9' }} />
+            <div className="h-px flex-1" style={{ background: '#D5D9E1' }} />
             <span
               className="text-xs tracking-widest uppercase font-medium px-4"
-              style={{ color: '#9B8B6E' }}
+              style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}
             >
               Results
             </span>
-            <div className="h-px flex-1" style={{ background: '#D4C5A9' }} />
+            <div className="h-px flex-1" style={{ background: '#D5D9E1' }} />
           </div>
 
           <div className="text-center mb-16">
             <h2
               className="text-4xl lg:text-5xl font-bold leading-tight"
               style={{
-                fontFamily: "'Georgia', serif",
-                color: '#1A1A2E',
+                fontFamily: "'Cormorant Garamond', Georgia, serif",
+                color: '#1F1F1F',
                 letterSpacing: '-0.02em',
               }}
             >
@@ -319,9 +327,9 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
           {testimonials.length === 0 ? (
             <div
               className="text-center py-16 rounded-xl"
-              style={{ background: '#FFFFFF', border: '1px solid #E8E0D4', color: '#9B8B6E' }}
+              style={{ background: '#FFFFFF', border: '1px solid #E4E7EC', color: '#8A9099' }}
             >
-              <p className="text-sm" style={{ fontFamily: "'Georgia', serif" }}>
+              <p className="text-sm" style={{ fontFamily: "'Syne', sans-serif" }}>
                 Testimonials coming soon. We&apos;re just getting started!
               </p>
             </div>
@@ -332,9 +340,9 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
                   key={t.id}
                   className="p-7 rounded-xl flex flex-col"
                   style={{
-                    background: i % 3 === 1 ? '#1A1A2E' : '#FFFFFF',
-                    border: i % 3 === 1 ? 'none' : '1px solid #E8E0D4',
-                    boxShadow: '0 4px 20px rgba(26,26,46,0.06)',
+                    background: i % 3 === 1 ? '#1F1F1F' : '#FFFFFF',
+                    border: i % 3 === 1 ? 'none' : '1px solid #E4E7EC',
+                    boxShadow: '0 4px 20px rgba(31,31,31,0.06)',
                   }}
                 >
                   {/* Stars */}
@@ -343,8 +351,8 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
                       <Star
                         key={idx}
                         className="h-4 w-4"
-                        fill={idx < t.rating ? '#C9A84C' : 'transparent'}
-                        stroke={idx < t.rating ? '#C9A84C' : '#D4C5A9'}
+                        fill={idx < t.rating ? '#8BB5AE' : 'transparent'}
+                        stroke={idx < t.rating ? '#8BB5AE' : '#D5D9E1'}
                       />
                     ))}
                   </div>
@@ -352,9 +360,10 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
                   <blockquote
                     className="flex-1 text-base leading-relaxed mb-6"
                     style={{
-                      fontFamily: "'Georgia', serif",
-                      color: i % 3 === 1 ? '#A8A8C0' : '#5C5C7A',
+                      fontFamily: "'Cormorant Garamond', Georgia, serif",
+                      color: i % 3 === 1 ? 'rgba(240,242,245,0.7)' : '#4A4F5A',
                       fontStyle: 'italic',
+                      fontSize: '1.05rem',
                     }}
                   >
                     &ldquo;{t.content}&rdquo;
@@ -362,15 +371,15 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
 
                   <div
                     className="h-px mb-5"
-                    style={{ background: i % 3 === 1 ? 'rgba(201,168,76,0.3)' : '#E8E0D4' }}
+                    style={{ background: i % 3 === 1 ? 'rgba(139,181,174,0.25)' : '#E4E7EC' }}
                   />
 
                   <div className="flex items-center gap-3">
                     <div
                       className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
                       style={{
-                        background: '#C9A84C',
-                        color: '#1A1A2E',
+                        background: i % 3 === 1 ? 'rgba(139,181,174,0.2)' : '#8BB5AE22',
+                        color: '#8BB5AE',
                       }}
                     >
                       {t.author_name.charAt(0).toUpperCase()}
@@ -379,15 +388,15 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
                       <p
                         className="text-sm font-semibold"
                         style={{
-                          fontFamily: "'Georgia', serif",
-                          color: i % 3 === 1 ? '#F8F7F4' : '#1A1A2E',
+                          fontFamily: "'Syne', sans-serif",
+                          color: i % 3 === 1 ? '#F0F2F5' : '#1F1F1F',
                         }}
                       >
                         {t.author_name}
                       </p>
                       <p
                         className="text-xs"
-                        style={{ color: i % 3 === 1 ? '#5C5C7A' : '#9B8B6E' }}
+                        style={{ color: i % 3 === 1 ? 'rgba(240,242,245,0.4)' : '#8A9099' }}
                       >
                         SAT Student
                       </p>
@@ -403,31 +412,30 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
       {/* CTA Banner */}
       <section
         className="py-20 relative overflow-hidden"
-        style={{ background: '#1A1A2E' }}
+        style={{ background: '#1F1F1F' }}
       >
         <div
-          className="absolute inset-0 opacity-5"
+          className="absolute inset-0 opacity-15"
           style={{
-            backgroundImage: `linear-gradient(#C9A84C 1px, transparent 1px), linear-gradient(90deg, #C9A84C 1px, transparent 1px)`,
-            backgroundSize: '60px 60px',
+            background: 'radial-gradient(ellipse 60% 80% at 50% 50%, #8BB5AE 0%, transparent 70%)',
           }}
         />
         <div className="relative max-w-2xl mx-auto px-6 text-center">
           <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="h-px w-12" style={{ background: '#C9A84C' }} />
+            <div className="h-px w-12" style={{ background: '#8BB5AE' }} />
             <span
               className="text-xs tracking-widest uppercase"
-              style={{ color: '#C9A84C' }}
+              style={{ color: '#8BB5AE', fontFamily: "'Syne', sans-serif" }}
             >
               Get Started Today
             </span>
-            <div className="h-px w-12" style={{ background: '#C9A84C' }} />
+            <div className="h-px w-12" style={{ background: '#8BB5AE' }} />
           </div>
           <h2
             className="text-3xl lg:text-4xl font-bold mb-4"
             style={{
-              fontFamily: "'Georgia', serif",
-              color: '#F8F7F4',
+              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              color: '#F0F2F5',
               letterSpacing: '-0.02em',
             }}
           >
@@ -435,14 +443,14 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
           </h2>
           <p
             className="text-base mb-10"
-            style={{ color: '#A8A8C0', fontFamily: "'Georgia', serif" }}
+            style={{ color: 'rgba(240,242,245,0.5)', fontFamily: "'Syne', sans-serif" }}
           >
             Log in to access your problem sets, review your schedule, or manage your students.
           </p>
           <Link href="/login">
             <button
               className="inline-flex items-center gap-2 px-8 py-4 rounded text-base font-semibold transition-all"
-              style={{ background: '#C9A84C', color: '#1A1A2E' }}
+              style={{ background: '#8BB5AE', color: '#1F1F1F' }}
             >
               Sign In to Your Portal
               <ArrowRight className="h-4 w-4" />
@@ -454,21 +462,21 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
       {/* Footer */}
       <footer
         className="py-8 border-t"
-        style={{ background: '#F8F7F4', borderColor: '#D4C5A9' }}
+        style={{ background: '#F0F2F5', borderColor: '#D5D9E1' }}
       >
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div
               className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
-              style={{ background: '#1A1A2E' }}
+              style={{ background: '#1F1F1F' }}
             >
               DC
             </div>
-            <span className="text-sm" style={{ color: '#9B8B6E', fontFamily: "'Georgia', serif" }}>
+            <span className="text-sm" style={{ color: '#8A9099', fontFamily: "'Syne', sans-serif" }}>
               DC SAT Tutor
             </span>
           </div>
-          <p className="text-xs" style={{ color: '#B8A898' }}>
+          <p className="text-xs" style={{ color: '#B0B8C4' }}>
             © {new Date().getFullYear()} DC SAT Tutor. All rights reserved.
           </p>
         </div>
