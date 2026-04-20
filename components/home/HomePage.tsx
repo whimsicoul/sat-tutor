@@ -1,15 +1,15 @@
 import Link from 'next/link';
-import { Star, ArrowRight, BookOpen, TrendingUp, Award, Users } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowRight, BookOpen, TrendingUp, Award, Users } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
 
-interface Testimonial {
+interface Tutor {
   id: string;
-  author_name: string;
-  content: string;
-  rating: number;
+  name: string;
+  email: string;
 }
 
-export default function HomePage({ testimonials }: { testimonials: Testimonial[] }) {
+export default function HomePage({ tutors }: { tutors: Tutor[] }) {
   return (
     <div
       className="min-h-screen"
@@ -36,7 +36,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
           <div className="flex items-center gap-6">
             <nav className="hidden md:flex items-center gap-6 text-sm" style={{ color: 'var(--slate)' }}>
               <a href="#about" className="transition-colors hover:text-[color:var(--rose-dark)]">About</a>
-              <a href="#testimonials" className="transition-colors hover:text-[color:var(--rose-dark)]">Results</a>
+              <a href="#tutors" className="transition-colors hover:text-[color:var(--rose-dark)]">Our Tutors</a>
             </nav>
             <Link
               href="/login"
@@ -228,93 +228,79 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
         </div>
       </section>
 
-      {/* ── Testimonials ── */}
+      {/* ── Tutors ── */}
       <section
-        id="testimonials"
+        id="tutors"
         className="py-24 lg:py-32"
         style={{ background: 'linear-gradient(135deg, #D6EDF8 0%, #F9E5E8 100%)' }}
       >
         <div className="max-w-6xl mx-auto px-6">
-          <div className="section-divider mb-4"><span>Results</span></div>
+          <div className="section-divider mb-4"><span>Our Team</span></div>
 
           <div className="text-center mb-16">
             <h2
               className="text-4xl lg:text-5xl font-bold"
               style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: 'var(--charcoal)', letterSpacing: '-0.025em' }}
             >
-              What students say.
+              Meet our tutors.
             </h2>
           </div>
 
-          {testimonials.length === 0 ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Featured owner card */}
             <div
-              className="text-center py-16 rounded-2xl"
-              style={{ background: 'var(--white)', border: '1px solid var(--fog)' }}
+              className="p-7 rounded-2xl flex flex-col items-center text-center"
+              style={{
+                background: 'linear-gradient(145deg, var(--sky-pale) 0%, var(--rose-pale) 100%)',
+                border: '1px solid rgba(168,203,222,0.35)',
+                boxShadow: '0 4px 24px rgba(26,29,35,0.07)',
+              }}
             >
-              <p className="text-sm" style={{ color: 'var(--mist)' }}>
-                Testimonials coming soon. We&apos;re just getting started!
+              <div className="w-24 h-24 rounded-full overflow-hidden mb-4 ring-2 ring-[color:var(--sky)] ring-offset-2">
+                <Image
+                  src="/thomas-headshot.jpg"
+                  alt="Thomas Coulon"
+                  width={96}
+                  height={96}
+                  className="object-cover w-full h-full"
+                />
+              </div>
+              <p className="text-base font-semibold mb-0.5" style={{ color: 'var(--charcoal)' }}>
+                Thomas Coulon
+              </p>
+              <p className="text-xs mb-4" style={{ color: 'var(--sky-deeper)' }}>Founder &amp; Tutor</p>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--slate)' }}>
+                I run DC SAT Tutors and often fill in for tutoring sessions. I was a math major at Hamilton College and got a perfect score on the ACT!
               </p>
             </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {testimonials.map((t, i) => (
+
+            {tutors.map((tutor, i) => (
+              <div
+                key={tutor.id}
+                className="p-7 rounded-2xl flex flex-col items-center text-center"
+                style={{
+                  background: i % 2 === 0
+                    ? 'linear-gradient(145deg, var(--rose-pale) 0%, var(--sky-pale) 100%)'
+                    : 'var(--white)',
+                  border: i % 2 === 0
+                    ? '1px solid rgba(224,166,175,0.3)'
+                    : '1px solid var(--fog)',
+                  boxShadow: '0 4px 24px rgba(26,29,35,0.05)',
+                }}
+              >
                 <div
-                  key={t.id}
-                  className="p-7 rounded-2xl flex flex-col"
-                  style={{
-                    background: i % 3 === 1
-                      ? 'linear-gradient(145deg, var(--rose-pale) 0%, var(--sky-pale) 100%)'
-                      : 'var(--white)',
-                    border: i % 3 === 1
-                      ? '1px solid rgba(224,166,175,0.3)'
-                      : '1px solid var(--fog)',
-                    boxShadow: '0 4px 24px rgba(26,29,35,0.05)',
-                  }}
+                  className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mb-4"
+                  style={{ background: 'rgba(168,203,222,0.25)', color: 'var(--sky-deeper)' }}
                 >
-                  {/* Stars */}
-                  <div className="flex gap-1 mb-5">
-                    {Array.from({ length: 5 }).map((_, idx) => (
-                      <Star
-                        key={idx}
-                        className="h-4 w-4"
-                        fill={idx < t.rating ? '#E0A6AF' : 'transparent'}
-                        stroke={idx < t.rating ? '#E0A6AF' : '#C4CAD6'}
-                      />
-                    ))}
-                  </div>
-
-                  <blockquote
-                    className="flex-1 text-base leading-relaxed mb-6"
-                    style={{
-                      fontFamily: "'Cormorant Garamond', Georgia, serif",
-                      color: 'var(--ink)',
-                      fontStyle: 'italic',
-                      fontSize: '1.05rem',
-                    }}
-                  >
-                    &ldquo;{t.content}&rdquo;
-                  </blockquote>
-
-                  <div className="h-px mb-5" style={{ background: 'var(--fog)' }} />
-
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                      style={{ background: 'rgba(224,166,175,0.2)', color: 'var(--rose-deeper)' }}
-                    >
-                      {t.author_name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
-                        {t.author_name}
-                      </p>
-                      <p className="text-xs" style={{ color: 'var(--mist)' }}>SAT Student</p>
-                    </div>
-                  </div>
+                  {tutor.name.charAt(0).toUpperCase()}
                 </div>
-              ))}
-            </div>
-          )}
+                <p className="text-base font-semibold mb-1" style={{ color: 'var(--charcoal)' }}>
+                  {tutor.name}
+                </p>
+                <p className="text-xs" style={{ color: 'var(--mist)' }}>SAT Tutor</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
