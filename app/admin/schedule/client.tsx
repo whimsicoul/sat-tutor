@@ -71,7 +71,7 @@ function EventComponent({ event }: { event: CalEvent }) {
             padding: '10px 14px',
             fontSize: 12,
             pointerEvents: 'none',
-            zIndex: 9999,
+            zIndex: 30,
             boxShadow: '0 4px 20px rgba(26,29,35,0.14)',
             whiteSpace: 'nowrap',
             minWidth: 190,

@@ -96,7 +96,7 @@ export default function LoginPage() {
               letterSpacing: '-0.01em',
             }}
           >
-            "Every score starts with a single session."
+            &ldquo;Every score starts with a single session.&rdquo;
           </blockquote>
           <p className="text-sm" style={{ color: 'var(--slate)' }}>
             Washington D.C. · SAT Preparation

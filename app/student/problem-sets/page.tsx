@@ -52,7 +52,6 @@ export default async function StudentProblemSetsPage() {
             <div
               key={ps.id as string}
               className="portal-card hover-rose-border flex items-center gap-5 p-5 transition-all"
-              style={{ animationDelay: `${idx * 40}ms` }}
             >
               {/* Index badge */}
               <div

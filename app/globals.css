@@ -256,6 +256,37 @@
   }
   .btn-ghost:hover { background: var(--frost); color: var(--charcoal); }
 
+  /* ── Sign-out button (replaces imperative onMouseEnter/Leave handlers) ── */
+  .nav-signout {
+    color: var(--mist);
+    background: transparent;
+    transition: color 0.15s, background 0.15s;
+  }
+  .nav-signout:hover {
+    color: var(--charcoal);
+    background: var(--frost);
+  }
+
+  /* ── Eyebrow label for dark/hero backgrounds ── */
+  .eyebrow-sky-light {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #93C9E8;
+    font-family: 'Syne', sans-serif;
+  }
+  .eyebrow-sky-light::before {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 1px;
+    background: #93C9E8;
+  }
+
   /* ── Hover utility classes (for Server Components that can't use event handlers) ── */
   .hover-lift {
     transition: box-shadow 0.15s, transform 0.15s;

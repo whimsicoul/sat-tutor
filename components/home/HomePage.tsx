@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Star, ArrowRight, BookOpen, TrendingUp, Award, Users } from 'lucide-react';
+import { DCFlagIcon } from '@/components/ui/dc-flag';
 
 interface Testimonial {
   id: string;
@@ -12,7 +13,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
   return (
     <div
       className="min-h-screen"
-      style={{ fontFamily: "'Syne', system-ui, sans-serif", background: 'var(--page-bg)', color: 'var(--charcoal)' }}
+      style={{ background: 'var(--page-bg)', color: 'var(--charcoal)' }}
     >
       {/* ── Navbar ── */}
       <header
@@ -26,20 +27,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
-            <svg
-              width="36"
-              height="24"
-              viewBox="0 0 90 60"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{ borderRadius: 5, flexShrink: 0, boxShadow: '0 1px 6px rgba(0,0,0,0.18)', border: '0.5px solid rgba(0,0,0,0.08)' }}
-            >
-              <rect width="90" height="60" fill="#FFFFFF" />
-              <rect x="0" y="25" width="90" height="10" fill="#C8102E" />
-              <rect x="0" y="42" width="90" height="10" fill="#C8102E" />
-              <polygon fill="#C8102E" points="15,4.5 17.18,10.84 23.89,10.84 18.36,14.82 20.54,21.16 15,17.18 9.46,21.16 11.64,14.82 6.11,10.84 12.82,10.84" />
-              <polygon fill="#C8102E" points="45,4.5 47.18,10.84 53.89,10.84 48.36,14.82 50.54,21.16 45,17.18 39.46,21.16 41.64,14.82 36.11,10.84 42.82,10.84" />
-              <polygon fill="#C8102E" points="75,4.5 77.18,10.84 83.89,10.84 78.36,14.82 80.54,21.16 75,17.18 69.46,21.16 71.64,14.82 66.11,10.84 72.82,10.84" />
-            </svg>
+            <DCFlagIcon width={36} height={24} />
             <span className="text-base font-semibold tracking-tight" style={{ color: 'var(--charcoal)' }}>
               DC SAT Tutor
             </span>
@@ -47,20 +35,14 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
 
           <div className="flex items-center gap-6">
             <nav className="hidden md:flex items-center gap-6 text-sm" style={{ color: 'var(--slate)' }}>
-              <a href="#about" className="transition-colors hover:text-[#C8838E]">About</a>
-              <a href="#testimonials" className="transition-colors hover:text-[#C8838E]">Results</a>
+              <a href="#about" className="transition-colors hover:text-[color:var(--rose-dark)]">About</a>
+              <a href="#testimonials" className="transition-colors hover:text-[color:var(--rose-dark)]">Results</a>
             </nav>
-            <Link href="/login">
-              <button
-                className="text-sm font-semibold px-5 py-2 rounded-lg transition-all"
-                style={{
-                  background: 'var(--rose)',
-                  color: 'var(--charcoal)',
-                  letterSpacing: '0.01em',
-                }}
-              >
-                Sign In
-              </button>
+            <Link
+              href="/login"
+              className="btn-rose text-sm"
+            >
+              Sign In
             </Link>
           </div>
         </div>
@@ -85,18 +67,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
         <div className="relative max-w-6xl mx-auto px-6 py-24 lg:py-36">
           <div className="max-w-3xl">
             {/* Eyebrow */}
-            <div
-              className="mb-8 inline-flex items-center gap-2"
-              style={{
-                fontSize: '0.7rem',
-                fontWeight: 600,
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                fontFamily: "'Syne', sans-serif",
-                color: '#93C9E8',
-              }}
-            >
-              <span style={{ display: 'inline-block', width: 20, height: 1, background: '#93C9E8' }} />
+            <div className="eyebrow-sky-light mb-8">
               Washington D.C. · SAT Preparation
             </div>
 
@@ -122,13 +93,12 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/login">
-                <button
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-base font-semibold transition-all hover:gap-3"
-                  style={{ background: '#7EC8E3', color: '#0F2337', letterSpacing: '0.01em' }}
-                >
-                  Get Started <ArrowRight className="h-4 w-4" />
-                </button>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-base font-semibold transition-all hover:gap-3"
+                style={{ background: '#7EC8E3', color: '#0F2337', letterSpacing: '0.01em' }}
+              >
+                Get Started <ArrowRight className="h-4 w-4" />
               </Link>
               <a
                 href="#about"
@@ -192,13 +162,12 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
                 leave our program not just better prepared for the SAT, but better equipped for
                 college coursework.
               </p>
-              <Link href="/login">
-                <button
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all"
-                  style={{ background: 'var(--sky)', color: 'var(--charcoal)' }}
-                >
-                  Access Your Portal <ArrowRight className="h-4 w-4" />
-                </button>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all"
+                style={{ background: 'var(--sky)', color: 'var(--charcoal)' }}
+              >
+                Access Your Portal <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
 
@@ -371,13 +340,12 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
           <p className="text-base mb-10 max-w-md mx-auto" style={{ color: 'var(--slate)' }}>
             Log in to access your problem sets, review your schedule, or manage your students.
           </p>
-          <Link href="/login">
-            <button
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-base font-semibold transition-all hover:gap-3"
-              style={{ background: 'var(--rose)', color: 'var(--charcoal)' }}
-            >
-              Sign In to Your Portal <ArrowRight className="h-4 w-4" />
-            </button>
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-base font-semibold transition-all hover:gap-3"
+            style={{ background: 'var(--rose)', color: 'var(--charcoal)' }}
+          >
+            Sign In to Your Portal <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>
@@ -386,20 +354,7 @@ export default function HomePage({ testimonials }: { testimonials: Testimonial[]
       <footer className="py-8" style={{ background: 'var(--white)', borderTop: '1px solid var(--fog)' }}>
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <svg
-              width="27"
-              height="18"
-              viewBox="0 0 90 60"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{ borderRadius: 3, flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.15)', border: '0.5px solid rgba(0,0,0,0.08)' }}
-            >
-              <rect width="90" height="60" fill="#FFFFFF" />
-              <rect x="0" y="25" width="90" height="10" fill="#C8102E" />
-              <rect x="0" y="42" width="90" height="10" fill="#C8102E" />
-              <polygon fill="#C8102E" points="15,4.5 17.18,10.84 23.89,10.84 18.36,14.82 20.54,21.16 15,17.18 9.46,21.16 11.64,14.82 6.11,10.84 12.82,10.84" />
-              <polygon fill="#C8102E" points="45,4.5 47.18,10.84 53.89,10.84 48.36,14.82 50.54,21.16 45,17.18 39.46,21.16 41.64,14.82 36.11,10.84 42.82,10.84" />
-              <polygon fill="#C8102E" points="75,4.5 77.18,10.84 83.89,10.84 78.36,14.82 80.54,21.16 75,17.18 69.46,21.16 71.64,14.82 66.11,10.84 72.82,10.84" />
-            </svg>
+            <DCFlagIcon width={27} height={18} />
             <span className="text-sm font-medium" style={{ color: 'var(--slate)' }}>DC SAT Tutor</span>
           </div>
           <p className="text-xs" style={{ color: 'var(--mist)' }}>
