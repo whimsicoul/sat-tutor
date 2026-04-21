@@ -213,6 +213,20 @@ export async function deleteSessionSeries(id: string) {
   await sql`DELETE FROM session_series WHERE id = ${id}`;
 }
 
+export async function adminUpdateSessionStatus(id: string, status: string) {
+  const rows = await sql`
+    UPDATE sessions SET status = ${status} WHERE id = ${id} RETURNING *
+  `;
+  return rows[0] ?? null;
+}
+
+export async function adminBulkUpdateSessionStatus(ids: string[], status: string) {
+  if (ids.length === 0) return [];
+  return sql`
+    UPDATE sessions SET status = ${status} WHERE id = ANY(${ids}::uuid[]) RETURNING *
+  `;
+}
+
 // ─── Admin: Problem Sets ──────────────────────────────────────────────────────
 
 export async function getAllProblemSets() {
