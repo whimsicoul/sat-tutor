@@ -222,9 +222,10 @@ export async function adminUpdateSessionStatus(id: string, status: string) {
 
 export async function adminBulkUpdateSessionStatus(ids: string[], status: string) {
   if (ids.length === 0) return [];
-  return sql`
-    UPDATE sessions SET status = ${status} WHERE id = ANY(${ids}::uuid[]) RETURNING *
-  `;
+  return sql.query(
+    'UPDATE sessions SET status = $1 WHERE id = ANY($2::uuid[]) RETURNING *',
+    [status, ids]
+  );
 }
 
 // ─── Admin: Problem Sets ──────────────────────────────────────────────────────

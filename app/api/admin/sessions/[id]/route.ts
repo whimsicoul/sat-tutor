@@ -16,8 +16,12 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
   }
 
-  const updated = await adminUpdateSessionStatus(params.id, status);
-  if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
-  return NextResponse.json(updated);
+  try {
+    const updated = await adminUpdateSessionStatus(params.id, status);
+    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return NextResponse.json(updated);
+  } catch (err) {
+    console.error('[PATCH /api/admin/sessions/[id]]', err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 }
