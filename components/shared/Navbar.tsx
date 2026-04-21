@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { BookOpen, Calendar, LogOut, Settings } from 'lucide-react';
+import { BookOpen, Calendar, LogOut, Settings, BarChart2 } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
 
 interface NavbarProps {
@@ -12,8 +12,9 @@ interface NavbarProps {
 }
 
 const STUDENT_LINKS = [
-  { href: '/student/problem-sets', label: 'Problem Sets', icon: BookOpen },
   { href: '/student/schedule', label: 'Schedule', icon: Calendar },
+  { href: '/student/test-results', label: 'Test Results', icon: BarChart2 },
+  { href: '/student/problem-sets', label: 'Problem Sets', icon: BookOpen },
   { href: '/student/settings', label: 'Settings', icon: Settings },
 ];
 

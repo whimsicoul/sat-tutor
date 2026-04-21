@@ -120,7 +120,9 @@ export default function TutorScheduleClient({
   students: StudentOption[];
   allProblemSets: TutorAllProblemSet[];
 }) {
-  const [sessions, setSessions] = useState(initial);
+  const [sessions, setSessions] = useState(
+    initial.map((s) => ({ ...s, proposed_time: s.proposed_time instanceof Date ? s.proposed_time.toISOString() : s.proposed_time }))
+  );
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [selectedSession, setSelectedSession] = useState<TutorSessionRow | null>(null);
