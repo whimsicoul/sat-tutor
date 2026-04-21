@@ -105,16 +105,30 @@ export async function createUser(
 
 export async function updateUser(
   id: string,
-  fields: { name?: string; email?: string; role?: string; active?: boolean }
+  fields: { name?: string; email?: string; role?: string; active?: boolean; hashedPassword?: string }
 ) {
   const rows = await sql`
     UPDATE users
     SET
-      name    = COALESCE(${fields.name ?? null}, name),
-      email   = COALESCE(${fields.email ?? null}, email),
-      role    = COALESCE(${fields.role ?? null}, role),
-      active  = COALESCE(${fields.active ?? null}, active)
+      name            = COALESCE(${fields.name ?? null}, name),
+      email           = COALESCE(${fields.email ?? null}, email),
+      role            = COALESCE(${fields.role ?? null}, role),
+      active          = COALESCE(${fields.active ?? null}, active),
+      hashed_password = COALESCE(${fields.hashedPassword ?? null}, hashed_password)
     WHERE id = ${id}
+    RETURNING id, name, email, role, active, created_at
+  `;
+  return rows[0] ?? null;
+}
+
+export async function getUserByIdWithPassword(id: string) {
+  const rows = await sql`SELECT id, name, email, role, active, hashed_password, created_at FROM users WHERE id = ${id} LIMIT 1`;
+  return rows[0] ?? null;
+}
+
+export async function updateUserPassword(id: string, hashedPassword: string) {
+  const rows = await sql`
+    UPDATE users SET hashed_password = ${hashedPassword} WHERE id = ${id}
     RETURNING id, name, email, role, active, created_at
   `;
   return rows[0] ?? null;

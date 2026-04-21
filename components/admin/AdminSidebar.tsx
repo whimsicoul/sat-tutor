@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { LayoutDashboard, Users, Link2, CalendarDays, BookOpen, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Link2, CalendarDays, BookOpen, LogOut, Settings } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { href: '/admin/assignments', label: 'Assignments', icon: Link2 },
   { href: '/admin/schedule', label: 'Schedule', icon: CalendarDays },
   { href: '/admin/problem-sets', label: 'Problem Sets', icon: BookOpen },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AdminSidebar() {

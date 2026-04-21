@@ -51,8 +51,9 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
   const [saving, setSaving] = useState(false);
 
   const [addForm, setAddForm] = useState({ name: '', email: '', password: '', role: 'tutor' });
-  const [editForm, setEditForm] = useState({ name: '', email: '', role: '' });
+  const [editForm, setEditForm] = useState({ name: '', email: '', role: '', newPassword: '' });
   const [showAddPassword, setShowAddPassword] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
 
   const filtered = users.filter((u) => filter === 'all' || u.role === filter);
 
@@ -81,15 +82,18 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
     if (!editUser) return;
     setSaving(true);
     try {
+      const { newPassword, ...rest } = editForm;
+      const body = { ...rest, ...(newPassword ? { password: newPassword } : {}) };
       const res = await fetch(`/api/admin/users/${editUser.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
       const updated = await res.json();
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       setEditUser(null);
+      setShowEditPassword(false);
       toast.success('User updated');
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Error updating user');
@@ -266,7 +270,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button
-                        onClick={() => { setEditUser(user); setEditForm({ name: user.name, email: user.email, role: user.role }); }}
+                        onClick={() => { setEditUser(user); setEditForm({ name: user.name, email: user.email, role: user.role, newPassword: '' }); setShowEditPassword(false); }}
                         title="Edit"
                         style={{
                           background: 'var(--frost)',
@@ -429,6 +433,33 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
                 <option value="student">Student</option>
                 <option value="tutor">Tutor</option>
               </select>
+            </div>
+            <div>
+              <Label htmlFor="edit-password" style={{ color: 'var(--slate)' }}>New Password <span style={{ color: 'var(--mist)', fontWeight: 400 }}>(optional)</span></Label>
+              <div style={{ position: 'relative' }} className="mt-1">
+                <Input
+                  id="edit-password"
+                  type={showEditPassword ? 'text' : 'password'}
+                  value={editForm.newPassword}
+                  onChange={(e) => setEditForm((f) => ({ ...f, newPassword: e.target.value }))}
+                  placeholder="Leave blank to keep current"
+                  style={{ paddingRight: '2.75rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowEditPassword((v) => !v)}
+                  tabIndex={-1}
+                  aria-label={showEditPassword ? 'Hide password' : 'Show password'}
+                  style={{
+                    position: 'absolute', inset: '0 0 0 auto',
+                    display: 'flex', alignItems: 'center', paddingRight: 12,
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--mist)',
+                  }}
+                >
+                  {showEditPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
           </div>
           <DialogFooter className="mt-4">

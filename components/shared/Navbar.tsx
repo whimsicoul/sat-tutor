@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { BookOpen, Calendar, MessageSquare, LogOut } from 'lucide-react';
+import { BookOpen, Calendar, MessageSquare, LogOut, Settings } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
 
 interface NavbarProps {
@@ -14,12 +14,14 @@ interface NavbarProps {
 const STUDENT_LINKS = [
   { href: '/student/problem-sets', label: 'Problem Sets', icon: BookOpen },
   { href: '/student/schedule', label: 'Schedule', icon: Calendar },
+  { href: '/student/settings', label: 'Settings', icon: Settings },
 ];
 
 const TUTOR_LINKS = [
   { href: '/tutor/problem-sets', label: 'Problem Sets', icon: BookOpen },
   { href: '/tutor/schedule', label: 'Schedule', icon: Calendar },
   { href: '/tutor/testimonials', label: 'Testimonials', icon: MessageSquare },
+  { href: '/tutor/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function Navbar({ role, userName }: NavbarProps) {
