@@ -8,7 +8,7 @@ export async function PATCH(
 ) {
   const session = await auth();
   const role = (session?.user as { role?: string } | undefined)?.role;
-  if (!session || role !== 'tutor') {
+  if (!session || role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -29,7 +29,7 @@ export async function DELETE(
 ) {
   const session = await auth();
   const role = (session?.user as { role?: string } | undefined)?.role;
-  if (!session || role !== 'tutor') {
+  if (!session || role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

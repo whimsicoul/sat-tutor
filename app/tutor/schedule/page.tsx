@@ -9,12 +9,21 @@ export interface TutorProblemSet {
   answer_pdf_url?: string;
 }
 
+export interface TutorAllProblemSet {
+  id: string;
+  title: string;
+  problem_pdf_url: string;
+  answer_pdf_url?: string;
+  student_id: string;
+}
+
 export interface TutorSessionRow {
   id: string;
   proposed_time: string;
   status: 'pending' | 'approved' | 'denied';
   created_at: string;
   student_name: string;
+  student_id: string;
   problem_sets: TutorProblemSet[];
 }
 
@@ -27,16 +36,23 @@ export default async function TutorSchedulePage() {
   const session = await auth();
   const tutorId = session!.user.id;
 
-  const [sessions, students, allAttachments] = await Promise.all([
+  const [sessions, students, allAttachments, tutorProblemSets] = await Promise.all([
     sql`
       SELECT s.id, s.proposed_time, s.status, s.created_at,
-             u.name AS student_name
+             u.name AS student_name, u.id AS student_id
       FROM sessions s
       JOIN users u ON u.id = s.student_id
       WHERE s.tutor_id = ${tutorId}
       ORDER BY s.proposed_time DESC
     `,
-    sql`SELECT id, name FROM users WHERE role = 'student' ORDER BY name`,
+    // Only students assigned to this tutor
+    sql`
+      SELECT u.id, u.name
+      FROM users u
+      JOIN tutor_student_assignments tsa ON tsa.student_id = u.id
+      WHERE tsa.tutor_id = ${tutorId}
+      ORDER BY u.name
+    `,
     sql`
       SELECT sps.session_id,
              ps.id, ps.title, ps.problem_pdf_url, ps.answer_pdf_url
@@ -45,6 +61,13 @@ export default async function TutorSchedulePage() {
       JOIN sessions s ON s.id = sps.session_id
       WHERE s.tutor_id = ${tutorId}
       ORDER BY ps.created_at DESC
+    `,
+    // All problem sets this tutor created, with student_id for filtering in UI
+    sql`
+      SELECT id, title, problem_pdf_url, answer_pdf_url, student_id
+      FROM problem_sets
+      WHERE tutor_id = ${tutorId}
+      ORDER BY created_at DESC
     `,
   ]);
 
@@ -65,10 +88,19 @@ export default async function TutorSchedulePage() {
     problem_sets: psMap[s.id] ?? [],
   }));
 
+  const allProblemSets: TutorAllProblemSet[] = (tutorProblemSets as TutorAllProblemSet[]).map((p) => ({
+    id: p.id,
+    title: p.title,
+    problem_pdf_url: p.problem_pdf_url,
+    answer_pdf_url: p.answer_pdf_url ?? undefined,
+    student_id: p.student_id,
+  }));
+
   return (
     <TutorScheduleClient
       sessions={sessionsWithPs}
       students={students as StudentOption[]}
+      allProblemSets={allProblemSets}
     />
   );
 }

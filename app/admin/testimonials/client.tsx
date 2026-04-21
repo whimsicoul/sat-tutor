@@ -19,7 +19,7 @@ const inputStyle = {
   transition: 'border-color 0.15s, box-shadow 0.15s',
 };
 
-export default function TestimonialsClient({ testimonials: initial }: { testimonials: TestimonialRow[] }) {
+export default function AdminTestimonialsClient({ testimonials: initial }: { testimonials: TestimonialRow[] }) {
   const [testimonials, setTestimonials] = useState(initial);
   const [authorName, setAuthorName] = useState('');
   const [content, setContent] = useState('');
@@ -57,16 +57,14 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
 
   return (
     <div className="space-y-10">
-      {/* Header */}
       <div>
-        <div className="eyebrow-rose mb-3">Tutor Portal</div>
+        <div className="eyebrow-rose mb-3">Admin Portal</div>
         <h1 className="portal-section-title">Testimonials</h1>
         <p className="text-sm mt-2" style={{ color: 'var(--slate)' }}>
           Manage the student testimonials shown on the public home page.
         </p>
       </div>
 
-      {/* Add form */}
       <div className="portal-card-rose p-6">
         <div className="flex items-center gap-2.5 mb-5">
           <div
@@ -83,10 +81,7 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label
-                className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
-                style={{ color: 'var(--mist)' }}
-              >
+              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
                 Student Name
               </label>
               <input
@@ -100,13 +95,9 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
               />
             </div>
             <div>
-              <label
-                className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
-                style={{ color: 'var(--mist)' }}
-              >
+              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
                 Rating
               </label>
-              {/* Star picker */}
               <div
                 className="flex items-center gap-1 px-3.5 py-2.5 rounded-lg"
                 style={{ background: 'var(--white)', border: '1px solid var(--fog)' }}
@@ -125,24 +116,19 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
                     />
                   </button>
                 ))}
-                <span className="ml-2 text-xs" style={{ color: 'var(--mist)' }}>
-                  {rating}/5
-                </span>
+                <span className="ml-2 text-xs" style={{ color: 'var(--mist)' }}>{rating}/5</span>
               </div>
             </div>
           </div>
 
           <div>
-            <label
-              className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
-              style={{ color: 'var(--mist)' }}
-            >
+            <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
               Testimonial
             </label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="What did the student say about your tutoring?"
+              placeholder="What did the student say?"
               rows={3}
               required
               style={{ ...inputStyle, resize: 'vertical' as const, minHeight: '80px' }}
@@ -168,7 +154,6 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
         </form>
       </div>
 
-      {/* Testimonials list */}
       <div className="space-y-4">
         <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--mist)' }}>
           All Testimonials
@@ -187,12 +172,8 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
             >
               <MessageSquare className="h-5 w-5" style={{ color: 'var(--rose-deeper)' }} />
             </div>
-            <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
-              No testimonials yet
-            </p>
-            <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>
-              Use the form above to add your first testimonial.
-            </p>
+            <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>No testimonials yet</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>Use the form above to add the first testimonial.</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -205,7 +186,6 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    {/* Author + stars + date row */}
                     <div className="flex items-center gap-3 flex-wrap mb-2">
                       <div
                         className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
@@ -214,12 +194,8 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
                         {t.author_name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--charcoal)' }}>
-                          {t.author_name}
-                        </p>
-                        <p className="text-xs" style={{ color: 'var(--mist)' }}>
-                          {format(new Date(t.created_at), 'MMM d, yyyy')}
-                        </p>
+                        <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--charcoal)' }}>{t.author_name}</p>
+                        <p className="text-xs" style={{ color: 'var(--mist)' }}>{format(new Date(t.created_at), 'MMM d, yyyy')}</p>
                       </div>
                       <div className="flex gap-0.5 ml-1">
                         {Array.from({ length: 5 }).map((_, i) => (
@@ -232,31 +208,17 @@ export default function TestimonialsClient({ testimonials: initial }: { testimon
                         ))}
                       </div>
                     </div>
-
-                    {/* Quote */}
                     <p
                       className="text-sm leading-relaxed pl-11"
-                      style={{
-                        fontFamily: "'Cormorant Garamond', Georgia, serif",
-                        color: 'var(--slate)',
-                        fontStyle: 'italic',
-                        fontSize: '1rem',
-                      }}
+                      style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: 'var(--slate)', fontStyle: 'italic', fontSize: '1rem' }}
                     >
                       &ldquo;{t.content}&rdquo;
                     </p>
                   </div>
-
-                  {/* Delete */}
                   <button
                     onClick={() => handleDelete(t.id)}
                     className="w-8 h-8 flex items-center justify-center rounded-lg transition-all shrink-0"
-                    style={{
-                      background: 'transparent',
-                      border: '1px solid transparent',
-                      color: 'var(--cloud)',
-                      cursor: 'pointer',
-                    }}
+                    style={{ background: 'transparent', border: '1px solid transparent', color: 'var(--cloud)', cursor: 'pointer' }}
                     onMouseEnter={(e) => { e.currentTarget.style.color = '#991B1B'; e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.borderColor = '#FECACA'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--cloud)'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
                   >
