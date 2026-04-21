@@ -4,6 +4,7 @@ import sql from '@/lib/db';
 import Link from 'next/link';
 import { Users, CalendarDays, Clock, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
+import TodayDate from './TodayDate';
 
 export default async function AdminDashboardPage() {
   const session = await auth();
@@ -63,7 +64,7 @@ export default async function AdminDashboardPage() {
           Dashboard
         </h1>
         <p style={{ color: 'var(--slate)', marginTop: 6, fontSize: 15 }}>
-          {format(new Date(), "EEEE, MMMM d, yyyy")}
+          <TodayDate />
         </p>
       </div>
 

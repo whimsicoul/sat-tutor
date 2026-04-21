@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Calendar, dateFnsLocalizer, Views, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import type { AdminSession, UserOption } from './page';
 
@@ -105,10 +104,13 @@ export default function ScheduleClient({
   tutors: UserOption[];
   students: UserOption[];
 }) {
+  const [mounted, setMounted] = useState(false);
   const [sessions, setSessions] = useState<AdminSession[]>(initial);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [view, setView] = useState<View>(Views.WEEK);
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(() => new Date());
+
+  useEffect(() => { setMounted(true); }, []);
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState<{
@@ -272,7 +274,8 @@ export default function ScheduleClient({
           height: 680,
         }}
       >
-        <style>{`
+        {/* eslint-disable-next-line react/no-danger */}
+        <style suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `
           .rbc-toolbar { padding: 16px 20px; border-bottom: 1px solid var(--fog, #E2E7EF); }
           .rbc-toolbar button { font-family: 'Syne', sans-serif; font-size: 13px; color: var(--charcoal, #1A1D23); border-color: var(--fog, #E2E7EF); border-radius: 8px; }
           .rbc-toolbar button.rbc-active { background: var(--sky, #A8CBDE); color: var(--charcoal, #1A1D23); border-color: var(--sky, #A8CBDE); }
@@ -281,23 +284,25 @@ export default function ScheduleClient({
           .rbc-today { background: rgba(168,203,222,0.1) !important; }
           .rbc-event { border: none !important; overflow: visible !important; border-radius: 6px !important; }
           .rbc-show-more { color: var(--rose-deeper, #A85F6A); font-size: 12px; font-weight: 600; }
-        `}</style>
-        <Calendar
-          localizer={localizer}
-          events={events}
-          view={view}
-          onView={setView}
-          date={date}
-          onNavigate={setDate}
-          eventPropGetter={eventPropGetter as (event: object) => object}
-          components={components as object}
-          style={{ height: '100%' }}
-          popup
-        />
+        ` }} />
+        {mounted && (
+          <Calendar
+            localizer={localizer}
+            events={events}
+            view={view}
+            onView={setView}
+            date={date}
+            onNavigate={setDate}
+            eventPropGetter={eventPropGetter as (event: object) => object}
+            components={components as object}
+            style={{ height: '100%' }}
+            popup
+          />
+        )}
       </div>
 
       {/* New session dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen} modal={false}>
         <DialogContent style={{ maxWidth: 480 }}>
           <DialogHeader>
             <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)', letterSpacing: '-0.02em' }}>New Session</DialogTitle>
@@ -305,21 +310,25 @@ export default function ScheduleClient({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
             <div>
               <Label>Tutor</Label>
-              <Select value={form.tutorId} onValueChange={(v) => setForm((f) => ({ ...f, tutorId: v ?? '' }))}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select tutor…" /></SelectTrigger>
-                <SelectContent>
-                  {tutors.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <select
+                value={form.tutorId}
+                onChange={(e) => setForm((f) => ({ ...f, tutorId: e.target.value }))}
+                style={{ display: 'block', width: '100%', marginTop: 4, height: 32, padding: '0 8px', borderRadius: 8, border: '1px solid var(--fog)', background: 'transparent', fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+              >
+                <option value="">Select tutor…</option>
+                {tutors.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
             </div>
             <div>
               <Label>Student</Label>
-              <Select value={form.studentId} onValueChange={(v) => setForm((f) => ({ ...f, studentId: v ?? '' }))}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select student…" /></SelectTrigger>
-                <SelectContent>
-                  {students.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <select
+                value={form.studentId}
+                onChange={(e) => setForm((f) => ({ ...f, studentId: e.target.value }))}
+                style={{ display: 'block', width: '100%', marginTop: 4, height: 32, padding: '0 8px', borderRadius: 8, border: '1px solid var(--fog)', background: 'transparent', fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+              >
+                <option value="">Select student…</option>
+                {students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
@@ -328,22 +337,34 @@ export default function ScheduleClient({
               </div>
               <div>
                 <Label>Time</Label>
-                <Input type="time" value={form.time} onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))} className="mt-1" />
+                <select
+                  value={form.time}
+                  onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+                  style={{ display: 'block', width: '100%', marginTop: 4, height: 32, padding: '0 8px', borderRadius: 8, border: '1px solid var(--fog)', background: 'transparent', fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+                >
+                  <option value="">Select time…</option>
+                  {Array.from({ length: 96 }, (_, i) => {
+                    const h = Math.floor(i / 4);
+                    const m = (i % 4) * 15;
+                    const value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                    const hour12 = h % 12 === 0 ? 12 : h % 12;
+                    const label = `${hour12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+                    return <option key={value} value={value}>{label}</option>;
+                  })}
+                </select>
               </div>
             </div>
             <div>
               <Label>Recurrence</Label>
-              <Select
+              <select
                 value={form.recurrence}
-                onValueChange={(v) => setForm((f) => ({ ...f, recurrence: (v ?? 'none') as 'none' | 'weekly' | 'biweekly' }))}
+                onChange={(e) => setForm((f) => ({ ...f, recurrence: e.target.value as 'none' | 'weekly' | 'biweekly' }))}
+                style={{ display: 'block', width: '100%', marginTop: 4, height: 32, padding: '0 8px', borderRadius: 8, border: '1px solid var(--fog)', background: 'transparent', fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
               >
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">One-time</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="biweekly">Biweekly (every 2 weeks)</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="none">One-time</option>
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Biweekly (every 2 weeks)</option>
+              </select>
             </div>
             {form.recurrence !== 'none' && (
               <div>

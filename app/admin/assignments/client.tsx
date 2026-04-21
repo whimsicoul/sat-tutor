@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Assignment, UserOption } from './page';
 
 export default function AssignmentsClient({
@@ -207,7 +206,7 @@ export default function AssignmentsClient({
       )}
 
       {/* Assign dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen} modal={false}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)', letterSpacing: '-0.02em' }}>
@@ -217,33 +216,26 @@ export default function AssignmentsClient({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
             <div>
               <Label style={{ color: 'var(--slate)' }}>Tutor</Label>
-              <Select value={form.tutorId} onValueChange={(v) => setForm({ tutorId: v ?? '', studentId: '' })}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select a tutor…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tutors.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={form.tutorId}
+                onChange={(e) => setForm({ tutorId: e.target.value, studentId: '' })}
+                style={{ display: 'block', width: '100%', marginTop: 4, height: 32, padding: '0 8px', borderRadius: 8, border: '1px solid var(--fog)', background: 'transparent', fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+              >
+                <option value="">Select a tutor…</option>
+                {tutors.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
             </div>
             <div>
               <Label style={{ color: 'var(--slate)' }}>Student</Label>
-              <Select
+              <select
                 value={form.studentId}
-                onValueChange={(v) => setForm((f) => ({ ...f, studentId: v ?? '' }))}
+                onChange={(e) => setForm((f) => ({ ...f, studentId: e.target.value }))}
                 disabled={!form.tutorId}
+                style={{ display: 'block', width: '100%', marginTop: 4, height: 32, padding: '0 8px', borderRadius: 8, border: '1px solid var(--fog)', background: 'transparent', fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer', fontFamily: "'Syne', sans-serif", opacity: form.tutorId ? 1 : 0.5 }}
               >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder={form.tutorId ? 'Select a student…' : 'Select a tutor first'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {getAvailableStudents(form.tutorId).map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="">{form.tutorId ? 'Select a student…' : 'Select a tutor first'}</option>
+                {getAvailableStudents(form.tutorId).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
             </div>
           </div>
           <DialogFooter className="mt-4">

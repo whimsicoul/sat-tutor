@@ -12,7 +12,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AdminProblemSet, UserOption } from './page';
 
 interface UploadedFile { url: string; name: string; }
@@ -191,21 +190,25 @@ export default function ProblemSetsClient({
             </div>
             <div>
               <Label>Tutor</Label>
-              <Select value={form.tutorId} onValueChange={(v) => setForm((f) => ({ ...f, tutorId: v ?? '' }))}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select tutor…" /></SelectTrigger>
-                <SelectContent>
-                  {tutors.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <select
+                value={form.tutorId}
+                onChange={(e) => setForm((f) => ({ ...f, tutorId: e.target.value }))}
+                style={{ display: 'block', width: '100%', marginTop: 4, height: 32, padding: '0 8px', borderRadius: 8, border: '1px solid var(--fog)', background: 'transparent', fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+              >
+                <option value="">Select tutor…</option>
+                {tutors.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
             </div>
             <div>
               <Label>Student</Label>
-              <Select value={form.studentId} onValueChange={(v) => setForm((f) => ({ ...f, studentId: v ?? '' }))}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select student…" /></SelectTrigger>
-                <SelectContent>
-                  {students.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <select
+                value={form.studentId}
+                onChange={(e) => setForm((f) => ({ ...f, studentId: e.target.value }))}
+                style={{ display: 'block', width: '100%', marginTop: 4, height: 32, padding: '0 8px', borderRadius: 8, border: '1px solid var(--fog)', background: 'transparent', fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+              >
+                <option value="">Select student…</option>
+                {students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
             </div>
 
             {/* Problem PDF upload */}
