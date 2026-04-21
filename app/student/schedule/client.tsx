@@ -1,11 +1,42 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, CheckCircle, XCircle, Download, ExternalLink, Clock } from 'lucide-react';
+import { Calendar, CheckCircle, XCircle, Download, ExternalLink, Clock, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
-import type { SessionRow } from './page';
+import type { SessionRow, SessionProblemSet } from './page';
+
+function ProblemSetsBlock({ problemSets }: { problemSets: SessionProblemSet[] }) {
+  if (problemSets.length === 0) return null;
+  return (
+    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--fog)' }}>
+      <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', marginBottom: 6 }}>
+        Problem Sheets
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {problemSets.map((ps) => (
+          <a
+            key={ps.id}
+            href={ps.problem_pdf_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12,
+              color: 'var(--sky-deeper)', textDecoration: 'none',
+              background: 'rgba(168,203,222,0.10)', border: '1px solid rgba(168,203,222,0.25)',
+              borderRadius: 6, padding: '3px 10px', width: 'fit-content',
+            }}
+          >
+            <FileText size={12} />
+            {ps.title}
+            <ExternalLink size={10} />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const STATUS_CONFIG = {
   pending: {
@@ -145,6 +176,7 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
                         Decline
                       </button>
                     </div>
+                    <ProblemSetsBlock problemSets={s.problem_sets} />
                   </div>
                 );
               })}
@@ -226,6 +258,7 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
                         )}
                       </div>
                     </div>
+                    <ProblemSetsBlock problemSets={s.problem_sets} />
                   </div>
                 );
               })}

@@ -241,3 +241,34 @@ export async function adminCreateProblemSet(
   `;
   return rows[0];
 }
+
+// ─── Session ↔ Problem Set Attachments ───────────────────────────────────────
+
+export async function getProblemSetsBySession(sessionId: string) {
+  return sql`
+    SELECT ps.id, ps.title, ps.problem_pdf_url, ps.answer_pdf_url
+    FROM session_problem_sets sps
+    JOIN problem_sets ps ON ps.id = sps.problem_set_id
+    WHERE sps.session_id = ${sessionId}
+    ORDER BY ps.created_at DESC
+  `;
+}
+
+export async function getProblemSetsForSessionPair(tutorId: string, studentId: string) {
+  return sql`
+    SELECT id, title, problem_pdf_url, answer_pdf_url
+    FROM problem_sets
+    WHERE tutor_id = ${tutorId} AND student_id = ${studentId}
+    ORDER BY created_at DESC
+  `;
+}
+
+export async function setSessionProblemSets(sessionId: string, problemSetIds: string[]) {
+  await sql`DELETE FROM session_problem_sets WHERE session_id = ${sessionId}`;
+  if (problemSetIds.length === 0) return;
+  await Promise.all(
+    problemSetIds.map((psId) =>
+      sql`INSERT INTO session_problem_sets (session_id, problem_set_id) VALUES (${sessionId}, ${psId})`
+    )
+  );
+}

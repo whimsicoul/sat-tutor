@@ -1,11 +1,56 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, CheckCircle, XCircle, Clock, Download, ExternalLink, Send } from 'lucide-react';
+import { Calendar, CheckCircle, XCircle, Clock, Download, ExternalLink, Send, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
-import type { TutorSessionRow, StudentOption } from './page';
+import type { TutorSessionRow, TutorProblemSet, StudentOption } from './page';
+
+function ProblemSetsBlock({ problemSets }: { problemSets: TutorProblemSet[] }) {
+  if (problemSets.length === 0) return null;
+  return (
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--fog)' }}>
+      <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', marginBottom: 6 }}>
+        Problem Sheets
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {problemSets.map((ps) => (
+          <div key={ps.id} style={{ display: 'flex', gap: 4 }}>
+            <a
+              href={ps.problem_pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12,
+                color: 'var(--sky-deeper)', textDecoration: 'none',
+                background: 'rgba(168,203,222,0.10)', border: '1px solid rgba(168,203,222,0.25)',
+                borderRadius: 6, padding: '3px 10px',
+              }}
+            >
+              <FileText size={12} /> {ps.title} <ExternalLink size={10} />
+            </a>
+            {ps.answer_pdf_url && (
+              <a
+                href={ps.answer_pdf_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12,
+                  color: 'var(--rose-deeper)', textDecoration: 'none',
+                  background: 'rgba(224,166,175,0.10)', border: '1px solid rgba(224,166,175,0.25)',
+                  borderRadius: 6, padding: '3px 10px',
+                }}
+              >
+                Answers <ExternalLink size={10} />
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const STATUS_CONFIG = {
   pending:  { label: 'Pending',  icon: Clock,        cls: 'status-pending'  },
@@ -207,55 +252,58 @@ export default function TutorScheduleClient({
                   return (
                     <div
                       key={s.id}
-                      className="portal-card flex items-center gap-4 px-5 py-4 flex-wrap"
+                      className="portal-card px-5 py-4"
                       style={{
                         borderLeft: status === 'pending' ? '3px solid var(--sky)' : undefined,
                       }}
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
-                          {format(dt, 'EEEE, MMMM d, yyyy')}
-                        </p>
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--mist)' }}>
-                          {format(dt, 'h:mm a')} · {s.student_name}
-                        </p>
-                      </div>
-                      {s.status === 'approved' && (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => downloadICS(s.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                            style={{
-                              background: 'var(--frost)',
-                              color: 'var(--slate)',
-                              border: '1px solid var(--fog)',
-                              cursor: 'pointer',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sky-pale)'; e.currentTarget.style.color = 'var(--sky-deeper)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--frost)'; e.currentTarget.style.color = 'var(--slate)'; }}
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                            .ics
-                          </button>
-                          <a
-                            href={gcUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                            style={{
-                              background: 'var(--frost)',
-                              color: 'var(--slate)',
-                              border: '1px solid var(--fog)',
-                              textDecoration: 'none',
-                            }}
-                            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--sky-pale)'; (e.currentTarget as HTMLAnchorElement).style.color = 'var(--sky-deeper)'; }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--frost)'; (e.currentTarget as HTMLAnchorElement).style.color = 'var(--slate)'; }}
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            Google Cal
-                          </a>
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
+                            {format(dt, 'EEEE, MMMM d, yyyy')}
+                          </p>
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--mist)' }}>
+                            {format(dt, 'h:mm a')} · {s.student_name}
+                          </p>
                         </div>
-                      )}
+                        {s.status === 'approved' && (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => downloadICS(s.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+                              style={{
+                                background: 'var(--frost)',
+                                color: 'var(--slate)',
+                                border: '1px solid var(--fog)',
+                                cursor: 'pointer',
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sky-pale)'; e.currentTarget.style.color = 'var(--sky-deeper)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--frost)'; e.currentTarget.style.color = 'var(--slate)'; }}
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              .ics
+                            </button>
+                            <a
+                              href={gcUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+                              style={{
+                                background: 'var(--frost)',
+                                color: 'var(--slate)',
+                                border: '1px solid var(--fog)',
+                                textDecoration: 'none',
+                              }}
+                              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--sky-pale)'; (e.currentTarget as HTMLAnchorElement).style.color = 'var(--sky-deeper)'; }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--frost)'; (e.currentTarget as HTMLAnchorElement).style.color = 'var(--slate)'; }}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                              Google Cal
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                      <ProblemSetsBlock problemSets={s.problem_sets} />
                     </div>
                   );
                 })}

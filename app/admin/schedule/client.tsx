@@ -6,14 +6,14 @@ import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
+import { Plus, FileText, ExternalLink } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import type { AdminSession, UserOption } from './page';
+import type { AdminSession, UserOption, AttachedProblemSet } from './page';
 
 const localizer = dateFnsLocalizer({
   format,
@@ -89,6 +89,9 @@ function EventComponent({ event }: { event: CalEvent }) {
           {s.series_id && (
             <div style={{ marginTop: 3, fontSize: 10, color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>Recurring series</div>
           )}
+          <div style={{ marginTop: 5, fontSize: 10, color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>
+            Click to manage problem sheets
+          </div>
         </div>
       )}
     </div>
@@ -129,6 +132,14 @@ export default function ScheduleClient({
     endDate: '',
   });
 
+  // Session detail / problem-sets modal state
+  const [detailSession, setDetailSession] = useState<AdminSession | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [availablePs, setAvailablePs] = useState<AttachedProblemSet[]>([]);
+  const [selectedPsIds, setSelectedPsIds] = useState<Set<string>>(new Set());
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailSaving, setDetailSaving] = useState(false);
+
   // Unique tutor IDs for color assignment
   const tutorIds = useMemo(
     () => Array.from(new Set(sessions.map((s) => s.tutor_id))),
@@ -161,6 +172,53 @@ export default function ScheduleClient({
     () => ({ event: EventComponent as React.ComponentType<{ event: CalEvent }> }),
     []
   );
+
+  async function handleSelectEvent(event: CalEvent) {
+    setDetailSession(event.resource);
+    setDetailOpen(true);
+    setDetailLoading(true);
+    try {
+      const res = await fetch(`/api/admin/sessions/${event.resource.id}/problem-sets`);
+      if (!res.ok) throw new Error('Failed to load problem sets');
+      const { availableProblemSets, attachedProblemSetIds } = await res.json() as {
+        availableProblemSets: AttachedProblemSet[];
+        attachedProblemSetIds: string[];
+      };
+      setAvailablePs(availableProblemSets);
+      setSelectedPsIds(new Set(attachedProblemSetIds));
+    } catch {
+      toast.error('Failed to load problem sets for this session');
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  function togglePsId(id: string) {
+    setSelectedPsIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleSaveAttachments() {
+    if (!detailSession) return;
+    setDetailSaving(true);
+    try {
+      const res = await fetch(`/api/admin/sessions/${detailSession.id}/problem-sets`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ problemSetIds: Array.from(selectedPsIds) }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      toast.success('Problem sheets updated');
+      setDetailOpen(false);
+    } catch {
+      toast.error('Failed to save problem sheets');
+    } finally {
+      setDetailSaving(false);
+    }
+  }
 
   async function handleCreate() {
     if (!form.tutorId || !form.studentId || !form.date || !form.time) {
@@ -230,6 +288,10 @@ export default function ScheduleClient({
     }
   }
 
+  const statusColor =
+    detailSession?.status === 'approved' ? 'var(--sky-deeper)' :
+    detailSession?.status === 'denied'   ? '#EF4444' : 'var(--rose-deeper)';
+
   return (
     <div style={{ padding: '40px 48px' }}>
       {/* Header */}
@@ -293,6 +355,7 @@ export default function ScheduleClient({
             onView={setView}
             date={date}
             onNavigate={setDate}
+            onSelectEvent={(event) => handleSelectEvent(event as CalEvent)}
             eventPropGetter={eventPropGetter as (event: object) => object}
             components={components as object}
             style={{ height: '100%' }}
@@ -300,6 +363,102 @@ export default function ScheduleClient({
           />
         )}
       </div>
+
+      {/* Session detail / problem sheets dialog */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent style={{ maxWidth: 500 }}>
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)', letterSpacing: '-0.02em' }}>
+              Session Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {detailSession && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 4 }}>
+              {/* Session info */}
+              <div style={{ background: 'var(--frost)', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--fog)' }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", marginBottom: 4 }}>
+                  {detailSession.tutor_name} → {detailSession.student_name}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--slate)', fontFamily: "'Syne', sans-serif", marginBottom: 6 }}>
+                  {format(new Date(detailSession.proposed_time), "EEEE, MMMM d, yyyy 'at' h:mm a")}
+                </div>
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: statusColor, fontFamily: "'Syne', sans-serif" }}>
+                  {detailSession.status}
+                </span>
+              </div>
+
+              {/* Problem sheets */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', fontFamily: "'Syne', sans-serif", marginBottom: 10 }}>
+                  Problem Sheets
+                </div>
+
+                {detailLoading ? (
+                  <div style={{ fontSize: 13, color: 'var(--mist)', fontFamily: "'Syne', sans-serif", padding: '8px 0' }}>
+                    Loading…
+                  </div>
+                ) : availablePs.length === 0 ? (
+                  <div style={{ fontSize: 13, color: 'var(--mist)', fontFamily: "'Syne', sans-serif", padding: '8px 0' }}>
+                    No problem sets exist for this tutor-student pair yet.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {availablePs.map((ps) => (
+                      <label
+                        key={ps.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '8px 12px',
+                          borderRadius: 8,
+                          border: `1px solid ${selectedPsIds.has(ps.id) ? 'rgba(168,203,222,0.5)' : 'var(--fog)'}`,
+                          background: selectedPsIds.has(ps.id) ? 'rgba(168,203,222,0.08)' : 'transparent',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedPsIds.has(ps.id)}
+                          onChange={() => togglePsId(ps.id)}
+                          style={{ accentColor: 'var(--sky-deeper)', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }}
+                        />
+                        <FileText size={13} style={{ color: 'var(--slate)', flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: 13, color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", fontWeight: selectedPsIds.has(ps.id) ? 600 : 400 }}>
+                          {ps.title}
+                        </span>
+                        <a
+                          href={ps.problem_pdf_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ color: 'var(--mist)', flexShrink: 0 }}
+                          title="Open PDF"
+                        >
+                          <ExternalLink size={12} />
+                        </a>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setDetailOpen(false)}>Close</Button>
+            <Button
+              onClick={handleSaveAttachments}
+              disabled={detailSaving || detailLoading}
+              style={{ background: 'var(--sky)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", border: 'none' }}
+            >
+              {detailSaving ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* New session dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen} modal={false}>

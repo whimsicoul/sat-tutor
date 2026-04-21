@@ -26,3 +26,11 @@ CREATE TABLE IF NOT EXISTS session_series (
 
 -- 4. Link individual sessions to a series
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS series_id UUID REFERENCES session_series(id) ON DELETE SET NULL;
+
+-- 5. Link problem sets to sessions (many-to-many)
+CREATE TABLE IF NOT EXISTS session_problem_sets (
+  session_id     UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  problem_set_id UUID NOT NULL REFERENCES problem_sets(id) ON DELETE CASCADE,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (session_id, problem_set_id)
+);

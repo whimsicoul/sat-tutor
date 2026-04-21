@@ -19,6 +19,13 @@ export interface UserOption {
   name: string;
 }
 
+export interface AttachedProblemSet {
+  id: string;
+  title: string;
+  problem_pdf_url: string;
+  answer_pdf_url?: string;
+}
+
 export default async function AdminSchedulePage() {
   const session = await auth();
   const role = (session?.user as { role?: string } | undefined)?.role;
