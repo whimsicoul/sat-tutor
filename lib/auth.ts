@@ -1,7 +1,11 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
+import { encode } from '@auth/core/jwt';
 import { getUserByEmail } from './db';
+
+const REMEMBER_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+const SESSION_MAX_AGE  =  1 * 24 * 60 * 60; // 1 day
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -9,6 +13,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        rememberMe: { label: 'Remember Me', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
@@ -29,10 +34,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    jwt({ token, user, credentials, trigger }) {
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
+      }
+      if (trigger === 'signIn' && credentials) {
+        token.rememberMe = credentials.rememberMe === 'true';
       }
       return token;
     },
@@ -43,6 +51,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   pages: { signIn: '/login' },
-  session: { strategy: 'jwt' },
+  session: { strategy: 'jwt', maxAge: REMEMBER_MAX_AGE },
+  jwt: {
+    maxAge: REMEMBER_MAX_AGE,
+    async encode(params) {
+      const rememberMe = (params.token as { rememberMe?: boolean })?.rememberMe ?? false;
+      return encode({ ...params, maxAge: rememberMe ? REMEMBER_MAX_AGE : SESSION_MAX_AGE });
+    },
+  },
   trustHost: true,
 });

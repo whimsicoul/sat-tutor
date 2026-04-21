@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -21,6 +22,7 @@ export default function LoginPage() {
     const result = await signIn('credentials', {
       email: fd.get('email'),
       password: fd.get('password'),
+      rememberMe: rememberMe ? 'true' : 'false',
       redirect: false,
     });
 
@@ -214,6 +216,25 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 mt-1">
+              <input
+                id="rememberMe"
+                name="rememberMe"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded"
+                style={{ accentColor: 'var(--rose)', cursor: 'pointer' }}
+              />
+              <label
+                htmlFor="rememberMe"
+                className="text-sm select-none"
+                style={{ color: 'var(--slate)', cursor: 'pointer' }}
+              >
+                Remember me for 30 days
+              </label>
             </div>
 
             {error && (
