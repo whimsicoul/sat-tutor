@@ -425,7 +425,7 @@ export default function AdminTestResultsClient({
                         setPdfName(files[0].name);
                       }
                     }}
-                    onUploadError={(err) => toast.error(err.message)}
+                    onUploadError={(err) => { toast.error(err.message); }}
                   />
                 )}
               </div>
