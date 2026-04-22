@@ -3,6 +3,6 @@ builder = "nixpacks"
 buildCommand = "npm run build"
 
 [deploy]
-startCommand = "next start -p $PORT"
+startCommand = "node .next/standalone/server.js"
 healthcheckPath = "/"
 restartPolicyType = "on_failure"
