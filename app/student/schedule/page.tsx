@@ -15,6 +15,9 @@ export interface SessionRow {
   created_at: string;
   tutor_name: string;
   problem_sets: SessionProblemSet[];
+  series_id?: string | null;
+  series_end_date?: string | null;
+  recurrence_rule?: string | null;
 }
 
 export default async function StudentSchedulePage() {
@@ -24,9 +27,11 @@ export default async function StudentSchedulePage() {
   const [sessions, allAttachments] = await Promise.all([
     sql`
       SELECT s.id, s.proposed_time, s.status, s.created_at,
-             u.name AS tutor_name
+             u.name AS tutor_name,
+             s.series_id, ss.end_date AS series_end_date, ss.recurrence_rule
       FROM sessions s
       JOIN users u ON u.id = s.tutor_id
+      LEFT JOIN session_series ss ON ss.id = s.series_id
       WHERE s.student_id = ${userId}
       ORDER BY s.proposed_time DESC
     `,
@@ -54,6 +59,9 @@ export default async function StudentSchedulePage() {
 
   const sessionsWithPs: SessionRow[] = (sessions as Omit<SessionRow, 'problem_sets'>[]).map((s) => ({
     ...s,
+    proposed_time: s.proposed_time instanceof Date ? s.proposed_time.toISOString() : s.proposed_time,
+    created_at: s.created_at instanceof Date ? s.created_at.toISOString() : s.created_at,
+    series_end_date: s.series_end_date instanceof Date ? s.series_end_date.toISOString() : s.series_end_date,
     problem_sets: psMap[s.id] ?? [],
   }));
 

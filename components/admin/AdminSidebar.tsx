@@ -37,6 +37,10 @@ export default function AdminSidebar() {
       }}
     >
       {/* Logo */}
+      <Link
+        href="/"
+        style={{ textDecoration: 'none', display: 'block' }}
+      >
       <div
         style={{
           padding: '28px 24px 20px',
@@ -93,6 +97,7 @@ export default function AdminSidebar() {
           </div>
         </div>
       </div>
+      </Link>
 
       {/* Nav */}
       <nav style={{ flex: 1, padding: '16px 12px' }}>

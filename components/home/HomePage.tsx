@@ -9,7 +9,7 @@ interface Tutor {
   email: string;
 }
 
-export default function HomePage({ tutors }: { tutors: Tutor[] }) {
+export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRole: string | null }) {
   return (
     <div
       className="min-h-screen"
@@ -38,12 +38,18 @@ export default function HomePage({ tutors }: { tutors: Tutor[] }) {
               <a href="#about" className="transition-colors hover:text-[color:var(--rose-dark)]">About</a>
               <a href="#tutors" className="transition-colors hover:text-[color:var(--rose-dark)]">Our Tutors</a>
             </nav>
-            <Link
-              href="/login"
-              className="btn-rose text-sm"
-            >
-              Sign In
-            </Link>
+            {userRole ? (
+              <Link
+                href={userRole === 'admin' ? '/admin' : userRole === 'tutor' ? '/tutor/schedule' : '/student/schedule'}
+                className="btn-rose text-sm"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <Link href="/login" className="btn-rose text-sm">
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </header>

@@ -25,6 +25,9 @@ export interface TutorSessionRow {
   student_name: string;
   student_id: string;
   problem_sets: TutorProblemSet[];
+  series_id?: string | null;
+  series_end_date?: string | null;
+  recurrence_rule?: string | null;
 }
 
 export interface StudentOption {
@@ -39,9 +42,11 @@ export default async function TutorSchedulePage() {
   const [sessions, students, allAttachments, tutorProblemSets] = await Promise.all([
     sql`
       SELECT s.id, s.proposed_time, s.status, s.created_at,
-             u.name AS student_name, u.id AS student_id
+             u.name AS student_name, u.id AS student_id,
+             s.series_id, ss.end_date AS series_end_date, ss.recurrence_rule
       FROM sessions s
       JOIN users u ON u.id = s.student_id
+      LEFT JOIN session_series ss ON ss.id = s.series_id
       WHERE s.tutor_id = ${tutorId}
       ORDER BY s.proposed_time DESC
     `,
@@ -85,6 +90,9 @@ export default async function TutorSchedulePage() {
 
   const sessionsWithPs: TutorSessionRow[] = (sessions as Omit<TutorSessionRow, 'problem_sets'>[]).map((s) => ({
     ...s,
+    proposed_time: s.proposed_time instanceof Date ? s.proposed_time.toISOString() : s.proposed_time,
+    created_at: s.created_at instanceof Date ? s.created_at.toISOString() : s.created_at,
+    series_end_date: s.series_end_date instanceof Date ? s.series_end_date.toISOString() : s.series_end_date,
     problem_sets: psMap[s.id] ?? [],
   }));
 

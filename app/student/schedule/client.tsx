@@ -20,6 +20,14 @@ const STATUS_COLOR: Record<string, string> = {
   denied: 'var(--cloud)',
 };
 
+function rruleLabel(rule: string | null | undefined): string {
+  if (!rule) return 'recurring';
+  if (/FREQ=WEEKLY.*INTERVAL=2/.test(rule) || /INTERVAL=2.*FREQ=WEEKLY/.test(rule)) return 'biweekly';
+  if (/FREQ=WEEKLY/.test(rule)) return 'weekly';
+  if (/FREQ=MONTHLY/.test(rule)) return 'monthly';
+  return 'recurring';
+}
+
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function ProblemSetsBlock({ problemSets }: { problemSets: SessionProblemSet[] }) {
@@ -279,38 +287,59 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
             </button>
           </div>
 
-          {/* Session tabs if multiple */}
-          {daySessions.length > 1 && (
-            <div className="flex gap-2 mb-4 flex-wrap">
-              {daySessions.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => setSelectedSession(s)}
-                  style={{
-                    padding: '4px 12px',
-                    borderRadius: 20,
-                    fontSize: 12,
-                    fontWeight: selectedSession?.id === s.id ? 600 : 400,
-                    background: selectedSession?.id === s.id ? 'var(--rose)' : 'var(--frost)',
-                    color: selectedSession?.id === s.id ? 'var(--charcoal)' : 'var(--slate)',
-                    border: '1px solid var(--fog)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {format(parseISO(s.proposed_time), 'h:mm a')}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Session tabs if multiple — collapse approved recurring series into one tab */}
+          {(() => {
+            const seenSeries = new Set<string>();
+            const displaySessions = daySessions.filter((s) => {
+              if (s.status === 'approved' && s.series_id) {
+                if (seenSeries.has(s.series_id)) return false;
+                seenSeries.add(s.series_id);
+              }
+              return true;
+            });
+            return displaySessions.length > 1 && (
+              <div className="flex gap-2 mb-4 flex-wrap">
+                {displaySessions.map((s) => (
+                  <button
+                    key={s.series_id && s.status === 'approved' ? `series-${s.series_id}` : s.id}
+                    onClick={() => setSelectedSession(s)}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: selectedSession?.id === s.id ? 600 : 400,
+                      background: selectedSession?.id === s.id ? 'var(--rose)' : 'var(--frost)',
+                      color: selectedSession?.id === s.id ? 'var(--charcoal)' : 'var(--slate)',
+                      border: '1px solid var(--fog)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {s.status === 'approved' && s.series_id
+                      ? `Recurring · ${format(parseISO(s.proposed_time), 'h:mm a')}`
+                      : format(parseISO(s.proposed_time), 'h:mm a')}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
 
           {selectedSession && (
             <div>
               {/* Session info */}
               <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
-                    {format(parseISO(selectedSession.proposed_time), 'h:mm a')} · with {selectedSession.tutor_name}
-                  </p>
+                  {selectedSession.status === 'approved' && selectedSession.series_id ? (
+                    <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
+                      Approved {rruleLabel(selectedSession.recurrence_rule)} session with {selectedSession.tutor_name}
+                      {selectedSession.series_end_date
+                        ? ` until ${format(new Date(selectedSession.series_end_date), 'MMM d, yyyy')}`
+                        : ''}
+                    </p>
+                  ) : (
+                    <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
+                      {format(parseISO(selectedSession.proposed_time), 'h:mm a')} · with {selectedSession.tutor_name}
+                    </p>
+                  )}
                   <div className="flex items-center gap-1.5 mt-1">
                     {selectedSession.status === 'pending' && <Clock size={12} style={{ color: 'var(--sky-deeper)' }} />}
                     {selectedSession.status === 'approved' && <CheckCircle size={12} style={{ color: '#16a34a' }} />}
