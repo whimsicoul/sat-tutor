@@ -1,36 +1,115 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DC SAT Tutor
+
+A full-stack tutoring management platform for a Washington D.C. SAT prep service. Built with Next.js 14, Neon Postgres, and NextAuth v5.
+
+## Features
+
+- **Three-role access control** — student, tutor, and admin portals with role-based routing
+- **Session scheduling** — students and tutors propose, confirm, and manage sessions; admins have full oversight
+- **Recurring sessions** — create repeating session series with bulk management tools
+- **Problem sets** — tutors assign PDF-based problem sets to students per session
+- **Test results** — track SAT score progress over time per student
+- **Testimonials** — admin-managed testimonials displayed on the landing page
+- **File uploads** — PDF uploads via UploadThing
+- **Email notifications** — session alerts sent via Resend
+- **Calendar export** — download .ics files or open sessions in Google Calendar
+- **Tutor–student assignments** — admin pairs tutors with their students
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 14 (App Router) |
+| Language | TypeScript |
+| Database | Neon Serverless Postgres |
+| Auth | NextAuth v5 (credentials) |
+| UI | shadcn/ui + Tailwind CSS |
+| File uploads | UploadThing |
+| Email | Resend |
+| Icons | Lucide React |
+| Forms | React Hook Form + Zod |
+| Calendar | react-big-calendar, ics, date-fns |
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+
+- A [Neon](https://neon.tech) Postgres database
+- A [Resend](https://resend.com) API key
+- An [UploadThing](https://uploadthing.com) token
+
+### Environment Variables
+
+Create a `.env.local` file in the project root:
+
+```env
+DATABASE_URL=your_neon_connection_string
+NEXTAUTH_SECRET=your_secret
+NEXTAUTH_URL=http://localhost:3000
+UPLOADTHING_TOKEN=your_uploadthing_token
+RESEND_API_KEY=your_resend_key
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=your_admin_password
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Database Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Run the migration scripts against your Neon database:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Apply schema migrations
+psql $DATABASE_URL -f scripts/migrate.sql
+psql $DATABASE_URL -f scripts/migrate_test_results.sql
 
-## Learn More
+# Seed the admin account
+npx tsx scripts/seed-admin.ts
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Development
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open [http://localhost:3000](http://localhost:3000).
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+app/
+  page.tsx              # Public landing page
+  login/                # Login page
+  student/              # Student portal (problem sets, schedule, test results)
+  tutor/                # Tutor portal (problem sets, schedule)
+  admin/                # Admin dashboard (users, assignments, schedule, testimonials, test results)
+  api/                  # API routes (auth, sessions, problem sets, testimonials, admin)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+components/
+  ui/                   # shadcn/ui primitives + custom components
+  shared/               # Navbar, SessionProvider, SettingsClient
+  admin/                # AdminSidebar
+  home/                 # HomePage landing component
+
+lib/
+  auth.ts               # NextAuth configuration
+  db.ts                 # Database query helpers
+  email.ts              # Resend email helpers
+  calendar.ts           # ICS / Google Calendar URL helpers
+  uploadthing.ts        # UploadThing configuration
+  utils.ts              # Tailwind class merge utility
+
+scripts/
+  migrate.sql           # Main schema migration
+  migrate_test_results.sql  # Test results table migration
+  seed-admin.ts         # Admin account seeder
+```
+
+## User Roles
+
+| Role | Access |
+|---|---|
+| `student` | View assigned problem sets, manage their schedule, view test results |
+| `tutor` | Manage problem sets for students, manage sessions |
+| `admin` | Full access: users, assignments, sessions, problem sets, test results, testimonials |

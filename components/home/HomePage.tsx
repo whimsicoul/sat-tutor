@@ -70,7 +70,7 @@ export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRo
           style={{ background: 'rgba(15,35,55,0.52)' }}
         />
 
-        <div className="relative max-w-6xl mx-auto px-6 py-24 lg:py-36">
+        <div className="relative max-w-6xl mx-auto px-6 py-28 lg:py-44">
           <div className="max-w-3xl">
             {/* Eyebrow */}
             <div className="eyebrow-sky-light mb-8">
@@ -114,31 +114,6 @@ export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRo
                 Learn More
               </a>
             </div>
-          </div>
-
-          {/* Stats */}
-          <div
-            className="mt-20 pt-12 grid grid-cols-2 lg:grid-cols-4 gap-8"
-            style={{ borderTop: '1px solid rgba(147,201,232,0.25)' }}
-          >
-            {[
-              { value: '200+', label: 'Average Score Increase' },
-              { value: '98%', label: 'Student Satisfaction' },
-              { value: '1550+', label: 'Top Student Score' },
-              { value: '100%', label: 'College Admission Rate' },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <div
-                  className="text-3xl lg:text-4xl font-bold mb-1"
-                  style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: '#7EC8E3' }}
-                >
-                  {stat.value}
-                </div>
-                <div className="text-xs tracking-wide uppercase" style={{ color: '#93C9E8' }}>
-                  {stat.label}
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
