@@ -30,9 +30,9 @@ export default async function AdminAssignmentsPage() {
 
   return (
     <AssignmentsClient
-      assignments={assignments as Assignment[]}
-      tutors={tutors as UserOption[]}
-      students={students as UserOption[]}
+      assignments={(assignments as unknown) as Assignment[]}
+      tutors={(tutors as unknown) as UserOption[]}
+      students={(students as unknown) as UserOption[]}
     />
   );
 }
