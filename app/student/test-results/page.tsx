@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
 import { format } from 'date-fns';
-import { BarChart2 } from 'lucide-react';
+import { BarChart2, FileText } from 'lucide-react';
 
 interface TestResult {
   id: string;
@@ -11,6 +11,7 @@ interface TestResult {
   math_score: number | null;
   reading_writing_score: number | null;
   notes: string | null;
+  pdf_url: string | null;
   created_at: string;
 }
 
@@ -19,7 +20,7 @@ export default async function StudentTestResultsPage() {
   const userId = session!.user.id;
 
   const results = await sql`
-    SELECT id, test_name, test_date, total_score, math_score, reading_writing_score, notes, created_at
+    SELECT id, test_name, test_date, total_score, math_score, reading_writing_score, notes, pdf_url, created_at
     FROM test_results
     WHERE student_id = ${userId}
     ORDER BY test_date DESC
@@ -66,6 +67,23 @@ export default async function StudentTestResultsPage() {
                   <p className="text-xs mt-0.5" style={{ color: 'var(--mist)' }}>
                     {format(new Date(r.test_date), 'MMMM d, yyyy')}
                   </p>
+                  {r.pdf_url && (
+                    <a
+                      href={r.pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold rounded-lg px-3 py-1.5"
+                      style={{
+                        background: 'var(--rose-ultra)',
+                        border: '1px solid rgba(224,166,175,0.3)',
+                        color: 'var(--rose-deeper)',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <FileText size={12} />
+                      View Score Report
+                    </a>
+                  )}
                 </div>
                 {r.total_score != null && (
                   <div

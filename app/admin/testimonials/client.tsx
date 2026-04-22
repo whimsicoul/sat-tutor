@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Star, Trash2, MessageSquare, Plus } from 'lucide-react';
+import { Trash2, MessageSquare, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import type { TestimonialRow } from './page';
@@ -23,7 +23,6 @@ export default function AdminTestimonialsClient({ testimonials: initial }: { tes
   const [testimonials, setTestimonials] = useState(initial);
   const [authorName, setAuthorName] = useState('');
   const [content, setContent] = useState('');
-  const [rating, setRating] = useState(5);
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -33,12 +32,12 @@ export default function AdminTestimonialsClient({ testimonials: initial }: { tes
       const res = await fetch('/api/testimonials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ authorName, content, rating }),
+        body: JSON.stringify({ authorName, content }),
       });
       if (!res.ok) throw new Error('Failed');
       const newT = await res.json();
       setTestimonials((prev) => [newT, ...prev]);
-      setAuthorName(''); setContent(''); setRating(5);
+      setAuthorName(''); setContent('');
       toast.success('Testimonial added!');
     } catch {
       toast.error('Failed to add testimonial.');
@@ -79,46 +78,19 @@ export default function AdminTestimonialsClient({ testimonials: initial }: { tes
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
-                Student Name
-              </label>
-              <input
-                value={authorName}
-                onChange={(e) => setAuthorName(e.target.value)}
-                placeholder="e.g. Alex M."
-                required
-                style={inputStyle}
-                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--rose)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(224,166,175,0.15)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--fog)'; e.currentTarget.style.boxShadow = 'none'; }}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
-                Rating
-              </label>
-              <div
-                className="flex items-center gap-1 px-3.5 py-2.5 rounded-lg"
-                style={{ background: 'var(--white)', border: '1px solid var(--fog)' }}
-              >
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setRating(n)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', lineHeight: 1 }}
-                  >
-                    <Star
-                      className="h-5 w-5 transition-colors"
-                      fill={n <= rating ? '#E0A6AF' : 'transparent'}
-                      stroke={n <= rating ? '#E0A6AF' : 'var(--cloud)'}
-                    />
-                  </button>
-                ))}
-                <span className="ml-2 text-xs" style={{ color: 'var(--mist)' }}>{rating}/5</span>
-              </div>
-            </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+              Student Name
+            </label>
+            <input
+              value={authorName}
+              onChange={(e) => setAuthorName(e.target.value)}
+              placeholder="e.g. Alex M."
+              required
+              style={inputStyle}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--rose)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(224,166,175,0.15)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--fog)'; e.currentTarget.style.boxShadow = 'none'; }}
+            />
           </div>
 
           <div>
@@ -196,16 +168,6 @@ export default function AdminTestimonialsClient({ testimonials: initial }: { tes
                       <div>
                         <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--charcoal)' }}>{t.author_name}</p>
                         <p className="text-xs" style={{ color: 'var(--mist)' }}>{format(new Date(t.created_at), 'MMM d, yyyy')}</p>
-                      </div>
-                      <div className="flex gap-0.5 ml-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className="h-3.5 w-3.5"
-                            fill={i < t.rating ? '#E0A6AF' : 'transparent'}
-                            stroke={i < t.rating ? '#E0A6AF' : 'var(--cloud)'}
-                          />
-                        ))}
                       </div>
                     </div>
                     <p

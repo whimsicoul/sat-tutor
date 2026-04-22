@@ -8,16 +8,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { studentId, testName, testDate, totalScore, mathScore, readingWritingScore, notes } = await req.json();
+  const { studentId, testName, testDate, totalScore, mathScore, readingWritingScore, notes, pdfUrl } = await req.json();
 
   if (!studentId || !testName || !testDate) {
     return NextResponse.json({ error: 'studentId, testName, and testDate are required' }, { status: 400 });
   }
 
   const [result] = await sql`
-    INSERT INTO test_results (student_id, test_name, test_date, total_score, math_score, reading_writing_score, notes)
-    VALUES (${studentId}, ${testName}, ${testDate}, ${totalScore ?? null}, ${mathScore ?? null}, ${readingWritingScore ?? null}, ${notes ?? null})
-    RETURNING id, student_id, test_name, test_date, total_score, math_score, reading_writing_score, notes, created_at
+    INSERT INTO test_results (student_id, test_name, test_date, total_score, math_score, reading_writing_score, notes, pdf_url)
+    VALUES (${studentId}, ${testName}, ${testDate}, ${totalScore ?? null}, ${mathScore ?? null}, ${readingWritingScore ?? null}, ${notes ?? null}, ${pdfUrl ?? null})
+    RETURNING id, student_id, test_name, test_date, total_score, math_score, reading_writing_score, notes, pdf_url, created_at
   `;
 
   const [student] = await sql`SELECT name FROM users WHERE id = ${studentId}`;

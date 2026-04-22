@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Plus, Trash2, X, BarChart2 } from 'lucide-react';
+import { Plus, Trash2, X, BarChart2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { UploadButton } from '@uploadthing/react';
+import type { OurFileRouter } from '@/lib/uploadthing';
 import type { TestResultRow, StudentOption } from './page';
 
 const inputStyle: React.CSSProperties = {
@@ -48,10 +50,13 @@ export default function AdminTestResultsClient({
   const [mathScore, setMathScore] = useState('');
   const [rwScore, setRwScore] = useState('');
   const [notes, setNotes] = useState('');
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfName, setPdfName] = useState<string | null>(null);
 
   function resetForm() {
     setStudentId(''); setTestName(''); setTestDate('');
     setTotalScore(''); setMathScore(''); setRwScore(''); setNotes('');
+    setPdfUrl(null); setPdfName(null);
   }
 
   async function handleAdd(e: React.FormEvent) {
@@ -70,6 +75,7 @@ export default function AdminTestResultsClient({
           mathScore: mathScore ? parseInt(mathScore) : null,
           readingWritingScore: rwScore ? parseInt(rwScore) : null,
           notes: notes || null,
+          pdfUrl: pdfUrl || null,
         }),
       });
       if (!res.ok) throw new Error('Failed');
@@ -157,7 +163,7 @@ export default function AdminTestResultsClient({
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--fog)' }}>
-                {['Student', 'Test', 'Date', 'Total', 'Math', 'R&W', 'Notes', ''].map((h) => (
+                {['Student', 'Test', 'Date', 'Total', 'Math', 'R&W', 'Notes', 'PDF', ''].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -202,6 +208,20 @@ export default function AdminTestResultsClient({
                     title={r.notes ?? undefined}
                   >
                     {r.notes ?? '—'}
+                  </td>
+                  <td style={{ padding: '12px 16px' }}>
+                    {r.pdf_url ? (
+                      <a
+                        href={r.pdf_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--rose-deeper)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <FileText size={14} />
+                      </a>
+                    ) : (
+                      <span style={{ color: 'var(--fog)' }}>—</span>
+                    )}
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <button
@@ -374,6 +394,40 @@ export default function AdminTestResultsClient({
                   onFocus={roseFocus}
                   onBlur={roseBlur}
                 />
+              </div>
+
+              {/* PDF Upload */}
+              <div>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+                  Score Report PDF <span style={{ fontWeight: 400, textTransform: 'none' }}>(optional)</span>
+                </label>
+                {pdfUrl ? (
+                  <div
+                    className="flex items-center gap-2 rounded-lg px-3 py-2"
+                    style={{ background: 'var(--frost)', border: '1px solid var(--fog)' }}
+                  >
+                    <FileText size={14} style={{ color: 'var(--rose-deeper)', flexShrink: 0 }} />
+                    <span className="text-xs flex-1 truncate" style={{ color: 'var(--charcoal)' }}>{pdfName}</span>
+                    <button
+                      type="button"
+                      onClick={() => { setPdfUrl(null); setPdfName(null); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mist)', padding: 0 }}
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <UploadButton<OurFileRouter, 'pdfUploader'>
+                    endpoint="pdfUploader"
+                    onClientUploadComplete={(files) => {
+                      if (files[0]) {
+                        setPdfUrl(files[0].ufsUrl ?? files[0].url);
+                        setPdfName(files[0].name);
+                      }
+                    }}
+                    onUploadError={(err) => toast.error(err.message)}
+                  />
+                )}
               </div>
 
               <button
