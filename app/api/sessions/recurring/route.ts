@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const [h, m] = time.split(':').map(Number);
 
   // Walk week-by-week from startDate
-  let cursor = parseISO(startDate);
+  const cursor = parseISO(startDate);
   // Iterate day by day from startDate to windowEnd
   // For efficiency, iterate day by day from startDate to windowEnd
   const dayMs = 24 * 60 * 60 * 1000;

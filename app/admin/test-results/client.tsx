@@ -153,7 +153,7 @@ export default function AdminTestResultsClient({
             <BarChart2 className="h-6 w-6" style={{ color: 'var(--rose-deeper)' }} />
           </div>
           <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>No test results yet</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>Click "Add Result" to upload the first one.</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>Click &ldquo;Add Result&rdquo; to upload the first one.</p>
         </div>
       ) : (
         <div
