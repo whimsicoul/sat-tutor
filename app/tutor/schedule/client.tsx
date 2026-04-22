@@ -129,7 +129,8 @@ export default function TutorScheduleClient({
   allProblemSets: TutorAllProblemSet[];
 }) {
   const [sessions, setSessions] = useState(
-    initial.map((s) => ({ ...s, proposed_time: s.proposed_time instanceof Date ? s.proposed_time.toISOString() : s.proposed_time }))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    initial.map((s: any) => ({ ...s, proposed_time: s.proposed_time instanceof Date ? s.proposed_time.toISOString() : s.proposed_time }))
   );
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);

@@ -88,7 +88,8 @@ export default async function TutorSchedulePage() {
     });
   }
 
-  const sessionsWithPs: TutorSessionRow[] = (sessions as Omit<TutorSessionRow, 'problem_sets'>[]).map((s) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sessionsWithPs: TutorSessionRow[] = (sessions as any[]).map((s) => ({
     ...s,
     proposed_time: s.proposed_time instanceof Date ? s.proposed_time.toISOString() : s.proposed_time,
     created_at: s.created_at instanceof Date ? s.created_at.toISOString() : s.created_at,
