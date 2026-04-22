@@ -32,11 +32,16 @@ export default async function AdminDashboardPage() {
       `,
     ]);
 
+  const [tutorRow] = tutorCount as Record<string, number>[];
+  const [studentRow] = studentCount as Record<string, number>[];
+  const [upcomingRow] = upcomingThisWeek as Record<string, number>[];
+  const [pendingRow] = pendingCount as Record<string, number>[];
+
   const stats = [
-    { label: 'Active Tutors', value: tutorCount[0].count, icon: Users, accent: 'sky', href: '/admin/users?role=tutor' },
-    { label: 'Active Students', value: studentCount[0].count, icon: Users, accent: 'rose', href: '/admin/users?role=student' },
-    { label: 'Sessions This Week', value: upcomingThisWeek[0].count, icon: CalendarDays, accent: 'sky', href: '/admin/schedule' },
-    { label: 'Pending Approvals', value: pendingCount[0].count, icon: Clock, accent: 'rose', href: '/admin/schedule' },
+    { label: 'Active Tutors', value: tutorRow.count, icon: Users, accent: 'sky', href: '/admin/users?role=tutor' },
+    { label: 'Active Students', value: studentRow.count, icon: Users, accent: 'rose', href: '/admin/users?role=student' },
+    { label: 'Sessions This Week', value: upcomingRow.count, icon: CalendarDays, accent: 'sky', href: '/admin/schedule' },
+    { label: 'Pending Approvals', value: pendingRow.count, icon: Clock, accent: 'rose', href: '/admin/schedule' },
   ];
 
   const quickActions = [
