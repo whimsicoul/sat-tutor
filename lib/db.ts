@@ -16,11 +16,11 @@ function getSql() {
 // only created on first use (not at module load time during Next.js build).
 const sql = new Proxy(
   function sql(...args: Parameters<ReturnType<typeof neon>>) {
-    return (getSql() as any)(...args);
+    return (getSql() as ReturnType<typeof neon>)(...args);
   } as ReturnType<typeof neon>,
   {
     get(_, prop) {
-      return (getSql() as any)[prop];
+      return (getSql() as ReturnType<typeof neon>)[prop as keyof ReturnType<typeof neon>];
     },
   }
 );
