@@ -3,8 +3,6 @@ builder = "nixpacks"
 buildCommand = "npm run build"
 
 [deploy]
-startCommand = "node .next/standalone/server.js"
-# This ensures your CSS and Images are in the right place
-postDeployCommand = "cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public"
+startCommand = "npm run start"
 healthcheckPath = "/api/health"
 restartPolicyType = "on_failure"
