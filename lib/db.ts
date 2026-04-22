@@ -1,5 +1,11 @@
 import { neon } from '@neondatabase/serverless';
 
+type Row = Record<string, any>;
+type SqlFn = (strings: TemplateStringsArray, ...values: any[]) => Promise<Row[]>;
+interface SqlProxy extends SqlFn {
+  query(text: string, params?: any[]): Promise<Row[]>;
+}
+
 let _sql: ReturnType<typeof neon> | null = null;
 
 function getSql() {
@@ -16,14 +22,14 @@ function getSql() {
 // only created on first use (not at module load time during Next.js build).
 const sql = new Proxy(
   function sql(...args: Parameters<ReturnType<typeof neon>>) {
-    return (getSql() as ReturnType<typeof neon>)(...args);
-  } as ReturnType<typeof neon>,
+    return (getSql() as any)(...args);
+  } as unknown as SqlProxy,
   {
     get(_, prop) {
       return (getSql() as ReturnType<typeof neon>)[prop as keyof ReturnType<typeof neon>];
     },
   }
-);
+) as SqlProxy;
 
 export default sql;
 

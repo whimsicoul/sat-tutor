@@ -36,6 +36,7 @@ export default async function AdminDashboardPage() {
   const [studentRow] = studentCount as Record<string, number>[];
   const [upcomingRow] = upcomingThisWeek as Record<string, number>[];
   const [pendingRow] = pendingCount as Record<string, number>[];
+  const sessions = upcomingFive as Record<string, unknown>[];
 
   const stats = [
     { label: 'Active Tutors', value: tutorRow.count, icon: Users, accent: 'sky', href: '/admin/users?role=tutor' },
@@ -187,15 +188,15 @@ export default async function AdminDashboardPage() {
             </Link>
           </div>
 
-          {upcomingFive.length === 0 ? (
+          {sessions.length === 0 ? (
             <div style={{ padding: 32, textAlign: 'center', color: 'var(--mist)', fontSize: 14, flex: 1 }}>
               No upcoming sessions
             </div>
           ) : (
             <div style={{ flex: 1, overflowY: 'auto' }}>
-              {upcomingFive.map((s: Record<string, unknown>, i: number) => {
+              {sessions.map((s, i) => {
                 const status = s.status as string;
-                const isLast = i === upcomingFive.length - 1;
+                const isLast = i === sessions.length - 1;
                 const statusStyle =
                   status === 'approved'
                     ? { color: 'var(--sky-deeper)', bg: 'rgba(168,203,222,0.18)' }
