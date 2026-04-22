@@ -1,6 +1,30 @@
 import { neon } from '@neondatabase/serverless';
 
-const sql = neon(process.env.DATABASE_URL!);
+let _sql: ReturnType<typeof neon> | null = null;
+
+function getSql() {
+  if (!_sql) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is not set');
+    }
+    _sql = neon(process.env.DATABASE_URL);
+  }
+  return _sql;
+}
+
+// sql is a tagged template literal function; proxy it so the connection is
+// only created on first use (not at module load time during Next.js build).
+const sql = new Proxy(
+  function sql(...args: Parameters<ReturnType<typeof neon>>) {
+    return (getSql() as any)(...args);
+  } as ReturnType<typeof neon>,
+  {
+    get(_, prop) {
+      return (getSql() as any)[prop];
+    },
+  }
+);
+
 export default sql;
 
 export async function getUserByEmail(email: string) {
