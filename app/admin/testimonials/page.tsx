@@ -13,5 +13,5 @@ export interface TestimonialRow {
 export default async function AdminTestimonialsPage() {
   await auth();
   const testimonials = await sql`SELECT * FROM testimonials ORDER BY created_at DESC`;
-  return <AdminTestimonialsClient testimonials={testimonials as TestimonialRow[]} />;
+  return <AdminTestimonialsClient testimonials={(testimonials as unknown) as TestimonialRow[]} />;
 }

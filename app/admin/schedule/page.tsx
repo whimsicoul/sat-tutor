@@ -31,17 +31,25 @@ export default async function AdminSchedulePage() {
   const role = (session?.user as { role?: string } | undefined)?.role;
   if (role !== 'admin') redirect('/login');
 
-  const [sessions, tutors, students] = await Promise.all([
+  const [sessions, rawTutors, rawStudents] = await Promise.all([
     getAllSessions(),
     getUsersByRole('tutor'),
     getUsersByRole('student'),
   ]);
 
+  const tutors = (rawTutors as Array<{ id: string; name: string }>).map(
+    (user) => ({ id: user.id, name: user.name }),
+  );
+
+  const students = (rawStudents as Array<{ id: string; name: string }>).map(
+    (user) => ({ id: user.id, name: user.name }),
+  );
+
   return (
     <ScheduleClient
-      sessions={sessions as AdminSession[]}
-      tutors={tutors as UserOption[]}
-      students={students as UserOption[]}
+      sessions={(sessions as unknown) as AdminSession[]}
+      tutors={tutors}
+      students={students}
     />
   );
 }

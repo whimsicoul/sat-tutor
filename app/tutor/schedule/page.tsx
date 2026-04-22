@@ -97,7 +97,7 @@ export default async function TutorSchedulePage() {
     problem_sets: psMap[s.id] ?? [],
   }));
 
-  const allProblemSets: TutorAllProblemSet[] = (tutorProblemSets as TutorAllProblemSet[]).map((p) => ({
+  const allProblemSets: TutorAllProblemSet[] = (tutorProblemSets as unknown as TutorAllProblemSet[]).map((p) => ({
     id: p.id,
     title: p.title,
     problem_pdf_url: p.problem_pdf_url,
@@ -108,7 +108,7 @@ export default async function TutorSchedulePage() {
   return (
     <TutorScheduleClient
       sessions={sessionsWithPs}
-      students={students as StudentOption[]}
+      students={students as unknown as StudentOption[]}
       allProblemSets={allProblemSets}
     />
   );

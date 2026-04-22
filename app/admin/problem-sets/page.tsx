@@ -31,9 +31,9 @@ export default async function AdminProblemSetsPage() {
 
   return (
     <ProblemSetsClient
-      problemSets={problemSets as AdminProblemSet[]}
-      tutors={tutors as UserOption[]}
-      students={students as UserOption[]}
+      problemSets={(problemSets as unknown) as AdminProblemSet[]}
+      tutors={(tutors as unknown) as UserOption[]}
+      students={(students as unknown) as UserOption[]}
     />
   );
 }

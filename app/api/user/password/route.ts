@@ -23,7 +23,7 @@ export async function PATCH(req: Request) {
   const user = await getUserByIdWithPassword(userId);
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-  const valid = await bcrypt.compare(currentPassword, user.hashed_password);
+  const valid = await bcrypt.compare(currentPassword, user.hashed_password as string);
   if (!valid) return NextResponse.json({ error: 'Current password is incorrect' }, { status: 401 });
 
   const hashed = await bcrypt.hash(newPassword, 12);

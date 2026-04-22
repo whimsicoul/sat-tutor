@@ -20,8 +20,8 @@ export default async function TutorProblemSetsPage() {
 
   return (
     <TutorProblemSetsClient
-      problemSets={problemSets as ProblemSetRow[]}
-      students={students as StudentOption[]}
+      problemSets={problemSets as unknown as ProblemSetRow[]}
+      students={students as unknown as StudentOption[]}
     />
   );
 }

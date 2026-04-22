@@ -18,5 +18,5 @@ export default async function AdminUsersPage() {
   if (role !== 'admin') redirect('/login');
 
   const users = await getAllUsers();
-  return <UsersClient users={users as AdminUser[]} />;
+  return <UsersClient users={(users as unknown) as AdminUser[]} />;
 }

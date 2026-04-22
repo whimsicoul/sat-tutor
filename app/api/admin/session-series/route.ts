@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   }
 
   const rrule = recurrence === 'biweekly' ? 'FREQ=WEEKLY;INTERVAL=2' : 'FREQ=WEEKLY';
-  const series = await createSessionSeries(tutorId, studentId, rrule, startDate, endDate);
+  const series = await createSessionSeries(tutorId, studentId, rrule, startDate, endDate) as { id: string };
 
   const [hours, minutes] = (time as string).split(':').map(Number);
   const start = new Date(startDate + 'T00:00:00');
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   }
 
   const created = await Promise.all(
-    occurrences.map((t) => adminCreateSession(tutorId, studentId, t, series.id))
+    occurrences.map((t) => adminCreateSession(tutorId, studentId, t, series.id as string))
   );
 
   return NextResponse.json({ series, sessions: created }, { status: 201 });
