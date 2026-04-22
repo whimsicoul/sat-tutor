@@ -1,9 +1,14 @@
 import { neon } from '@neondatabase/serverless';
 
-type Row = Record<string, any>;
-type SqlFn = (strings: TemplateStringsArray, ...values: any[]) => Promise<Row[]>;
+// Replace 'any' with 'unknown' for flexible but safe typing
+type Row = Record<string, unknown>;
+
+// Replace 'any[]' with 'unknown[]'
+type SqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<Row[]>;
+
 interface SqlProxy extends SqlFn {
-  query(text: string, params?: any[]): Promise<Row[]>;
+  // Replace 'any[]' with 'unknown[]'
+  query(text: string, params?: unknown[]): Promise<Row[]>;
 }
 
 let _sql: ReturnType<typeof neon> | null = null;
@@ -22,11 +27,13 @@ function getSql() {
 // only created on first use (not at module load time during Next.js build).
 const sql = new Proxy(
   function sql(...args: Parameters<ReturnType<typeof neon>>) {
-    return (getSql() as any)(...args);
+    // Cast to SqlFn instead of any to satisfy the linter
+    return (getSql() as unknown as SqlFn)(...args);
   } as unknown as SqlProxy,
   {
     get(_, prop) {
-      return (getSql() as ReturnType<typeof neon>)[prop as keyof ReturnType<typeof neon>];
+      const db = getSql();
+      return db[prop as keyof typeof db];
     },
   }
 ) as SqlProxy;
@@ -264,8 +271,10 @@ export async function adminUpdateSessionStatus(id: string, status: string) {
   return rows[0] ?? null;
 }
 
-export async function adminBulkUpdateSessionStatus(ids: string[], status: string) {
+export async function adminBulkUpdateSessionStatus(ids: string[], status: string): Promise<Row[]> {
   if (ids.length === 0) return [];
+  
+  // By typing the return of the query, we satisfy the linter
   return sql.query(
     'UPDATE sessions SET status = $1 WHERE id = ANY($2::uuid[]) RETURNING *',
     [status, ids]
