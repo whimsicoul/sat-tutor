@@ -6,19 +6,17 @@ export const SESSION_MAX_AGE  =  1 * 24 * 60 * 60;
 export const authConfig = {
   providers: [],
   callbacks: {
-    jwt({ token, user, credentials, trigger }) {
+    jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = (user as { role?: string }).role;
-      }
-      if (trigger === 'signIn' && credentials) {
-        token.rememberMe = credentials.rememberMe === 'true';
+        token.id = user.id as string;
+        token.role = user.role;
+        token.rememberMe = user.rememberMe ?? false;
       }
       return token;
     },
     session({ session, token }) {
-      session.user.id = token.id as string;
-      (session.user as { role?: string }).role = token.role as string;
+      session.user.id = token.id;
+      session.user.role = token.role;
       return session;
     },
   },

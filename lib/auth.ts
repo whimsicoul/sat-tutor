@@ -27,7 +27,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: user.id as string,
           name: user.name as string,
           email: user.email as string,
-          role: user.role as string,
+          role: user.role as 'student' | 'tutor' | 'admin',
+          rememberMe: credentials.rememberMe === 'true',
         };
       },
     }),

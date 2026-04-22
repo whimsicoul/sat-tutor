@@ -2,6 +2,11 @@ import { DefaultSession } from 'next-auth';
 import { DefaultJWT } from 'next-auth/jwt';
 
 declare module 'next-auth' {
+  interface User {
+    role: 'student' | 'tutor' | 'admin';
+    rememberMe?: boolean;
+  }
+
   interface Session {
     user: DefaultSession['user'] & {
       id: string;
