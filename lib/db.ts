@@ -414,3 +414,71 @@ export async function setSessionProblemSets(sessionId: string, problemSetIds: st
     )
   );
 }
+
+// ─── Homework ─────────────────────────────────────────────────────────────────
+
+export async function getHomeworkByStudent(studentId: string) {
+  return sql`
+    SELECT hw.id, hw.title, hw.scheduled_date, hw.problem_pdf_url, hw.created_at,
+           u.name AS assigned_by_name
+    FROM homework hw
+    JOIN users u ON u.id = hw.assigned_by
+    WHERE hw.student_id = ${studentId}
+    ORDER BY hw.scheduled_date ASC
+  `;
+}
+
+export async function getHomeworkByAssigner(assignerId: string) {
+  return sql`
+    SELECT hw.id, hw.title, hw.scheduled_date, hw.problem_pdf_url, hw.answer_pdf_url, hw.created_at,
+           s.name AS student_name
+    FROM homework hw
+    JOIN users s ON s.id = hw.student_id
+    WHERE hw.assigned_by = ${assignerId}
+    ORDER BY hw.scheduled_date ASC
+  `;
+}
+
+export async function getHomeworkForTutorStudents(tutorId: string) {
+  return sql`
+    SELECT hw.id, hw.title, hw.scheduled_date, hw.problem_pdf_url, hw.answer_pdf_url, hw.created_at,
+           s.name AS student_name, s.id AS student_id
+    FROM homework hw
+    JOIN users s ON s.id = hw.student_id
+    JOIN tutor_student_assignments tsa ON tsa.student_id = hw.student_id
+    WHERE tsa.tutor_id = ${tutorId}
+    ORDER BY hw.scheduled_date ASC
+  `;
+}
+
+export async function getAllHomework() {
+  return sql`
+    SELECT hw.id, hw.title, hw.scheduled_date, hw.problem_pdf_url, hw.answer_pdf_url, hw.created_at,
+           s.name AS student_name,
+           a.name AS assigned_by_name
+    FROM homework hw
+    JOIN users s ON s.id = hw.student_id
+    JOIN users a ON a.id = hw.assigned_by
+    ORDER BY hw.scheduled_date ASC
+  `;
+}
+
+export async function createHomework(
+  title: string,
+  studentId: string,
+  assignedBy: string,
+  scheduledDate: string,
+  problemPdfUrl: string,
+  answerPdfUrl?: string
+) {
+  const rows = await sql`
+    INSERT INTO homework (title, student_id, assigned_by, scheduled_date, problem_pdf_url, answer_pdf_url)
+    VALUES (${title}, ${studentId}, ${assignedBy}, ${scheduledDate}, ${problemPdfUrl}, ${answerPdfUrl ?? null})
+    RETURNING *
+  `;
+  return rows[0];
+}
+
+export async function deleteHomework(id: string) {
+  await sql`DELETE FROM homework WHERE id = ${id}`;
+}

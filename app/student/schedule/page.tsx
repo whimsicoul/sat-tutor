@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
-import { getSatDatesByStudent } from '@/lib/db';
+import { getSatDatesByStudent, getHomeworkByStudent } from '@/lib/db';
 import StudentScheduleClient from './client';
 
 export interface SessionProblemSet {
@@ -21,11 +21,17 @@ export interface SessionRow {
   recurrence_rule?: string | null;
 }
 
+export interface HomeworkItem {
+  id: string;
+  title: string;
+  scheduled_date: string;
+}
+
 export default async function StudentSchedulePage() {
   const session = await auth();
   const userId = session!.user.id;
 
-  const [sessions, allAttachments, satDatesRaw] = await Promise.all([
+  const [sessions, allAttachments, satDatesRaw, homeworkRaw] = await Promise.all([
     sql`
       SELECT s.id, s.proposed_time, s.status, s.created_at,
              u.name AS tutor_name,
@@ -46,6 +52,7 @@ export default async function StudentSchedulePage() {
       ORDER BY ps.created_at DESC
     `,
     getSatDatesByStudent(userId),
+    getHomeworkByStudent(userId),
   ]);
 
   const psMap: Record<string, SessionProblemSet[]> = {};
@@ -75,5 +82,12 @@ export default async function StudentSchedulePage() {
     created_at: d.created_at instanceof Date ? d.created_at.toISOString() : String(d.created_at),
   }));
 
-  return <StudentScheduleClient sessions={sessionsWithPs} satDates={satDates} />;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const homework: HomeworkItem[] = (homeworkRaw as any[]).map((h) => ({
+    id: h.id as string,
+    title: h.title as string,
+    scheduled_date: h.scheduled_date instanceof Date ? h.scheduled_date.toISOString().split('T')[0] : String(h.scheduled_date),
+  }));
+
+  return <StudentScheduleClient sessions={sessionsWithPs} satDates={satDates} homework={homework} />;
 }

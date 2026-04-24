@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import type { AdminSession, UserOption, AttachedProblemSet } from './page';
+import type { AdminSession, UserOption, AttachedProblemSet, AdminSatDate, AdminHomeworkItem } from './page';
 
 const localizer = dateFnsLocalizer({
   format,
@@ -39,13 +39,31 @@ interface CalEvent {
   title: string;
   start: Date;
   end: Date;
-  resource: AdminSession;
+  resource?: AdminSession;
   color: string;
+  type: 'session' | 'sat' | 'homework';
 }
 
 function EventComponent({ event }: { event: CalEvent }) {
   const [showTip, setShowTip] = useState(false);
-  const s = event.resource;
+
+  if (event.type === 'sat') {
+    return (
+      <div style={{ fontSize: 11, padding: '1px 4px', fontWeight: 600 }}>
+        🗓 SAT — {event.title}
+      </div>
+    );
+  }
+
+  if (event.type === 'homework') {
+    return (
+      <div style={{ fontSize: 11, padding: '1px 4px', fontWeight: 600 }}>
+        📝 {event.title}
+      </div>
+    );
+  }
+
+  const s = event.resource!;
   const statusColor =
     s.status === 'approved' ? 'var(--sky-deeper)' :
     s.status === 'denied'   ? '#EF4444' : 'var(--rose-deeper)';
@@ -102,10 +120,14 @@ export default function ScheduleClient({
   sessions: initial,
   tutors,
   students,
+  satDates = [],
+  homework = [],
 }: {
   sessions: AdminSession[];
   tutors: UserOption[];
   students: UserOption[];
+  satDates?: AdminSatDate[];
+  homework?: AdminHomeworkItem[];
 }) {
   const [mounted, setMounted] = useState(false);
   const [sessions, setSessions] = useState<AdminSession[]>(initial);
@@ -211,16 +233,26 @@ export default function ScheduleClient({
     [sessions]
   );
 
-  const events = useMemo<CalEvent[]>(
-    () =>
-      sessions.map((s) => {
-        const start = new Date(s.proposed_time);
-        const end = new Date(start.getTime() + 60 * 60 * 1000);
-        const color = getTutorColor(s.tutor_id, tutorIds);
-        return { id: s.id, title: `${s.tutor_name} → ${s.student_name}`, start, end, resource: s, color };
-      }),
-    [sessions, tutorIds]
-  );
+  const events = useMemo<CalEvent[]>(() => {
+    const sessionEvents: CalEvent[] = sessions.map((s) => {
+      const start = new Date(s.proposed_time);
+      const end = new Date(start.getTime() + 60 * 60 * 1000);
+      const color = getTutorColor(s.tutor_id, tutorIds);
+      return { id: s.id, title: `${s.tutor_name} → ${s.student_name}`, start, end, resource: s, color, type: 'session' as const };
+    });
+
+    const satEvents: CalEvent[] = satDates.map((d) => {
+      const day = new Date(d.test_date + 'T00:00:00');
+      return { id: `sat-${d.id}`, title: d.student_name, start: day, end: day, color: '#A85F6A', type: 'sat' as const };
+    });
+
+    const hwEvents: CalEvent[] = homework.map((h) => {
+      const day = new Date(h.scheduled_date + 'T00:00:00');
+      return { id: `hw-${h.id}`, title: `${h.student_name}: ${h.title}`, start: day, end: day, color: '#4D8FAE', type: 'homework' as const };
+    });
+
+    return [...sessionEvents, ...satEvents, ...hwEvents];
+  }, [sessions, tutorIds, satDates, homework]);
 
   const eventPropGetter = (event: CalEvent) => ({
     style: {
@@ -239,6 +271,7 @@ export default function ScheduleClient({
   );
 
   async function handleSelectEvent(event: CalEvent) {
+    if (event.type !== 'session' || !event.resource) return;
     setDetailSession(event.resource);
     setDetailOpen(true);
     setDetailLoading(true);
@@ -378,17 +411,23 @@ export default function ScheduleClient({
         </button>
       </div>
 
-      {/* Tutor color legend */}
-      {tutorIds.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
-          {tutors.filter((t) => tutorIds.includes(t.id)).map((tutor) => (
-            <div key={tutor.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: getTutorColor(tutor.id, tutorIds), flexShrink: 0 }} />
-              {tutor.name}
-            </div>
-          ))}
+      {/* Calendar legend */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20, alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
+          <div style={{ width: 12, height: 12, borderRadius: 3, background: '#A85F6A', flexShrink: 0 }} />
+          SAT Test Date
         </div>
-      )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
+          <div style={{ width: 12, height: 12, borderRadius: 3, background: '#4D8FAE', flexShrink: 0 }} />
+          Homework
+        </div>
+        {tutorIds.length > 0 && tutors.filter((t) => tutorIds.includes(t.id)).map((tutor) => (
+          <div key={tutor.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
+            <div style={{ width: 12, height: 12, borderRadius: 3, background: getTutorColor(tutor.id, tutorIds), flexShrink: 0 }} />
+            {tutor.name}
+          </div>
+        ))}
+      </div>
 
       {/* Calendar */}
       <div

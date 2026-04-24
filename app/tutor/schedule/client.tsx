@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
-import type { TutorSessionRow, TutorProblemSet, StudentOption, TutorAllProblemSet } from './page';
+import type { TutorSessionRow, TutorProblemSet, StudentOption, TutorAllProblemSet, HomeworkItem } from './page';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -131,11 +131,13 @@ export default function TutorScheduleClient({
   students,
   allProblemSets,
   satDates,
+  homework = [],
 }: {
   sessions: TutorSessionRow[];
   students: StudentOption[];
   allProblemSets: TutorAllProblemSet[];
   satDates: TutorSatDate[];
+  homework?: HomeworkItem[];
 }) {
   const [sessions, setSessions] = useState(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -180,6 +182,21 @@ export default function TutorScheduleClient({
     }
     return map;
   }, [sessions]);
+
+  const satDatesByDay = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of satDates) set.add(d.test_date);
+    return set;
+  }, [satDates]);
+
+  const homeworkByDay = useMemo(() => {
+    const map: Record<string, HomeworkItem[]> = {};
+    for (const h of homework) {
+      if (!map[h.scheduled_date]) map[h.scheduled_date] = [];
+      map[h.scheduled_date].push(h);
+    }
+    return map;
+  }, [homework]);
 
   // ── Day selection ──────────────────────────────────────────────────────
 
@@ -390,9 +407,12 @@ export default function TutorScheduleClient({
           {calendarDays.map((day) => {
             const key = format(day, 'yyyy-MM-dd');
             const daySess = sessionsByDay[key] ?? [];
+            const dayHw = homeworkByDay[key] ?? [];
+            const hasSat = satDatesByDay.has(key);
             const inMonth = isSameMonth(day, currentMonth);
             const isSelected = selectedDay && isSameDay(day, selectedDay);
             const isToday = isSameDay(day, new Date());
+            const hasAny = daySess.length > 0 || dayHw.length > 0 || hasSat;
 
             return (
               <div
@@ -408,7 +428,7 @@ export default function TutorScheduleClient({
                   transition: 'background 0.1s',
                   opacity: inMonth ? 1 : 0.35,
                 }}
-                onMouseEnter={(e) => { if (daySess.length > 0) (e.currentTarget as HTMLDivElement).style.background = isSelected ? 'rgba(168,203,222,0.18)' : 'rgba(168,203,222,0.06)'; }}
+                onMouseEnter={(e) => { if (hasAny) (e.currentTarget as HTMLDivElement).style.background = isSelected ? 'rgba(168,203,222,0.18)' : 'rgba(168,203,222,0.06)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = isSelected ? 'rgba(168,203,222,0.12)' : 'transparent'; }}
               >
                 <span
@@ -429,7 +449,7 @@ export default function TutorScheduleClient({
                   {format(day, 'd')}
                 </span>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {daySess.slice(0, 3).map((s) => (
+                  {daySess.slice(0, 2).map((s) => (
                     <div
                       key={s.id}
                       style={{
@@ -447,8 +467,42 @@ export default function TutorScheduleClient({
                       {format(parseISO(s.proposed_time), 'h:mm a')} {s.student_name.split(' ')[0]}
                     </div>
                   ))}
-                  {daySess.length > 3 && (
-                    <span style={{ fontSize: 9, color: 'var(--mist)', paddingLeft: 5 }}>+{daySess.length - 3} more</span>
+                  {daySess.length > 2 && (
+                    <span style={{ fontSize: 9, color: 'var(--mist)', paddingLeft: 5 }}>+{daySess.length - 2} more</span>
+                  )}
+                  {dayHw.slice(0, 2).map((h) => (
+                    <div
+                      key={h.id}
+                      style={{
+                        fontSize: 10,
+                        lineHeight: 1.3,
+                        padding: '1px 5px',
+                        borderRadius: 4,
+                        background: 'rgba(77,143,174,0.18)',
+                        color: 'var(--sky-deeper)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      📝 {h.student_name.split(' ')[0]}
+                    </div>
+                  ))}
+                  {hasSat && (
+                    <div
+                      style={{
+                        fontSize: 10,
+                        lineHeight: 1.3,
+                        padding: '1px 5px',
+                        borderRadius: 4,
+                        background: 'rgba(168,95,106,0.15)',
+                        color: 'var(--rose-deeper)',
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      SAT
+                    </div>
                   )}
                 </div>
               </div>
