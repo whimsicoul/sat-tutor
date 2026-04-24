@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Plus, Trash2, X, BarChart2, FileText } from 'lucide-react';
+import { Plus, Trash2, X, BarChart2, FileText, GraduationCap } from 'lucide-react';
 import { toast } from 'sonner';
 import { UploadButton } from '@uploadthing/react';
 import type { OurFileRouter } from '@/lib/uploadthing';
-import type { TestResultRow, StudentOption } from './page';
+import type { TestResultRow, StudentOption, SatDateRow } from './page';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -33,14 +33,23 @@ function roseBlur(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTM
 export default function AdminTestResultsClient({
   results: initial,
   students,
+  satDates: initialSatDates,
 }: {
   results: TestResultRow[];
   students: StudentOption[];
+  satDates: SatDateRow[];
 }) {
   const [results, setResults] = useState(initial);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // SAT dates state
+  const [satDates, setSatDates] = useState(initialSatDates);
+  const [satStudentId, setSatStudentId] = useState('');
+  const [satDate, setSatDate] = useState('');
+  const [satSaving, setSatSaving] = useState(false);
+  const [satDeletingId, setSatDeletingId] = useState<string | null>(null);
 
   // Form state
   const [studentId, setStudentId] = useState('');
@@ -102,6 +111,43 @@ export default function AdminTestResultsClient({
       toast.error('Failed to delete result.');
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleAddSatDate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!satStudentId || !satDate) { toast.error('Student and date are required.'); return; }
+    setSatSaving(true);
+    try {
+      const res = await fetch('/api/admin/sat-dates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: satStudentId, testDate: satDate }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const row = await res.json();
+      const student = students.find((s) => s.id === satStudentId);
+      setSatDates((prev) => [...prev, { ...row, student_name: student?.name ?? '' }].sort((a, b) => a.test_date.localeCompare(b.test_date)));
+      setSatStudentId(''); setSatDate('');
+      toast.success('SAT date added.');
+    } catch {
+      toast.error('Failed to add SAT date.');
+    } finally {
+      setSatSaving(false);
+    }
+  }
+
+  async function handleDeleteSatDate(id: string) {
+    setSatDeletingId(id);
+    try {
+      const res = await fetch(`/api/admin/sat-dates/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed');
+      setSatDates((prev) => prev.filter((d) => d.id !== id));
+      toast.success('SAT date removed.');
+    } catch {
+      toast.error('Failed to remove SAT date.');
+    } finally {
+      setSatDeletingId(null);
     }
   }
 
@@ -244,6 +290,98 @@ export default function AdminTestResultsClient({
           </table>
         </div>
       )}
+
+      {/* SAT Test Dates */}
+      <div style={{ maxWidth: 960, marginTop: 40 }}>
+        <div className="flex items-center gap-2 mb-4">
+          <GraduationCap size={16} style={{ color: 'var(--rose-deeper)' }} />
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 700, color: 'var(--charcoal)' }}>
+            Official SAT Test Dates
+          </h2>
+        </div>
+
+        {/* Add form */}
+        <form onSubmit={handleAddSatDate} className="flex items-end gap-3 mb-6 flex-wrap">
+          <div style={{ flex: '1 1 180px', minWidth: 180 }}>
+            <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>Student</label>
+            <select
+              value={satStudentId}
+              onChange={(e) => setSatStudentId(e.target.value)}
+              required
+              style={{ ...inputStyle, appearance: 'none' }}
+              onFocus={roseFocus}
+              onBlur={roseBlur}
+            >
+              <option value="">Select student</option>
+              {students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: '1 1 180px', minWidth: 180 }}>
+            <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>SAT Date</label>
+            <input
+              type="date"
+              value={satDate}
+              onChange={(e) => setSatDate(e.target.value)}
+              required
+              style={inputStyle}
+              onFocus={roseFocus}
+              onBlur={roseBlur}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={satSaving}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold"
+            style={{ background: satSaving ? 'var(--fog)' : 'var(--rose)', color: satSaving ? 'var(--mist)' : 'var(--charcoal)', border: 'none', cursor: satSaving ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
+          >
+            <Plus className="h-4 w-4" />
+            Add SAT Date
+          </button>
+        </form>
+
+        {satDates.length === 0 ? (
+          <div
+            className="portal-card flex flex-col items-center justify-center py-12 text-center"
+            style={{ maxWidth: 960 }}
+          >
+            <GraduationCap className="h-6 w-6 mb-2" style={{ color: 'var(--mist)' }} />
+            <p className="text-sm" style={{ color: 'var(--mist)' }}>No SAT test dates recorded yet.</p>
+          </div>
+        ) : (
+          <div className="portal-card p-0 overflow-hidden" style={{ maxWidth: 960 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--fog)' }}>
+                  {['Student', 'SAT Date', ''].map((h) => (
+                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {satDates.map((d) => (
+                  <tr key={d.id} style={{ borderBottom: '1px solid var(--fog)' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--charcoal)' }}>{d.student_name}</td>
+                    <td style={{ padding: '12px 16px', color: 'var(--rose-deeper)', fontWeight: 600 }}>
+                      {format(new Date(d.test_date + 'T12:00:00'), 'MMMM d, yyyy')}
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <button
+                        onClick={() => handleDeleteSatDate(d.id)}
+                        disabled={satDeletingId === d.id}
+                        style={{ background: 'none', border: 'none', cursor: satDeletingId === d.id ? 'not-allowed' : 'pointer', color: 'var(--mist)', padding: 4, borderRadius: 6, opacity: satDeletingId === d.id ? 0.5 : 1 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--rose-deeper)'; e.currentTarget.style.background = 'var(--rose-ultra)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--mist)'; e.currentTarget.style.background = 'none'; }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Add modal */}
       {showAdd && (

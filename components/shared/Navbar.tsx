@@ -20,6 +20,7 @@ const STUDENT_LINKS = [
 
 const TUTOR_LINKS = [
   { href: '/tutor/schedule', label: 'Schedule', icon: Calendar },
+  { href: '/tutor/test-results', label: 'Test Results', icon: BarChart2 },
   { href: '/tutor/problem-sets', label: 'Problem Sets', icon: BookOpen },
   { href: '/tutor/settings', label: 'Settings', icon: Settings },
 ];

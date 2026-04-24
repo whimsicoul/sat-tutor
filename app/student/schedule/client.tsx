@@ -8,11 +8,225 @@ import {
 } from 'date-fns';
 import {
   ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock,
-  Download, ExternalLink, Calendar, FileText, X,
+  Download, ExternalLink, Calendar, FileText, X, GraduationCap, Plus, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
 import type { SessionRow, SessionProblemSet } from './page';
+
+interface SatDate {
+  id: string;
+  test_date: string;
+  created_at: string;
+}
+
+function MeetingRequestForm({ onRequested }: { onRequested: (session: SessionRow) => void }) {
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!date || !time) return;
+    setSubmitting(true);
+    try {
+      const proposedTime = new Date(`${date}T${time}`).toISOString();
+      const res = await fetch('/api/student/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposedTime }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error ?? 'Failed to submit request.');
+        return;
+      }
+      const newSession = await res.json();
+      onRequested({
+        id: newSession.id,
+        proposed_time: newSession.proposed_time,
+        status: 'pending',
+        created_at: newSession.created_at,
+        tutor_name: newSession.tutor_name ?? '',
+        problem_sets: [],
+        series_id: null,
+        series_end_date: null,
+        recurrence_rule: null,
+      });
+      setDate(''); setTime('');
+      toast.success('Meeting request submitted! Your tutor will review it.');
+    } catch {
+      toast.error('Failed to submit request.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="portal-card p-6" style={{ borderLeft: '3px solid var(--sky)' }}>
+      <div className="flex items-center gap-2 mb-4">
+        <Calendar size={16} style={{ color: 'var(--sky-deeper)' }} />
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>Request a Meeting</h2>
+      </div>
+      <p className="text-xs mb-4" style={{ color: 'var(--mist)' }}>
+        Propose a date and time — your tutor and admin will be notified to approve.
+      </p>
+      <form onSubmit={handleSubmit} className="flex items-end gap-3 flex-wrap">
+        <div style={{ flex: '1 1 160px', minWidth: 160 }}>
+          <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>Date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+            style={{
+              width: '100%', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem',
+              border: '1px solid var(--fog)', background: 'var(--white)', color: 'var(--charcoal)',
+              fontFamily: "'Syne', sans-serif", outline: 'none',
+            }}
+          />
+        </div>
+        <div style={{ flex: '1 1 140px', minWidth: 140 }}>
+          <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>Time</label>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            required
+            style={{
+              width: '100%', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem',
+              border: '1px solid var(--fog)', background: 'var(--white)', color: 'var(--charcoal)',
+              fontFamily: "'Syne', sans-serif", outline: 'none',
+            }}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={submitting || !date || !time}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold"
+          style={{
+            background: submitting || !date || !time ? 'var(--fog)' : 'rgba(168,203,222,0.5)',
+            color: submitting || !date || !time ? 'var(--mist)' : 'var(--sky-deeper)',
+            border: '1px solid rgba(168,203,222,0.4)',
+            cursor: submitting || !date || !time ? 'not-allowed' : 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <Plus size={14} />
+          {submitting ? 'Requesting…' : 'Request Meeting'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function SatDatesSection({ initialDates }: { initialDates: SatDate[] }) {
+  const [dates, setDates] = useState(initialDates);
+  const [newDate, setNewDate] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newDate) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/student/sat-dates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testDate: newDate }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const row: SatDate = await res.json();
+      setDates((prev) => [...prev, row].sort((a, b) => a.test_date.localeCompare(b.test_date)));
+      setNewDate('');
+      toast.success('SAT date added.');
+    } catch {
+      toast.error('Failed to add SAT date.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/student/sat-dates/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed');
+      setDates((prev) => prev.filter((d) => d.id !== id));
+      toast.success('SAT date removed.');
+    } catch {
+      toast.error('Failed to remove SAT date.');
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  return (
+    <div className="portal-card p-6" style={{ borderLeft: '3px solid var(--rose)' }}>
+      <div className="flex items-center gap-2 mb-4">
+        <GraduationCap size={16} style={{ color: 'var(--rose-deeper)' }} />
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>Official SAT Test Dates</h2>
+      </div>
+
+      {dates.length === 0 && (
+        <p className="text-xs mb-4" style={{ color: 'var(--mist)' }}>No SAT dates added yet. Add your exam date below.</p>
+      )}
+
+      {dates.length > 0 && (
+        <div className="flex flex-col gap-2 mb-4">
+          {dates.map((d) => (
+            <div
+              key={d.id}
+              className="flex items-center justify-between rounded-lg px-4 py-2"
+              style={{ background: 'var(--rose-ultra)', border: '1px solid rgba(224,166,175,0.3)' }}
+            >
+              <span className="text-sm font-semibold" style={{ color: 'var(--rose-deeper)' }}>
+                {format(new Date(d.test_date + 'T12:00:00'), 'MMMM d, yyyy')}
+              </span>
+              <button
+                onClick={() => handleDelete(d.id)}
+                disabled={deletingId === d.id}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mist)', padding: 4, borderRadius: 6, opacity: deletingId === d.id ? 0.5 : 1 }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--rose-deeper)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--mist)'; }}
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <form onSubmit={handleAdd} className="flex items-center gap-2">
+        <input
+          type="date"
+          value={newDate}
+          onChange={(e) => setNewDate(e.target.value)}
+          required
+          style={{
+            flex: 1, padding: '0.5rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem',
+            border: '1px solid var(--fog)', background: 'var(--white)', color: 'var(--charcoal)',
+            fontFamily: "'Syne', sans-serif", outline: 'none',
+          }}
+        />
+        <button
+          type="submit"
+          disabled={saving || !newDate}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold"
+          style={{
+            background: saving || !newDate ? 'var(--fog)' : 'var(--rose)',
+            color: saving || !newDate ? 'var(--mist)' : 'var(--charcoal)',
+            border: 'none', cursor: saving || !newDate ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+          }}
+        >
+          <Plus size={14} />
+          Add Date
+        </button>
+      </form>
+    </div>
+  );
+}
 
 const STATUS_COLOR: Record<string, string> = {
   pending: 'var(--sky)',
@@ -61,7 +275,13 @@ function ProblemSetsBlock({ problemSets }: { problemSets: SessionProblemSet[] })
   );
 }
 
-export default function StudentScheduleClient({ sessions: initial }: { sessions: SessionRow[] }) {
+export default function StudentScheduleClient({
+  sessions: initial,
+  satDates,
+}: {
+  sessions: SessionRow[];
+  satDates: SatDate[];
+}) {
   const [sessions, setSessions] = useState(initial);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
@@ -264,10 +484,16 @@ export default function StudentScheduleClient({ sessions: initial }: { sessions:
             No sessions scheduled yet
           </p>
           <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>
-            Your tutor will propose sessions here.
+            Your tutor will propose sessions here, or you can request one below.
           </p>
         </div>
       )}
+
+      {/* Meeting Request Form */}
+      <MeetingRequestForm onRequested={(newSession) => setSessions((prev) => [newSession, ...prev])} />
+
+      {/* SAT Test Dates */}
+      <SatDatesSection initialDates={satDates} />
 
       {/* Day detail panel */}
       {selectedDay && (

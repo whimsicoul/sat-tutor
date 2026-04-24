@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
+import { getSatDatesByStudent } from '@/lib/db';
 import StudentScheduleClient from './client';
 
 export interface SessionProblemSet {
@@ -24,7 +25,7 @@ export default async function StudentSchedulePage() {
   const session = await auth();
   const userId = session!.user.id;
 
-  const [sessions, allAttachments] = await Promise.all([
+  const [sessions, allAttachments, satDatesRaw] = await Promise.all([
     sql`
       SELECT s.id, s.proposed_time, s.status, s.created_at,
              u.name AS tutor_name,
@@ -44,6 +45,7 @@ export default async function StudentSchedulePage() {
       WHERE s.student_id = ${userId}
       ORDER BY ps.created_at DESC
     `,
+    getSatDatesByStudent(userId),
   ]);
 
   const psMap: Record<string, SessionProblemSet[]> = {};
@@ -66,5 +68,12 @@ export default async function StudentSchedulePage() {
     problem_sets: psMap[s.id] ?? [],
   }));
 
-  return <StudentScheduleClient sessions={sessionsWithPs} />;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const satDates = (satDatesRaw as any[]).map((d) => ({
+    id: d.id as string,
+    test_date: d.test_date instanceof Date ? d.test_date.toISOString().split('T')[0] : String(d.test_date),
+    created_at: d.created_at instanceof Date ? d.created_at.toISOString() : String(d.created_at),
+  }));
+
+  return <StudentScheduleClient sessions={sessionsWithPs} satDates={satDates} />;
 }

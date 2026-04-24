@@ -8,7 +8,7 @@ import {
 } from 'date-fns';
 import {
   ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock,
-  Download, ExternalLink, Send, FileText, X, Edit2, Save, Plus,
+  Download, ExternalLink, Send, FileText, X, Edit2, Save, Plus, GraduationCap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
@@ -119,14 +119,23 @@ function ProblemSetsBlock({ problemSets }: { problemSets: TutorProblemSet[] }) {
 
 // ── Main component ──────────────────────────────────────────────────────────
 
+interface TutorSatDate {
+  id: string;
+  test_date: string;
+  student_id: string;
+  student_name: string;
+}
+
 export default function TutorScheduleClient({
   sessions: initial,
   students,
   allProblemSets,
+  satDates,
 }: {
   sessions: TutorSessionRow[];
   students: StudentOption[];
   allProblemSets: TutorAllProblemSet[];
+  satDates: TutorSatDate[];
 }) {
   const [sessions, setSessions] = useState(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -610,6 +619,30 @@ export default function TutorScheduleClient({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* SAT Test Dates */}
+      {satDates.length > 0 && (
+        <div className="portal-card-sky p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <GraduationCap size={16} style={{ color: 'var(--sky-deeper)' }} />
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>Students&apos; Official SAT Dates</h2>
+          </div>
+          <div className="flex flex-col gap-2">
+            {satDates.map((d) => (
+              <div
+                key={d.id}
+                className="flex items-center justify-between rounded-lg px-4 py-2"
+                style={{ background: 'rgba(168,203,222,0.12)', border: '1px solid rgba(168,203,222,0.25)' }}
+              >
+                <span className="text-xs font-semibold" style={{ color: 'var(--charcoal)' }}>{d.student_name}</span>
+                <span className="text-sm font-semibold" style={{ color: 'var(--sky-deeper)' }}>
+                  {format(new Date(d.test_date + 'T12:00:00'), 'MMMM d, yyyy')}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

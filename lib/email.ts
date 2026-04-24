@@ -23,6 +23,25 @@ export async function emailStudentSessionProposed(opts: {
   });
 }
 
+export async function sendMeetingRequestEmail(opts: {
+  tutorEmail: string;
+  adminEmail: string;
+  studentName: string;
+  proposedTime: Date;
+}) {
+  const timeStr = opts.proposedTime.toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+  const html = `
+    <p><strong>${opts.studentName}</strong> has requested a tutoring session on
+       <strong>${timeStr}</strong>.</p>
+    <p><a href="${APP_URL}/tutor/schedule">View schedule to approve or deny →</a></p>
+  `;
+
+  await Promise.all([
+    resend.emails.send({ from: FROM, to: opts.tutorEmail, subject: `Meeting request from ${opts.studentName}`, html }),
+    resend.emails.send({ from: FROM, to: opts.adminEmail, subject: `Meeting request from ${opts.studentName}`, html }),
+  ]);
+}
+
 export async function emailTutorSessionStatusChanged(opts: {
   tutorEmail: string;
   studentName: string;

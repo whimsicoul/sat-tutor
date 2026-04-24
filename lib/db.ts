@@ -310,6 +310,80 @@ export async function adminCreateProblemSet(
   return rows[0];
 }
 
+// ─── Student: Session Requests ────────────────────────────────────────────────
+
+export async function getAssignedTutorForStudent(studentId: string) {
+  const rows = await sql`
+    SELECT u.id, u.name, u.email
+    FROM tutor_student_assignments tsa
+    JOIN users u ON u.id = tsa.tutor_id
+    WHERE tsa.student_id = ${studentId}
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
+// ─── SAT Test Dates ───────────────────────────────────────────────────────────
+
+export async function getSatDatesByStudent(studentId: string) {
+  return sql`
+    SELECT id, test_date, created_at
+    FROM sat_test_dates
+    WHERE student_id = ${studentId}
+    ORDER BY test_date ASC
+  `;
+}
+
+export async function getSatDatesForTutorStudents(tutorId: string) {
+  return sql`
+    SELECT std.id, std.test_date, std.created_at,
+           s.id AS student_id, s.name AS student_name
+    FROM sat_test_dates std
+    JOIN users s ON s.id = std.student_id
+    JOIN tutor_student_assignments tsa ON tsa.student_id = std.student_id
+    WHERE tsa.tutor_id = ${tutorId}
+    ORDER BY std.test_date ASC
+  `;
+}
+
+export async function getAllSatDates() {
+  return sql`
+    SELECT std.id, std.test_date, std.created_at,
+           s.id AS student_id, s.name AS student_name
+    FROM sat_test_dates std
+    JOIN users s ON s.id = std.student_id
+    ORDER BY std.test_date ASC
+  `;
+}
+
+export async function createSatDate(studentId: string, testDate: string, createdBy: string) {
+  const rows = await sql`
+    INSERT INTO sat_test_dates (student_id, test_date, created_by)
+    VALUES (${studentId}, ${testDate}, ${createdBy})
+    RETURNING id, student_id, test_date, created_at
+  `;
+  return rows[0];
+}
+
+export async function deleteSatDate(id: string) {
+  await sql`DELETE FROM sat_test_dates WHERE id = ${id}`;
+}
+
+// ─── Tutor: Test Results ─────────────────────────────────────────────────────
+
+export async function getTestResultsForTutorStudents(tutorId: string) {
+  return sql`
+    SELECT tr.id, tr.test_name, tr.test_date, tr.total_score, tr.math_score,
+           tr.reading_writing_score, tr.notes, tr.pdf_url, tr.created_at,
+           s.name AS student_name
+    FROM test_results tr
+    JOIN users s ON s.id = tr.student_id
+    JOIN tutor_student_assignments tsa ON tsa.student_id = tr.student_id
+    WHERE tsa.tutor_id = ${tutorId}
+    ORDER BY tr.test_date DESC
+  `;
+}
+
 // ─── Session ↔ Problem Set Attachments ───────────────────────────────────────
 
 export async function getProblemSetsBySession(sessionId: string) {
