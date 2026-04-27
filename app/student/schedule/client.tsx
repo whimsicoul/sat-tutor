@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
-import type { SessionRow, SessionProblemSet, HomeworkItem } from './page';
+import type { SessionRow, SessionProblemSet, HomeworkItem, BreakfastDay } from './page';
 
 interface SatDate {
   id: string;
@@ -279,10 +279,12 @@ export default function StudentScheduleClient({
   sessions: initial,
   satDates,
   homework = [],
+  breakfastDays = [],
 }: {
   sessions: SessionRow[];
   satDates: SatDate[];
   homework?: HomeworkItem[];
+  breakfastDays?: BreakfastDay[];
 }) {
   const [sessions, setSessions] = useState(initial);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -319,6 +321,12 @@ export default function StudentScheduleClient({
     }
     return map;
   }, [homework]);
+
+  const breakfastByDay = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    for (const b of breakfastDays) map[b.date] = b.completed;
+    return map;
+  }, [breakfastDays]);
 
   function handleDayClick(day: Date) {
     const key = format(day, 'yyyy-MM-dd');
@@ -516,6 +524,25 @@ export default function StudentScheduleClient({
                       }}
                     >
                       SAT
+                    </div>
+                  )}
+                  {key in breakfastByDay && (
+                    <div
+                      style={{
+                        fontSize: 10,
+                        lineHeight: 1.3,
+                        padding: '1px 5px',
+                        borderRadius: 4,
+                        background: breakfastByDay[key] ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)',
+                        color: breakfastByDay[key] ? '#15803d' : '#b91c1c',
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                      }}
+                    >
+                      {breakfastByDay[key] ? '✓' : '✗'} BP
                     </div>
                   )}
                 </div>

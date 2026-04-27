@@ -592,6 +592,21 @@ export async function saveBreakfastResponse(
   return rows[0] ?? null;
 }
 
+export async function getBreakfastCompletionByStudent(studentId: string) {
+  return sql`
+    SELECT
+      sba.assigned_date::text AS assigned_date,
+      COUNT(sba.id)           AS total,
+      COUNT(sbr.id)           AS submitted
+    FROM student_breakfast_assignments sba
+    LEFT JOIN student_breakfast_responses sbr
+           ON sbr.assignment_id = sba.id AND sbr.student_id = ${studentId}
+    WHERE sba.student_id = ${studentId}
+    GROUP BY sba.assigned_date
+    ORDER BY sba.assigned_date DESC
+  `;
+}
+
 // ─── Breakfast Problems: Tutor / Admin Results ────────────────────────────────
 
 export async function getBreakfastResultsForTutorStudents(tutorId: string) {
