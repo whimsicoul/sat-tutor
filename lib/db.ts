@@ -482,3 +482,172 @@ export async function createHomework(
 export async function deleteHomework(id: string) {
   await sql`DELETE FROM homework WHERE id = ${id}`;
 }
+
+// ─── Breakfast Problems: Admin ────────────────────────────────────────────────
+
+export async function getAllBreakfastProblems() {
+  return sql`
+    SELECT id, question, choice_a, choice_b, choice_c, choice_d,
+           correct_answer, category, created_at
+    FROM breakfast_problems
+    ORDER BY created_at DESC
+  `;
+}
+
+export async function bulkInsertBreakfastProblems(
+  rows: Array<{
+    question: string;
+    choice_a: string;
+    choice_b: string;
+    choice_c: string;
+    choice_d: string;
+    correct_answer: string;
+    category?: string;
+  }>
+) {
+  if (rows.length === 0) return [];
+  const results = await Promise.all(
+    rows.map((r) =>
+      sql`
+        INSERT INTO breakfast_problems
+          (question, choice_a, choice_b, choice_c, choice_d, correct_answer, category)
+        VALUES
+          (${r.question}, ${r.choice_a}, ${r.choice_b}, ${r.choice_c}, ${r.choice_d},
+           ${r.correct_answer.toUpperCase()}, ${r.category ?? null})
+        RETURNING id
+      `
+    )
+  );
+  return results.flat();
+}
+
+export async function deleteBreakfastProblem(id: string) {
+  await sql`DELETE FROM breakfast_problems WHERE id = ${id}`;
+}
+
+// ─── Breakfast Problems: Student ─────────────────────────────────────────────
+
+export async function getTodayAssignmentsForStudent(studentId: string) {
+  return sql`
+    SELECT
+      sba.id          AS assignment_id,
+      sba.assigned_date,
+      bp.id           AS problem_id,
+      bp.question,
+      bp.choice_a,
+      bp.choice_b,
+      bp.choice_c,
+      bp.choice_d,
+      bp.category,
+      sbr.student_answer,
+      sbr.is_correct,
+      sbr.submitted_at
+    FROM student_breakfast_assignments sba
+    JOIN breakfast_problems bp ON bp.id = sba.problem_id
+    LEFT JOIN student_breakfast_responses sbr
+           ON sbr.assignment_id = sba.id AND sbr.student_id = ${studentId}
+    WHERE sba.student_id  = ${studentId}
+      AND sba.assigned_date = CURRENT_DATE
+    ORDER BY sba.created_at ASC
+  `;
+}
+
+export async function assignBreakfastProblemsForToday(
+  studentId: string,
+  limit: number = 5
+): Promise<number> {
+  const rows = await sql`
+    INSERT INTO student_breakfast_assignments (student_id, problem_id, assigned_date)
+    SELECT ${studentId}, bp.id, CURRENT_DATE
+    FROM breakfast_problems bp
+    WHERE bp.id NOT IN (
+      SELECT problem_id
+      FROM student_breakfast_assignments
+      WHERE student_id = ${studentId}
+    )
+    ORDER BY random()
+    LIMIT ${limit}
+    ON CONFLICT (student_id, problem_id) DO NOTHING
+    RETURNING id
+  `;
+  return rows.length;
+}
+
+export async function saveBreakfastResponse(
+  assignmentId: string,
+  studentId: string,
+  problemId: string,
+  studentAnswer: string,
+  isCorrect: boolean
+) {
+  const rows = await sql`
+    INSERT INTO student_breakfast_responses
+      (assignment_id, student_id, problem_id, student_answer, is_correct)
+    VALUES
+      (${assignmentId}, ${studentId}, ${problemId},
+       ${studentAnswer.toUpperCase()}, ${isCorrect})
+    ON CONFLICT ON CONSTRAINT uq_sbr_assignment DO NOTHING
+    RETURNING id
+  `;
+  return rows[0] ?? null;
+}
+
+// ─── Breakfast Problems: Tutor / Admin Results ────────────────────────────────
+
+export async function getBreakfastResultsForTutorStudents(tutorId: string) {
+  return sql`
+    SELECT
+      sbr.id,
+      sbr.student_answer,
+      sbr.is_correct,
+      sbr.submitted_at,
+      sba.assigned_date,
+      bp.question,
+      bp.choice_a,
+      bp.choice_b,
+      bp.choice_c,
+      bp.choice_d,
+      bp.correct_answer,
+      bp.category,
+      u.id   AS student_id,
+      u.name AS student_name
+    FROM student_breakfast_responses sbr
+    JOIN student_breakfast_assignments sba ON sba.id = sbr.assignment_id
+    JOIN breakfast_problems bp             ON bp.id  = sbr.problem_id
+    JOIN users u                           ON u.id   = sbr.student_id
+    JOIN tutor_student_assignments tsa     ON tsa.student_id = sbr.student_id
+    WHERE tsa.tutor_id = ${tutorId}
+    ORDER BY u.name ASC, sba.assigned_date DESC
+  `;
+}
+
+export async function getLastSessionDatePerStudent(tutorId: string) {
+  return sql`
+    SELECT s.student_id, MAX(s.proposed_time::date) AS last_session_date
+    FROM sessions s
+    WHERE s.tutor_id = ${tutorId}
+      AND s.status   = 'confirmed'
+    GROUP BY s.student_id
+  `;
+}
+
+export async function getAllBreakfastResults() {
+  return sql`
+    SELECT
+      sbr.id,
+      sbr.student_answer,
+      sbr.is_correct,
+      sbr.submitted_at,
+      sba.assigned_date,
+      bp.question,
+      bp.correct_answer,
+      bp.category,
+      u.id   AS student_id,
+      u.name AS student_name
+    FROM student_breakfast_responses sbr
+    JOIN student_breakfast_assignments sba ON sba.id = sbr.assignment_id
+    JOIN breakfast_problems bp             ON bp.id  = sbr.problem_id
+    JOIN users u                           ON u.id   = sbr.student_id
+    ORDER BY u.name ASC, sba.assigned_date DESC
+  `;
+}

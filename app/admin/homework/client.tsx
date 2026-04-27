@@ -110,7 +110,7 @@ export default function AdminHomeworkClient({
               <FileText className="h-5 w-5" style={{ color: 'var(--sky-deeper)' }} />
             </div>
             <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>No homework assigned yet</p>
-            <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>Click "Assign Homework" to get started.</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>Click &quot;Assign Homework&quot; to get started.</p>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { BookOpen, Calendar, LogOut, Settings, BarChart2, ClipboardList } from 'lucide-react';
+import { BookOpen, Calendar, Coffee, LogOut, Settings, BarChart2, ClipboardList } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
 
 interface NavbarProps {
@@ -13,6 +13,7 @@ interface NavbarProps {
 
 const STUDENT_LINKS = [
   { href: '/student/schedule', label: 'Schedule', icon: Calendar },
+  { href: '/student/breakfast-problems', label: 'Breakfast Problems', icon: Coffee },
   { href: '/student/test-results', label: 'Test Results', icon: BarChart2 },
   { href: '/student/problem-sets', label: 'Problem Sets', icon: BookOpen },
   { href: '/student/homework', label: 'Homework', icon: ClipboardList },
@@ -21,6 +22,7 @@ const STUDENT_LINKS = [
 
 const TUTOR_LINKS = [
   { href: '/tutor/schedule', label: 'Schedule', icon: Calendar },
+  { href: '/tutor/breakfast-problems', label: 'Breakfast Problems', icon: Coffee },
   { href: '/tutor/test-results', label: 'Test Results', icon: BarChart2 },
   { href: '/tutor/problem-sets', label: 'Problem Sets', icon: BookOpen },
   { href: '/tutor/homework', label: 'Homework', icon: ClipboardList },
