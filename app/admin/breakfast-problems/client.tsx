@@ -464,7 +464,7 @@ export default function AdminBreakfastProblemsClient({
                 </tr>
               </thead>
               <tbody>
-                {filteredProblems.map((p: BreakfastProblem & { skill?: string; difficulty?: string }, i) => (
+                {filteredProblems.map((p, i) => (
                   <tr
                     key={p.id}
                     style={{ borderBottom: i < filteredProblems.length - 1 ? '1px solid var(--fog)' : 'none' }}
