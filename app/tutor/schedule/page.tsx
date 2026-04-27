@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
-import { getSatDatesForTutorStudents, getHomeworkForTutorStudents } from '@/lib/db';
+import { getSatDatesForTutorStudents } from '@/lib/db';
 import TutorScheduleClient from './client';
 
 export interface TutorProblemSet {
@@ -36,19 +36,11 @@ export interface StudentOption {
   name: string;
 }
 
-export interface HomeworkItem {
-  id: string;
-  title: string;
-  scheduled_date: string;
-  student_id: string;
-  student_name: string;
-}
-
 export default async function TutorSchedulePage() {
   const session = await auth();
   const tutorId = session!.user.id;
 
-  const [sessions, students, allAttachments, tutorProblemSets, satDatesRaw, homeworkRaw] = await Promise.all([
+  const [sessions, students, allAttachments, tutorProblemSets, satDatesRaw] = await Promise.all([
     sql`
       SELECT s.id, s.proposed_time, s.status, s.created_at,
              u.name AS student_name, u.id AS student_id,
@@ -84,7 +76,6 @@ export default async function TutorSchedulePage() {
       ORDER BY created_at DESC
     `,
     getSatDatesForTutorStudents(tutorId),
-    getHomeworkForTutorStudents(tutorId),
   ]);
 
   const psMap: Record<string, TutorProblemSet[]> = {};
@@ -124,22 +115,12 @@ export default async function TutorSchedulePage() {
     student_name: d.student_name as string,
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const homework: HomeworkItem[] = (homeworkRaw as any[]).map((h) => ({
-    id: h.id as string,
-    title: h.title as string,
-    scheduled_date: h.scheduled_date instanceof Date ? h.scheduled_date.toISOString().split('T')[0] : String(h.scheduled_date),
-    student_id: h.student_id as string,
-    student_name: h.student_name as string,
-  }));
-
   return (
     <TutorScheduleClient
       sessions={sessionsWithPs}
       students={students as unknown as StudentOption[]}
       allProblemSets={allProblemSets}
       satDates={satDates}
-      homework={homework}
     />
   );
 }

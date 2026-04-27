@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { toast } from 'sonner';
-import { Coffee, CheckCircle, XCircle } from 'lucide-react';
+import { Coffee, CheckCircle, XCircle, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import type { TodayAssignment } from './page';
 
 const CHOICES = ['A', 'B', 'C', 'D'] as const;
@@ -48,6 +50,10 @@ export default function StudentBreakfastClient({
 
   const [submitted, setSubmitted] = useState(alreadySubmitted);
   const [submitting, setSubmitting] = useState(false);
+  const [flaggingProblemId, setFlaggingProblemId] = useState<string | null>(null);
+  const [flagReason, setFlagReason] = useState('');
+  const [flagging, setFlagging] = useState(false);
+  const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set());
 
   const allAnswered = initial.length > 0 && initial.every((a) => answers[a.problem_id]);
 
@@ -93,6 +99,27 @@ export default function StudentBreakfastClient({
     const map = { A: a.choice_a, B: a.choice_b, C: a.choice_c, D: a.choice_d };
     return map[c];
   };
+
+  async function handleFlag() {
+    if (!flaggingProblemId) return;
+    setFlagging(true);
+    try {
+      const res = await fetch('/api/breakfast-problems/flags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ problemId: flaggingProblemId, reason: flagReason || null }),
+      });
+      if (!res.ok) throw new Error('Flag failed');
+      setFlaggedIds((prev) => new Set([...prev, flaggingProblemId]));
+      toast.success("Problem flagged — your tutor will review it.");
+      setFlaggingProblemId(null);
+      setFlagReason('');
+    } catch {
+      toast.error('Could not submit flag. Please try again.');
+    } finally {
+      setFlagging(false);
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -171,15 +198,28 @@ export default function StudentBreakfastClient({
                           {a.question}
                         </p>
                       )}
-                      {submitted && grade && !a.question_image_url && (
-                        <div className="shrink-0 mt-0.5">
-                          {isCorrect ? (
+                      <div className="shrink-0 flex items-center gap-1 mt-0.5">
+                        {submitted && grade && !a.question_image_url && (
+                          isCorrect ? (
                             <CheckCircle className="h-5 w-5" style={{ color: '#16a34a' }} />
                           ) : (
                             <XCircle className="h-5 w-5" style={{ color: 'var(--rose-deeper)' }} />
-                          )}
-                        </div>
-                      )}
+                          )
+                        )}
+                        <button
+                          onClick={() => { setFlaggingProblemId(a.problem_id); setFlagReason(''); }}
+                          title="Flag this problem"
+                          className="flex items-center justify-center w-7 h-7 rounded transition-all"
+                          style={{
+                            background: flaggedIds.has(a.problem_id) ? '#FEE2E2' : 'transparent',
+                            border: flaggedIds.has(a.problem_id) ? '1px solid #FECACA' : '1px solid transparent',
+                            color: flaggedIds.has(a.problem_id) ? '#991B1B' : 'var(--cloud)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Flag className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
                     {submitted && grade && a.question_image_url && (
                       <div className="mt-2 flex justify-end">
@@ -295,6 +335,44 @@ export default function StudentBreakfastClient({
           )}
         </div>
       )}
+
+      <Dialog
+        open={flaggingProblemId !== null}
+        onOpenChange={(open) => { if (!open) { setFlaggingProblemId(null); setFlagReason(''); } }}
+      >
+        <DialogContent style={{ maxWidth: 400 }}>
+          <DialogHeader>
+            <DialogTitle>Flag this problem</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm" style={{ color: 'var(--slate)' }}>
+            Let your tutor know something&apos;s confusing. Leave a note or just flag it.
+          </p>
+          <Textarea
+            placeholder="Optional: What's confusing? (e.g. &quot;I don't understand the wording&quot;)"
+            value={flagReason}
+            onChange={(e) => setFlagReason(e.target.value)}
+            className="resize-none"
+            rows={3}
+          />
+          <DialogFooter>
+            <button
+              onClick={handleFlag}
+              disabled={flagging}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+              style={{
+                background: 'var(--rose-deeper)',
+                color: 'white',
+                border: 'none',
+                cursor: flagging ? 'not-allowed' : 'pointer',
+                opacity: flagging ? 0.7 : 1,
+              }}
+            >
+              <Flag className="h-3.5 w-3.5" />
+              {flagging ? 'Flagging…' : 'Submit Flag'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

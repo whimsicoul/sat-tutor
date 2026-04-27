@@ -4,9 +4,10 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Upload, Trash2, Coffee, BarChart2, FileText, CheckCircle2, X, Loader2 } from 'lucide-react';
+import { Upload, Trash2, Coffee, BarChart2, FileText, CheckCircle2, X, Loader2, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import type { BreakfastProblem } from './page';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -88,6 +89,7 @@ export default function AdminBreakfastProblemsClient({
   const [skipped, setSkipped] = useState<{ external_id: string; reason: string }[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Math' | 'Reading and Writing'>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
+  const [detailProblem, setDetailProblem] = useState<BreakfastProblem | null>(null);
 
   // ── File handler: routes PDF → parse-pdf API, CSV → local parse ───────────
 
@@ -444,7 +446,7 @@ export default function AdminBreakfastProblemsClient({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--fog)' }}>
-                  {['Question', 'Category', 'Skill', 'Difficulty', 'Answer', 'Added', ''].map((h) => (
+                  {['Question', 'Category', 'Skill', 'Difficulty', 'Answer', 'Flags', 'Added', ''].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -467,7 +469,10 @@ export default function AdminBreakfastProblemsClient({
                 {filteredProblems.map((p, i) => (
                   <tr
                     key={p.id}
-                    style={{ borderBottom: i < filteredProblems.length - 1 ? '1px solid var(--fog)' : 'none' }}
+                    onClick={() => setDetailProblem(p)}
+                    style={{ borderBottom: i < filteredProblems.length - 1 ? '1px solid var(--fog)' : 'none', cursor: 'pointer' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--frost)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
                     <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--charcoal)', maxWidth: 380 }}>
                       <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
@@ -501,12 +506,23 @@ export default function AdminBreakfastProblemsClient({
                         {p.correct_answer}
                       </span>
                     </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      {p.flag_count > 0 && (
+                        <span
+                          className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold w-fit"
+                          style={{ background: '#FEE2E2', color: '#991B1B', border: '1px solid #FECACA' }}
+                        >
+                          <Flag className="h-3 w-3" />
+                          {p.flag_count}
+                        </span>
+                      )}
+                    </td>
                     <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--slate)' }}>
                       {format(new Date(p.created_at), 'MMM d, yyyy')}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <button
-                        onClick={() => handleDelete(p.id)}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }}
                         className="w-7 h-7 flex items-center justify-center rounded transition-all"
                         style={{ background: 'transparent', border: 'none', color: 'var(--cloud)', cursor: 'pointer' }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = '#991B1B'; e.currentTarget.style.background = '#FEE2E2'; }}
@@ -522,6 +538,82 @@ export default function AdminBreakfastProblemsClient({
           )}
         </div>
       )}
+
+      <Dialog open={detailProblem !== null} onOpenChange={(open) => { if (!open) setDetailProblem(null); }}>
+        <DialogContent style={{ maxWidth: 560 }}>
+          {detailProblem && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Problem Detail</DialogTitle>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {detailProblem.category && (
+                    <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--frost)', color: 'var(--slate)', border: '1px solid var(--fog)' }}>
+                      {detailProblem.category}
+                    </span>
+                  )}
+                  {detailProblem.skill && (
+                    <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--frost)', color: 'var(--slate)', border: '1px solid var(--fog)' }}>
+                      {detailProblem.skill}
+                    </span>
+                  )}
+                  {detailProblem.difficulty && (
+                    <span className="text-xs px-2 py-0.5 rounded" style={{
+                      background: detailProblem.difficulty === 'Easy' ? '#D1FAE5' : detailProblem.difficulty === 'Hard' ? '#FEE2E2' : '#FEF3C7',
+                      color: detailProblem.difficulty === 'Easy' ? '#065F46' : detailProblem.difficulty === 'Hard' ? '#991B1B' : '#92400E',
+                    }}>
+                      {detailProblem.difficulty}
+                    </span>
+                  )}
+                  {detailProblem.external_id && (
+                    <span className="text-xs" style={{ color: 'var(--mist)' }}>ID: {detailProblem.external_id}</span>
+                  )}
+                </div>
+              </DialogHeader>
+
+              <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
+                {detailProblem.question}
+              </p>
+
+              <div className="space-y-2">
+                {(['A', 'B', 'C', 'D'] as const).map((letter) => {
+                  const key = `choice_${letter.toLowerCase()}` as keyof BreakfastProblem;
+                  const isCorrect = detailProblem.correct_answer === letter;
+                  return (
+                    <div
+                      key={letter}
+                      className="flex items-start gap-2 px-3 py-2 rounded-lg text-sm"
+                      style={{
+                        background: isCorrect ? 'rgba(22,163,74,0.08)' : 'var(--frost)',
+                        border: isCorrect ? '1px solid rgba(22,163,74,0.35)' : '1px solid var(--fog)',
+                        color: isCorrect ? '#16a34a' : 'var(--charcoal)',
+                        fontWeight: isCorrect ? 600 : 400,
+                      }}
+                    >
+                      <strong>{letter}.</strong>
+                      <span className="flex-1">{detailProblem[key] as string}</span>
+                      {isCorrect && <span className="text-xs ml-auto shrink-0">Correct</span>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {detailProblem.flag_count > 0 && (
+                <div className="rounded-lg px-3 py-2 text-xs" style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B' }}>
+                  <div className="flex items-center gap-1 font-semibold mb-0.5">
+                    <Flag className="h-3 w-3" />
+                    Flagged by {detailProblem.flag_count} student{detailProblem.flag_count !== 1 ? 's' : ''}
+                  </div>
+                  {detailProblem.latest_flag_reason && (
+                    <p style={{ color: '#7F1D1D' }}>Latest reason: &ldquo;{detailProblem.latest_flag_reason}&rdquo;</p>
+                  )}
+                </div>
+              )}
+
+              <DialogFooter showCloseButton />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

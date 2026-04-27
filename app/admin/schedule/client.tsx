@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import type { AdminSession, UserOption, AttachedProblemSet, AdminSatDate, AdminHomeworkItem } from './page';
+import type { AdminSession, UserOption, AttachedProblemSet, AdminSatDate } from './page';
 
 const localizer = dateFnsLocalizer({
   format,
@@ -41,7 +41,7 @@ interface CalEvent {
   end: Date;
   resource?: AdminSession;
   color: string;
-  type: 'session' | 'sat' | 'homework';
+  type: 'session' | 'sat';
 }
 
 function EventComponent({ event }: { event: CalEvent }) {
@@ -51,14 +51,6 @@ function EventComponent({ event }: { event: CalEvent }) {
     return (
       <div style={{ fontSize: 11, padding: '1px 4px', fontWeight: 600 }}>
         🗓 SAT — {event.title}
-      </div>
-    );
-  }
-
-  if (event.type === 'homework') {
-    return (
-      <div style={{ fontSize: 11, padding: '1px 4px', fontWeight: 600 }}>
-        📝 {event.title}
       </div>
     );
   }
@@ -121,13 +113,11 @@ export default function ScheduleClient({
   tutors,
   students,
   satDates = [],
-  homework = [],
 }: {
   sessions: AdminSession[];
   tutors: UserOption[];
   students: UserOption[];
   satDates?: AdminSatDate[];
-  homework?: AdminHomeworkItem[];
 }) {
   const [mounted, setMounted] = useState(false);
   const [sessions, setSessions] = useState<AdminSession[]>(initial);
@@ -246,13 +236,8 @@ export default function ScheduleClient({
       return { id: `sat-${d.id}`, title: d.student_name, start: day, end: day, color: '#A85F6A', type: 'sat' as const };
     });
 
-    const hwEvents: CalEvent[] = homework.map((h) => {
-      const day = new Date(h.scheduled_date + 'T00:00:00');
-      return { id: `hw-${h.id}`, title: `${h.student_name}: ${h.title}`, start: day, end: day, color: '#4D8FAE', type: 'homework' as const };
-    });
-
-    return [...sessionEvents, ...satEvents, ...hwEvents];
-  }, [sessions, tutorIds, satDates, homework]);
+    return [...sessionEvents, ...satEvents];
+  }, [sessions, tutorIds, satDates]);
 
   const eventPropGetter = (event: CalEvent) => ({
     style: {

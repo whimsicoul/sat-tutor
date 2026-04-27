@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth';
-import { getAllBreakfastProblems, bulkInsertBreakfastProblems } from '@/lib/db';
+import { getAllBreakfastProblemsWithFlagCounts, bulkInsertBreakfastProblems } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
 const VALID_ANSWERS = new Set(['A', 'B', 'C', 'D']);
@@ -10,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const rows = await getAllBreakfastProblems();
+  const rows = await getAllBreakfastProblemsWithFlagCounts();
   return NextResponse.json(rows);
 }
 

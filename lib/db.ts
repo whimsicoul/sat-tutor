@@ -415,73 +415,7 @@ export async function setSessionProblemSets(sessionId: string, problemSetIds: st
   );
 }
 
-// ─── Homework ─────────────────────────────────────────────────────────────────
 
-export async function getHomeworkByStudent(studentId: string) {
-  return sql`
-    SELECT hw.id, hw.title, hw.scheduled_date, hw.problem_pdf_url, hw.created_at,
-           u.name AS assigned_by_name
-    FROM homework hw
-    JOIN users u ON u.id = hw.assigned_by
-    WHERE hw.student_id = ${studentId}
-    ORDER BY hw.scheduled_date ASC
-  `;
-}
-
-export async function getHomeworkByAssigner(assignerId: string) {
-  return sql`
-    SELECT hw.id, hw.title, hw.scheduled_date, hw.problem_pdf_url, hw.answer_pdf_url, hw.created_at,
-           s.name AS student_name
-    FROM homework hw
-    JOIN users s ON s.id = hw.student_id
-    WHERE hw.assigned_by = ${assignerId}
-    ORDER BY hw.scheduled_date ASC
-  `;
-}
-
-export async function getHomeworkForTutorStudents(tutorId: string) {
-  return sql`
-    SELECT hw.id, hw.title, hw.scheduled_date, hw.problem_pdf_url, hw.answer_pdf_url, hw.created_at,
-           s.name AS student_name, s.id AS student_id
-    FROM homework hw
-    JOIN users s ON s.id = hw.student_id
-    JOIN tutor_student_assignments tsa ON tsa.student_id = hw.student_id
-    WHERE tsa.tutor_id = ${tutorId}
-    ORDER BY hw.scheduled_date ASC
-  `;
-}
-
-export async function getAllHomework() {
-  return sql`
-    SELECT hw.id, hw.title, hw.scheduled_date, hw.problem_pdf_url, hw.answer_pdf_url, hw.created_at,
-           s.name AS student_name,
-           a.name AS assigned_by_name
-    FROM homework hw
-    JOIN users s ON s.id = hw.student_id
-    JOIN users a ON a.id = hw.assigned_by
-    ORDER BY hw.scheduled_date ASC
-  `;
-}
-
-export async function createHomework(
-  title: string,
-  studentId: string,
-  assignedBy: string,
-  scheduledDate: string,
-  problemPdfUrl: string,
-  answerPdfUrl?: string
-) {
-  const rows = await sql`
-    INSERT INTO homework (title, student_id, assigned_by, scheduled_date, problem_pdf_url, answer_pdf_url)
-    VALUES (${title}, ${studentId}, ${assignedBy}, ${scheduledDate}, ${problemPdfUrl}, ${answerPdfUrl ?? null})
-    RETURNING *
-  `;
-  return rows[0];
-}
-
-export async function deleteHomework(id: string) {
-  await sql`DELETE FROM homework WHERE id = ${id}`;
-}
 
 // ─── Breakfast Problems: Admin ────────────────────────────────────────────────
 
@@ -529,6 +463,36 @@ export async function bulkInsertBreakfastProblems(
 
 export async function deleteBreakfastProblem(id: string) {
   await sql`DELETE FROM breakfast_problems WHERE id = ${id}`;
+}
+
+export async function getAllBreakfastProblemsWithFlagCounts() {
+  return sql`
+    SELECT
+      bp.id, bp.question, bp.choice_a, bp.choice_b, bp.choice_c, bp.choice_d,
+      bp.correct_answer, bp.category, bp.skill, bp.difficulty,
+      bp.external_id, bp.created_at,
+      COUNT(bpf.id)::int AS flag_count,
+      MAX(bpf.reason)    AS latest_flag_reason
+    FROM breakfast_problems bp
+    LEFT JOIN breakfast_problem_flags bpf ON bpf.problem_id = bp.id
+    GROUP BY bp.id
+    ORDER BY bp.created_at DESC
+  `;
+}
+
+export async function upsertBreakfastProblemFlag(
+  problemId: string,
+  studentId: string,
+  reason: string | null
+) {
+  const rows = await sql`
+    INSERT INTO breakfast_problem_flags (problem_id, student_id, reason)
+    VALUES (${problemId}, ${studentId}, ${reason})
+    ON CONFLICT (problem_id, student_id)
+    DO UPDATE SET reason = EXCLUDED.reason, created_at = now()
+    RETURNING id
+  `;
+  return rows[0] ?? null;
 }
 
 // ─── Breakfast Problems: Student ─────────────────────────────────────────────
