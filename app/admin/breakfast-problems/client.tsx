@@ -171,7 +171,7 @@ export default function AdminBreakfastProblemsClient({
 
   const difficulties = preview
     ? [...new Set(preview.map((r) => r.difficulty).filter(Boolean))]
-    : [...new Set(problems.map((p: BreakfastProblem & { difficulty?: string }) => p.difficulty).filter(Boolean))];
+    : [...new Set(problems.map((p) => p.difficulty ?? undefined).filter(Boolean))];
 
   const filteredPreview = preview?.filter((r) => {
     if (categoryFilter !== 'all' && r.category !== categoryFilter) return false;
@@ -179,9 +179,9 @@ export default function AdminBreakfastProblemsClient({
     return true;
   });
 
-  const filteredProblems = problems.filter((p: BreakfastProblem & { difficulty?: string }) => {
+  const filteredProblems = problems.filter((p) => {
     if (categoryFilter !== 'all' && p.category !== categoryFilter) return false;
-    if (difficultyFilter !== 'all' && p.difficulty !== difficultyFilter) return false;
+    if (difficultyFilter !== 'all' && (p.difficulty ?? undefined) !== difficultyFilter) return false;
     return true;
   });
 

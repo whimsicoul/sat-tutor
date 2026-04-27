@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { toast } from 'sonner';
 import { Coffee, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -157,9 +158,11 @@ export default function StudentBreakfastClient({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       {a.question_image_url ? (
-                        <img
+                        <Image
                           src={a.question_image_url}
                           alt="Math question"
+                          width={800}
+                          height={400}
                           className="w-full rounded border"
                           style={{ borderColor: 'var(--fog)' }}
                         />
