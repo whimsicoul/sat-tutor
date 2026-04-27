@@ -36,5 +36,6 @@ export async function POST(req: Request) {
   }
 
   const inserted = await bulkInsertBreakfastProblems(rows);
-  return NextResponse.json({ inserted: inserted.length }, { status: 201 });
+  // inserted may be shorter than rows if duplicates were skipped via ON CONFLICT
+  return NextResponse.json({ inserted: inserted.length, total: rows.length }, { status: 201 });
 }

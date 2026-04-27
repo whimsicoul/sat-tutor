@@ -488,7 +488,7 @@ export async function deleteHomework(id: string) {
 export async function getAllBreakfastProblems() {
   return sql`
     SELECT id, question, choice_a, choice_b, choice_c, choice_d,
-           correct_answer, category, created_at
+           correct_answer, category, skill, difficulty, external_id, created_at
     FROM breakfast_problems
     ORDER BY created_at DESC
   `;
@@ -503,6 +503,9 @@ export async function bulkInsertBreakfastProblems(
     choice_d: string;
     correct_answer: string;
     category?: string;
+    skill?: string;
+    difficulty?: string;
+    external_id?: string;
   }>
 ) {
   if (rows.length === 0) return [];
@@ -510,10 +513,13 @@ export async function bulkInsertBreakfastProblems(
     rows.map((r) =>
       sql`
         INSERT INTO breakfast_problems
-          (question, choice_a, choice_b, choice_c, choice_d, correct_answer, category)
+          (question, choice_a, choice_b, choice_c, choice_d, correct_answer,
+           category, skill, difficulty, external_id)
         VALUES
           (${r.question}, ${r.choice_a}, ${r.choice_b}, ${r.choice_c}, ${r.choice_d},
-           ${r.correct_answer.toUpperCase()}, ${r.category ?? null})
+           ${r.correct_answer.toUpperCase()}, ${r.category ?? null},
+           ${r.skill ?? null}, ${r.difficulty ?? null}, ${r.external_id ?? null})
+        ON CONFLICT (external_id) DO NOTHING
         RETURNING id
       `
     )
@@ -539,6 +545,7 @@ export async function getTodayAssignmentsForStudent(studentId: string) {
       bp.choice_c,
       bp.choice_d,
       bp.category,
+      bp.question_image_url,
       sbr.student_answer,
       sbr.is_correct,
       sbr.submitted_at
@@ -556,14 +563,63 @@ export async function assignBreakfastProblemsForToday(
   studentId: string,
   limit: number = 5
 ): Promise<number> {
+  // If both Math and Reading/Writing exist in the pool, split assignments 50/50
+  // (rounding so total == limit). Falls back to random if only one category exists.
+  const categoryCounts = (await sql`
+    SELECT category, COUNT(*) AS cnt
+    FROM breakfast_problems
+    WHERE category IN ('Math', 'Reading and Writing')
+      AND id NOT IN (
+        SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
+      )
+    GROUP BY category
+  `) as { category: string; cnt: number }[];
+
+  const hasMath = categoryCounts.some((r) => r.category === 'Math' && Number(r.cnt) > 0);
+  const hasRW   = categoryCounts.some((r) => r.category === 'Reading and Writing' && Number(r.cnt) > 0);
+
+  if (hasMath && hasRW) {
+    const mathLimit = Math.round(limit / 2);
+    const rwLimit   = limit - mathLimit;
+
+    const [mathRows, rwRows] = await Promise.all([
+      sql`
+        INSERT INTO student_breakfast_assignments (student_id, problem_id, assigned_date)
+        SELECT ${studentId}, bp.id, CURRENT_DATE
+        FROM breakfast_problems bp
+        WHERE bp.category = 'Math'
+          AND bp.id NOT IN (
+            SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
+          )
+        ORDER BY random()
+        LIMIT ${mathLimit}
+        ON CONFLICT (student_id, problem_id) DO NOTHING
+        RETURNING id
+      `,
+      sql`
+        INSERT INTO student_breakfast_assignments (student_id, problem_id, assigned_date)
+        SELECT ${studentId}, bp.id, CURRENT_DATE
+        FROM breakfast_problems bp
+        WHERE bp.category = 'Reading and Writing'
+          AND bp.id NOT IN (
+            SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
+          )
+        ORDER BY random()
+        LIMIT ${rwLimit}
+        ON CONFLICT (student_id, problem_id) DO NOTHING
+        RETURNING id
+      `,
+    ]);
+    return mathRows.length + rwRows.length;
+  }
+
+  // Single category or uncategorised pool — assign randomly
   const rows = await sql`
     INSERT INTO student_breakfast_assignments (student_id, problem_id, assigned_date)
     SELECT ${studentId}, bp.id, CURRENT_DATE
     FROM breakfast_problems bp
     WHERE bp.id NOT IN (
-      SELECT problem_id
-      FROM student_breakfast_assignments
-      WHERE student_id = ${studentId}
+      SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
     )
     ORDER BY random()
     LIMIT ${limit}

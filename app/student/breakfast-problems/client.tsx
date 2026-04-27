@@ -156,10 +156,19 @@ export default function StudentBreakfastClient({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
-                        {a.question}
-                      </p>
-                      {submitted && grade && (
+                      {a.question_image_url ? (
+                        <img
+                          src={a.question_image_url}
+                          alt="Math question"
+                          className="w-full rounded border"
+                          style={{ borderColor: 'var(--fog)' }}
+                        />
+                      ) : (
+                        <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
+                          {a.question}
+                        </p>
+                      )}
+                      {submitted && grade && !a.question_image_url && (
                         <div className="shrink-0 mt-0.5">
                           {isCorrect ? (
                             <CheckCircle className="h-5 w-5" style={{ color: '#16a34a' }} />
@@ -169,6 +178,15 @@ export default function StudentBreakfastClient({
                         </div>
                       )}
                     </div>
+                    {submitted && grade && a.question_image_url && (
+                      <div className="mt-2 flex justify-end">
+                        {isCorrect ? (
+                          <CheckCircle className="h-5 w-5" style={{ color: '#16a34a' }} />
+                        ) : (
+                          <XCircle className="h-5 w-5" style={{ color: 'var(--rose-deeper)' }} />
+                        )}
+                      </div>
+                    )}
 
                     {a.category && (
                       <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>{a.category}</p>
@@ -224,7 +242,7 @@ export default function StudentBreakfastClient({
                                 fontWeight: submitted && (isCorrectChoice || isWrongSelected) ? 600 : 400,
                               }}
                             >
-                              <strong>{c}.</strong> {choiceLabel(a, c)}
+                              <strong>{c}.</strong>{a.question_image_url ? null : ` ${choiceLabel(a, c)}`}
                             </span>
                           </label>
                         );

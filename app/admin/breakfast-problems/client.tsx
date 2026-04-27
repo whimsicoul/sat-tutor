@@ -4,10 +4,25 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Upload, Trash2, Coffee, BarChart2 } from 'lucide-react';
+import { Upload, Trash2, Coffee, BarChart2, FileText, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import type { BreakfastProblem } from './page';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface ParsedRow {
+  external_id: string;
+  category: string;
+  skill: string;
+  difficulty: string;
+  question: string;
+  choice_a: string;
+  choice_b: string;
+  choice_c: string;
+  choice_d: string;
+  correct_answer: string;
+}
 
 interface CsvRow {
   question: string;
@@ -17,20 +32,45 @@ interface CsvRow {
   choice_d: string;
   correct_answer: string;
   category?: string;
+  skill?: string;
+  difficulty?: string;
+  external_id?: string;
+}
+
+// ── CSV parser (robust quoted-field handling) ─────────────────────────────────
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (ch === ',' && !inQ) {
+      result.push(cur.trim()); cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur.trim());
+  return result;
 }
 
 function parseCSV(text: string): CsvRow[] {
-  const lines = text.trim().split('\n');
+  const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
-  const headers = lines[0].split(',').map((h) => h.trim().toLowerCase().replace(/"/g, ''));
+  const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().replace(/"/g, ''));
   return lines.slice(1).filter(Boolean).map((line) => {
-    const values =
-      line.match(/(".*?"|[^,]+)(?=,|$)/g)?.map((v) => v.replace(/^"|"$/g, '').trim()) ?? [];
+    const values = parseCSVLine(line);
     return Object.fromEntries(headers.map((h, i) => [h, values[i] ?? ''])) as unknown as CsvRow;
   });
 }
 
 const VALID_ANSWERS = new Set(['A', 'B', 'C', 'D']);
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function AdminBreakfastProblemsClient({
   problems: initial,
@@ -40,85 +80,148 @@ export default function AdminBreakfastProblemsClient({
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [problems, setProblems] = useState<BreakfastProblem[]>(initial);
-  const [uploading, setUploading] = useState(false);
 
-  async function handleCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
+  // Upload / parse state
+  const [parsing, setParsing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState<ParsedRow[] | null>(null);
+  const [skipped, setSkipped] = useState<{ external_id: string; reason: string }[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'Math' | 'Reading and Writing'>('all');
+  const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
+
+  // ── File handler: routes PDF → parse-pdf API, CSV → local parse ───────────
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      await handlePdf(file);
+    } else if (file.name.toLowerCase().endsWith('.csv')) {
+      handleCsv(file);
+    } else {
+      toast.error('Please upload a PDF or CSV file.');
+    }
+  }
+
+  async function handlePdf(file: File) {
+    setParsing(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/admin/breakfast-problems/parse-pdf', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error((await res.json()).error || 'Parse failed');
+      const data = await res.json();
+      setPreview(data.rows);
+      setSkipped(data.skipped ?? []);
+      toast.success(`Parsed ${data.rows.length} questions from PDF.${data.skipped?.length ? ` (${data.skipped.length} skipped)` : ''}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'PDF parse failed');
+    } finally {
+      setParsing(false);
+    }
+  }
+
+  async function handleCsv(file: File) {
     const text = await file.text();
     const rows = parseCSV(text);
-
-    if (rows.length === 0) {
-      toast.error('No data rows found in CSV.');
-      return;
-    }
-
+    if (rows.length === 0) { toast.error('No data rows found in CSV.'); return; }
     const invalid = rows.findIndex(
-      (r) =>
-        !r.question ||
-        !r.choice_a ||
-        !r.choice_b ||
-        !r.choice_c ||
-        !r.choice_d ||
-        !r.correct_answer ||
-        !VALID_ANSWERS.has(r.correct_answer.toUpperCase())
+      (r) => !r.question || !r.choice_a || !r.choice_b || !r.choice_c || !r.choice_d ||
+             !r.correct_answer || !VALID_ANSWERS.has(r.correct_answer.toUpperCase())
     );
     if (invalid !== -1) {
-      toast.error(
-        `Row ${invalid + 2} is invalid. Check that all fields are present and correct_answer is A, B, C, or D.`
-      );
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      toast.error(`Row ${invalid + 2} is invalid. Check all fields and that correct_answer is A–D.`);
       return;
     }
+    setPreview(rows as unknown as ParsedRow[]);
+    setSkipped([]);
+    toast.success(`Loaded ${rows.length} questions from CSV — review and confirm below.`);
+  }
 
+  // ── Confirm: POST preview rows to the DB ──────────────────────────────────
+
+  async function confirmUpload() {
+    if (!preview) return;
     setUploading(true);
     try {
       const res = await fetch('/api/admin/breakfast-problems', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows }),
+        body: JSON.stringify({ rows: preview }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
-      const { inserted } = await res.json();
-      toast.success(`${inserted} problem${inserted !== 1 ? 's' : ''} added to the pool.`);
+      const { inserted, total } = await res.json();
+      const dupes = total - inserted;
+      let msg = `${inserted} question${inserted !== 1 ? 's' : ''} added to the pool.`;
+      if (dupes > 0) msg += ` (${dupes} duplicate${dupes !== 1 ? 's' : ''} skipped)`;
+      toast.success(msg);
+      setPreview(null);
+      setSkipped([]);
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }
 
+  // ── Filter helpers ────────────────────────────────────────────────────────
+
+  const difficulties = preview
+    ? [...new Set(preview.map((r) => r.difficulty).filter(Boolean))]
+    : [...new Set(problems.map((p: BreakfastProblem & { difficulty?: string }) => p.difficulty).filter(Boolean))];
+
+  const filteredPreview = preview?.filter((r) => {
+    if (categoryFilter !== 'all' && r.category !== categoryFilter) return false;
+    if (difficultyFilter !== 'all' && r.difficulty !== difficultyFilter) return false;
+    return true;
+  });
+
+  const filteredProblems = problems.filter((p: BreakfastProblem & { difficulty?: string }) => {
+    if (categoryFilter !== 'all' && p.category !== categoryFilter) return false;
+    if (difficultyFilter !== 'all' && p.difficulty !== difficultyFilter) return false;
+    return true;
+  });
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+
   async function handleDelete(id: string) {
-    if (!confirm('Delete this problem? Students who have already been assigned it will keep their records.')) return;
+    if (!confirm('Delete this problem? Students who have already been assigned it keep their records.')) return;
     const res = await fetch(`/api/admin/breakfast-problems/${id}`, { method: 'DELETE' });
     if (!res.ok) { toast.error('Delete failed.'); return; }
     setProblems((prev) => prev.filter((p) => p.id !== id));
     toast.success('Problem deleted.');
   }
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  const mathCount = problems.filter((p) => p.category === 'Math').length;
+  const rwCount = problems.filter((p) => p.category === 'Reading and Writing').length;
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1
             className="text-2xl font-bold"
             style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)' }}
           >
-            Breakfast Problems
+            Question Bank
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--mist)' }}>
-            {problems.length} problem{problems.length !== 1 ? 's' : ''} in the pool · 5 auto-assigned to students each day
+            {problems.length} problem{problems.length !== 1 ? 's' : ''} total
+            {mathCount > 0 && ` · ${mathCount} Math`}
+            {rwCount > 0 && ` · ${rwCount} R&W`}
+            {' · 5 auto-assigned to students each day'}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/admin/breakfast-problems/results">
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-            >
+            <Button variant="outline" className="flex items-center gap-2">
               <BarChart2 className="h-4 w-4" />
               View Results
             </Button>
@@ -126,142 +229,299 @@ export default function AdminBreakfastProblemsClient({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv"
+            accept=".pdf,.csv"
             className="hidden"
-            onChange={handleCsvFile}
+            onChange={handleFile}
           />
           <Button
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+            disabled={parsing || uploading}
             className="flex items-center gap-2"
             style={{ background: 'var(--sky-deeper)', color: 'white', border: 'none' }}
           >
-            <Upload className="h-4 w-4" />
-            {uploading ? 'Uploading…' : 'Upload CSV'}
+            {parsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {parsing ? 'Parsing PDF…' : 'Upload PDF or CSV'}
           </Button>
         </div>
       </div>
 
-      {/* CSV format hint */}
+      {/* ── Format hint ────────────────────────────────────────────────────── */}
       <div
         className="rounded-lg px-4 py-3 text-xs"
         style={{ background: 'var(--frost)', border: '1px solid var(--fog)', color: 'var(--slate)' }}
       >
-        <strong>CSV format:</strong> question, choice_a, choice_b, choice_c, choice_d, correct_answer, category
-        &nbsp;· correct_answer must be A, B, C, or D
+        <strong>PDF:</strong> Upload a MyPractice Question Bank export — questions are auto-parsed.
+        &nbsp;&nbsp;
+        <strong>CSV columns:</strong> external_id, category, skill, difficulty, question, choice_a–d, correct_answer
       </div>
 
-      {/* Table */}
-      <div className="portal-card overflow-hidden p-0">
-        {problems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
-              style={{ background: 'var(--sky-ultra)', border: '1px solid rgba(168,203,222,0.25)' }}
-            >
-              <Coffee className="h-5 w-5" style={{ color: 'var(--sky-deeper)' }} />
-            </div>
-            <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
-              No problems yet
-            </p>
-            <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>
-              Upload a CSV to add problems to the pool.
-            </p>
-          </div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--fog)' }}>
-                {['Question', 'Category', 'Answer', 'Added', ''].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: '12px 16px',
-                      textAlign: 'left',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      color: 'var(--mist)',
-                      background: 'var(--frost)',
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {problems.map((p, i) => (
-                <tr
-                  key={p.id}
-                  style={{ borderBottom: i < problems.length - 1 ? '1px solid var(--fog)' : 'none' }}
+      {/* ── Preview panel ───────────────────────────────────────────────────── */}
+      {preview && (
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{ border: '2px solid var(--sky-deeper)' }}
+        >
+          {/* Preview header */}
+          <div
+            className="flex items-center justify-between px-4 py-3"
+            style={{ background: 'rgba(77,143,174,0.08)', borderBottom: '1px solid rgba(77,143,174,0.2)' }}
+          >
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4" style={{ color: 'var(--sky-deeper)' }} />
+              <span className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
+                Preview — {preview.length} question{preview.length !== 1 ? 's' : ''} ready to import
+              </span>
+              {skipped.length > 0 && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded"
+                  style={{ background: '#FEF3C7', color: '#92400E' }}
                 >
-                  <td
-                    style={{
-                      padding: '12px 16px',
-                      fontSize: 13,
-                      color: 'var(--charcoal)',
-                      maxWidth: 420,
-                    }}
-                  >
-                    <span
+                  {skipped.length} skipped
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setPreview(null); setSkipped([]); }}
+                className="text-xs flex items-center gap-1"
+                style={{ color: 'var(--mist)' }}
+              >
+                <X className="h-3.5 w-3.5" /> Discard
+              </button>
+              <Button
+                onClick={confirmUpload}
+                disabled={uploading}
+                className="flex items-center gap-2 text-sm"
+                style={{ background: 'var(--sky-deeper)', color: 'white', border: 'none' }}
+              >
+                {uploading
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Importing…</>
+                  : <><CheckCircle2 className="h-3.5 w-3.5" /> Confirm Import</>
+                }
+              </Button>
+            </div>
+          </div>
+
+          {/* Category breakdown */}
+          {(() => {
+            const m = preview.filter((r) => r.category === 'Math').length;
+            const rw = preview.filter((r) => r.category === 'Reading and Writing').length;
+            return (
+              <div
+                className="flex gap-4 px-4 py-2 text-xs"
+                style={{ background: 'var(--frost)', borderBottom: '1px solid var(--fog)', color: 'var(--slate)' }}
+              >
+                {m > 0 && <span><strong>{m}</strong> Math</span>}
+                {rw > 0 && <span><strong>{rw}</strong> Reading &amp; Writing</span>}
+                {['Easy', 'Medium', 'Hard'].map((d) => {
+                  const n = preview.filter((r) => r.difficulty === d).length;
+                  return n > 0 ? <span key={d}><strong>{n}</strong> {d}</span> : null;
+                })}
+              </div>
+            );
+          })()}
+
+          {/* Preview table */}
+          <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                <tr style={{ background: 'var(--frost)', borderBottom: '1px solid var(--fog)' }}>
+                  {['#', 'Question', 'Category', 'Skill', 'Difficulty', 'Answer'].map((h) => (
+                    <th
+                      key={h}
                       style={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      } as React.CSSProperties}
-                    >
-                      {p.question}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--slate)' }}>
-                    {p.category ?? <span style={{ color: 'var(--cloud)' }}>—</span>}
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <span
-                      className="px-2 py-0.5 rounded text-xs font-semibold"
-                      style={{
-                        background: 'rgba(77,143,174,0.12)',
-                        color: 'var(--sky-deeper)',
-                        border: '1px solid rgba(77,143,174,0.22)',
+                        padding: '8px 12px',
+                        textAlign: 'left',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        color: 'var(--mist)',
                       }}
                     >
-                      {p.correct_answer}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--slate)' }}>
-                    {format(new Date(p.created_at), 'MMM d, yyyy')}
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      className="w-7 h-7 flex items-center justify-center rounded transition-all"
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--cloud)',
-                        cursor: 'pointer',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = '#991B1B';
-                        e.currentTarget.style.background = '#FEE2E2';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = 'var(--cloud)';
-                        e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </td>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
+              </thead>
+              <tbody>
+                {(filteredPreview ?? preview).map((r, i) => (
+                  <tr key={r.external_id || i} style={{ borderBottom: '1px solid var(--fog)' }}>
+                    <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--mist)' }}>{i + 1}</td>
+                    <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--charcoal)', maxWidth: 380 }}>
+                      <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
+                        {r.question}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--slate)', whiteSpace: 'nowrap' }}>{r.category}</td>
+                    <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--slate)' }}>{r.skill || '—'}</td>
+                    <td style={{ padding: '8px 12px', fontSize: 12 }}>
+                      {r.difficulty && (
+                        <span
+                          className="px-2 py-0.5 rounded text-xs"
+                          style={{
+                            background: r.difficulty === 'Easy' ? '#D1FAE5' : r.difficulty === 'Hard' ? '#FEE2E2' : '#FEF3C7',
+                            color: r.difficulty === 'Easy' ? '#065F46' : r.difficulty === 'Hard' ? '#991B1B' : '#92400E',
+                          }}
+                        >
+                          {r.difficulty}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '8px 12px' }}>
+                      <span
+                        className="px-2 py-0.5 rounded text-xs font-bold"
+                        style={{ background: 'rgba(77,143,174,0.12)', color: 'var(--sky-deeper)', border: '1px solid rgba(77,143,174,0.22)' }}
+                      >
+                        {r.correct_answer}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Filters ─────────────────────────────────────────────────────────── */}
+      {!preview && problems.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--mist)' }}>Filter:</span>
+          {(['all', 'Math', 'Reading and Writing'] as const).map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(cat)}
+              className="text-xs px-3 py-1 rounded-full transition-all"
+              style={{
+                background: categoryFilter === cat ? 'var(--sky-deeper)' : 'var(--frost)',
+                color: categoryFilter === cat ? 'white' : 'var(--slate)',
+                border: '1px solid ' + (categoryFilter === cat ? 'var(--sky-deeper)' : 'var(--fog)'),
+              }}
+            >
+              {cat === 'all' ? 'All' : cat}
+            </button>
+          ))}
+          {difficulties.length > 0 && (
+            <>
+              <span className="text-xs" style={{ color: 'var(--fog)' }}>|</span>
+              {(['all', ...difficulties] as string[]).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDifficultyFilter(d)}
+                  className="text-xs px-3 py-1 rounded-full transition-all"
+                  style={{
+                    background: difficultyFilter === d ? 'var(--charcoal)' : 'var(--frost)',
+                    color: difficultyFilter === d ? 'white' : 'var(--slate)',
+                    border: '1px solid ' + (difficultyFilter === d ? 'var(--charcoal)' : 'var(--fog)'),
+                  }}
+                >
+                  {d === 'all' ? 'All Difficulties' : d}
+                </button>
               ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Problem pool table ──────────────────────────────────────────────── */}
+      {!preview && (
+        <div className="portal-card overflow-hidden p-0">
+          {problems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
+                style={{ background: 'var(--sky-ultra)', border: '1px solid rgba(168,203,222,0.25)' }}
+              >
+                <Coffee className="h-5 w-5" style={{ color: 'var(--sky-deeper)' }} />
+              </div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>No problems yet</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>
+                Upload a MyPractice PDF or CSV to build the question bank.
+              </p>
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--fog)' }}>
+                  {['Question', 'Category', 'Skill', 'Difficulty', 'Answer', 'Added', ''].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        padding: '12px 16px',
+                        textAlign: 'left',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        color: 'var(--mist)',
+                        background: 'var(--frost)',
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProblems.map((p: BreakfastProblem & { skill?: string; difficulty?: string }, i) => (
+                  <tr
+                    key={p.id}
+                    style={{ borderBottom: i < filteredProblems.length - 1 ? '1px solid var(--fog)' : 'none' }}
+                  >
+                    <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--charcoal)', maxWidth: 380 }}>
+                      <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
+                        {p.question}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--slate)', whiteSpace: 'nowrap' }}>
+                      {p.category ?? <span style={{ color: 'var(--cloud)' }}>—</span>}
+                    </td>
+                    <td style={{ padding: '12px 16px', fontSize: 12, color: 'var(--slate)' }}>
+                      {p.skill ?? <span style={{ color: 'var(--cloud)' }}>—</span>}
+                    </td>
+                    <td style={{ padding: '12px 16px', fontSize: 12 }}>
+                      {p.difficulty ? (
+                        <span
+                          className="px-2 py-0.5 rounded text-xs"
+                          style={{
+                            background: p.difficulty === 'Easy' ? '#D1FAE5' : p.difficulty === 'Hard' ? '#FEE2E2' : '#FEF3C7',
+                            color: p.difficulty === 'Easy' ? '#065F46' : p.difficulty === 'Hard' ? '#991B1B' : '#92400E',
+                          }}
+                        >
+                          {p.difficulty}
+                        </span>
+                      ) : <span style={{ color: 'var(--cloud)' }}>—</span>}
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span
+                        className="px-2 py-0.5 rounded text-xs font-semibold"
+                        style={{ background: 'rgba(77,143,174,0.12)', color: 'var(--sky-deeper)', border: '1px solid rgba(77,143,174,0.22)' }}
+                      >
+                        {p.correct_answer}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--slate)' }}>
+                      {format(new Date(p.created_at), 'MMM d, yyyy')}
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="w-7 h-7 flex items-center justify-center rounded transition-all"
+                        style={{ background: 'transparent', border: 'none', color: 'var(--cloud)', cursor: 'pointer' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#991B1B'; e.currentTarget.style.background = '#FEE2E2'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--cloud)'; e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 }

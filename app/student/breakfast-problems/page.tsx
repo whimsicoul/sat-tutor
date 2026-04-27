@@ -12,6 +12,7 @@ export interface TodayAssignment {
   choice_c: string;
   choice_d: string;
   category: string | null;
+  question_image_url: string | null;
   student_answer: string | null;
   is_correct: boolean | null;
   submitted_at: string | null;

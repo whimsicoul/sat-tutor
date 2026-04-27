@@ -2,6 +2,8 @@
 
 A full-stack tutoring management platform for a Washington D.C. SAT prep service. Built with Next.js 14, Neon Postgres, and NextAuth v5.
 
+The website is live at https://dc-sat-tutor.up.railway.app/
+
 ## Features
 
 - **Three-role access control** — student, tutor, and admin portals with role-based routing
