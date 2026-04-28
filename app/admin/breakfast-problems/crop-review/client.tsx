@@ -17,7 +17,8 @@ function CroppedPreview({ problem, cropTop, cropBottom }: { problem: CropProblem
   const bottom = Math.max(0, cropBottom);
   const visibleHeight = Math.max(1, h - top - bottom);
   const pb = (visibleHeight / w * 100).toFixed(4) + '%';
-  const topPct = (top / w * 100).toFixed(4) + '%';
+  const imgHeightPct = (h / w * 100).toFixed(4) + '%';
+  const topOffsetPct = (top / w * 100).toFixed(4) + '%';
 
   return (
     <div
@@ -29,7 +30,7 @@ function CroppedPreview({ problem, cropTop, cropBottom }: { problem: CropProblem
         src={problem.question_image_url}
         alt="Cropped preview"
         className="absolute left-0 w-full"
-        style={{ top: `-${topPct}` }}
+        style={{ top: 0, height: imgHeightPct, marginTop: `-${topOffsetPct}` }}
       />
     </div>
   );
