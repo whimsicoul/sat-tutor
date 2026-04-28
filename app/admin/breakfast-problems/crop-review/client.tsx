@@ -56,14 +56,16 @@ export default function CropReviewClient({ problems }: Props) {
   const [cropBottom, setCropBottom] = useState(0);
   const [saving, setSaving] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savedCrops, setSavedCrops] = useState<Record<string, { top: number; bottom: number }>>({});
 
   const problem = problems[index];
 
   useEffect(() => {
     if (!problem) return;
-    setCropTop(problem.crop_top_px ?? 0);
-    setCropBottom(problem.crop_bottom_px ?? 0);
-  }, [index, problem]);
+    const saved = savedCrops[problem.id];
+    setCropTop(saved?.top ?? problem.crop_top_px ?? 0);
+    setCropBottom(saved?.bottom ?? problem.crop_bottom_px ?? 0);
+  }, [index, problem, savedCrops]);
 
   if (problems.length === 0) {
     return (
@@ -94,6 +96,7 @@ export default function CropReviewClient({ problems }: Props) {
         throw new Error(data.error || 'Save failed');
       }
       setSavedIds(prev => new Set(prev).add(problem.id));
+      setSavedCrops(prev => ({ ...prev, [problem.id]: { top: cropTop, bottom: cropBottom } }));
       toast.success('Crop saved.');
       const nextIdx = problems.findIndex((p, i) => i > index && !savedIds.has(p.id));
       if (nextIdx !== -1) setIndex(nextIdx);

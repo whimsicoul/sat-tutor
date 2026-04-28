@@ -490,10 +490,10 @@ export async function updateBreakfastProblem(
       choice_c           = COALESCE(${fields.choice_c        ?? null}, choice_c),
       choice_d           = COALESCE(${fields.choice_d        ?? null}, choice_d),
       correct_answer     = COALESCE(${fields.correct_answer  ?? null}, correct_answer),
-      answer_explanation = ${'answer_explanation' in fields ? fields.answer_explanation : null}::text,
-      category           = ${'category'   in fields ? fields.category   : null}::text,
-      skill              = ${'skill'       in fields ? fields.skill       : null}::text,
-      difficulty         = ${'difficulty'  in fields ? fields.difficulty  : null}::text,
+      answer_explanation = COALESCE(${fields.answer_explanation ?? null}::text, answer_explanation),
+      category           = COALESCE(${fields.category           ?? null}::text, category),
+      skill              = COALESCE(${fields.skill               ?? null}::text, skill),
+      difficulty         = COALESCE(${fields.difficulty          ?? null}::text, difficulty),
       crop_top_px        = COALESCE(${fields.crop_top_px    ?? null}::int, crop_top_px),
       crop_bottom_px     = COALESCE(${fields.crop_bottom_px ?? null}::int, crop_bottom_px)
     WHERE id = ${id}
