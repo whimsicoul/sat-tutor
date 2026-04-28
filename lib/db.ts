@@ -544,6 +544,8 @@ export async function getTodayAssignmentsForStudent(studentId: string) {
       bp.choice_d,
       bp.category,
       bp.question_image_url,
+      bp.crop_top_px,
+      bp.crop_bottom_px,
       sbr.student_answer,
       sbr.is_correct,
       sbr.submitted_at

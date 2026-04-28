@@ -195,7 +195,11 @@ export default function StudentBreakfastClient({
                             width={800}
                             height={400}
                             className="w-full"
-                            style={{ marginTop: '-220px', display: 'block' }}
+                            style={{
+                              marginTop: a.crop_top_px ? `-${a.crop_top_px}px` : undefined,
+                              marginBottom: a.crop_bottom_px ? `-${a.crop_bottom_px}px` : undefined,
+                              display: 'block',
+                            }}
                           />
                         </div>
                       ) : (
