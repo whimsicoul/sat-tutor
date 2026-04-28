@@ -190,10 +190,9 @@ export default function StudentBreakfastClient({
                           const top = a.crop_top_px || 0;
                           const bottom = a.crop_bottom_px || 0;
                           const visibleHeight = h - top - bottom;
-                          // Container height = visibleHeight/w of container width (aspect ratio trick)
+                          // paddingBottom % is relative to container width — sets visible height as aspect ratio
                           const pb = (visibleHeight / w * 100).toFixed(4) + '%';
-                          // Image height as % of container width, then shift up by top pixels scaled the same way
-                          const imgHeightPct = (h / w * 100).toFixed(4) + '%';
+                          // top offset: top/w * 100% resolves against container width, matching image scale
                           const topOffsetPct = (top / w * 100).toFixed(4) + '%';
                           return (
                             <div
@@ -205,7 +204,7 @@ export default function StudentBreakfastClient({
                                 src={a.question_image_url!}
                                 alt="Math question"
                                 className="absolute left-0 w-full"
-                                style={{ top: 0, height: imgHeightPct, marginTop: `-${topOffsetPct}` }}
+                                style={{ top: `-${topOffsetPct}` }}
                               />
                             </div>
                           );
