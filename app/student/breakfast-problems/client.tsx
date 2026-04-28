@@ -185,23 +185,31 @@ export default function StudentBreakfastClient({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       {a.question_image_url ? (
-                        <div
-                          className="w-full rounded border overflow-hidden relative"
-                          style={{ borderColor: 'var(--fog)' }}
-                        >
-                          <Image
-                            src={a.question_image_url}
-                            alt="Math question"
-                            width={800}
-                            height={400}
-                            className="w-full"
-                            style={{
-                              marginTop: a.crop_top_px ? `-${a.crop_top_px}px` : undefined,
-                              marginBottom: a.crop_bottom_px ? `-${a.crop_bottom_px}px` : undefined,
-                              display: 'block',
-                            }}
-                          />
-                        </div>
+                        (() => {
+                          const w = a.image_width_px || 1836;
+                          const h = a.image_height_px || 1134;
+                          const top = a.crop_top_px || 0;
+                          const bottom = a.crop_bottom_px || 0;
+                          const visibleHeight = h - top - bottom;
+                          // paddingBottom % is relative to container width, giving us the correct aspect ratio
+                          const pb = (visibleHeight / w * 100).toFixed(4) + '%';
+                          const topPct = (top / w * 100).toFixed(4) + '%';
+                          return (
+                            <div
+                              className="w-full rounded border overflow-hidden relative"
+                              style={{ borderColor: 'var(--fog)', paddingBottom: pb, height: 0 }}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={a.question_image_url!}
+                                alt="Math question"
+                                className="absolute left-0 w-full"
+                                style={{ top: `-${topPct}` }}
+                              />
+                            </div>
+                          );
+                        })()
+
                       ) : (
                         <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
                           {a.question}

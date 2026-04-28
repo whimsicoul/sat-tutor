@@ -65,10 +65,10 @@ for (let i = 0; i < rows.length; i++) {
     }
 
     await client.query(
-      `UPDATE breakfast_problems SET crop_top_px=$1, crop_bottom_px=$2 WHERE id=$3`,
-      [offsets.crop_top_px, offsets.crop_bottom_px, id]
+      `UPDATE breakfast_problems SET crop_top_px=$1, crop_bottom_px=$2, image_width_px=$3, image_height_px=$4 WHERE id=$5`,
+      [offsets.crop_top_px, offsets.crop_bottom_px, info.width, info.height, id]
     );
-    console.log(`OK (top=${offsets.crop_top_px}, bottom=${offsets.crop_bottom_px})`);
+    console.log(`OK (top=${offsets.crop_top_px}, bottom=${offsets.crop_bottom_px}, ${info.width}x${info.height})`);
     success++;
   } catch (err) {
     console.log(`FAIL: ${err.message}`);

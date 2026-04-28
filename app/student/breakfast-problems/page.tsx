@@ -15,6 +15,8 @@ export interface TodayAssignment {
   question_image_url: string | null;
   crop_top_px: number;
   crop_bottom_px: number;
+  image_width_px: number;
+  image_height_px: number;
   student_answer: string | null;
   is_correct: boolean | null;
   submitted_at: string | null;
