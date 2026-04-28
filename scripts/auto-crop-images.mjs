@@ -13,7 +13,6 @@ function detectCropOffsets(data, width, height, channels) {
       if (b > r + 40 && b > g + 40 && b > 80) blueCountPerRow[y]++;
     }
   }
-
   const bands = [];
   let bandStart = null;
   for (let y = 0; y < height; y++) {
@@ -24,26 +23,29 @@ function detectCropOffsets(data, width, height, channels) {
     }
   }
   if (bandStart !== null) bands.push({ start: bandStart, end: height - 1, height: height - bandStart });
-
   if (bands.length === 0) return null;
-
   const headerBand = bands.reduce((max, b) => b.height > max.height ? b : max, bands[0]);
   const footerBand = bands.filter(b => b.start > height * 0.85).at(-1);
-
   return {
     crop_top_px: headerBand.end + 1,
     crop_bottom_px: footerBand ? height - footerBand.start : 0,
   };
 }
 
-const client = new pg.Client({ connectionString: DB_URL });
-await client.connect();
+async function makeClient() {
+  const client = new pg.Client({ connectionString: DB_URL });
+  await client.connect();
+  return client;
+}
 
+// Only process images that still have image_height_px = 0 (not yet done)
+let client = await makeClient();
 const { rows } = await client.query(
-  `SELECT id, question_image_url FROM breakfast_problems WHERE question_image_url IS NOT NULL ORDER BY created_at`
+  `SELECT id, question_image_url FROM breakfast_problems WHERE question_image_url IS NOT NULL AND image_height_px = 0 ORDER BY created_at`
 );
+await client.end();
 
-console.log(`Processing ${rows.length} images...\n`);
+console.log(`${rows.length} images remaining to process...\n`);
 
 let success = 0, failed = 0, skipped = 0;
 
@@ -64,10 +66,14 @@ for (let i = 0; i < rows.length; i++) {
       continue;
     }
 
-    await client.query(
+    // Fresh connection per update to avoid timeout
+    const c = await makeClient();
+    await c.query(
       `UPDATE breakfast_problems SET crop_top_px=$1, crop_bottom_px=$2, image_width_px=$3, image_height_px=$4 WHERE id=$5`,
       [offsets.crop_top_px, offsets.crop_bottom_px, info.width, info.height, id]
     );
+    await c.end();
+
     console.log(`OK (top=${offsets.crop_top_px}, bottom=${offsets.crop_bottom_px}, ${info.width}x${info.height})`);
     success++;
   } catch (err) {
@@ -76,5 +82,4 @@ for (let i = 0; i < rows.length; i++) {
   }
 }
 
-await client.end();
 console.log(`\nDone. success=${success}, failed=${failed}, skipped=${skipped}`);
