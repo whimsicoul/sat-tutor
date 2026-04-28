@@ -12,6 +12,55 @@ import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import type { BreakfastProblem } from './page';
 
+// ── Crop sub-components (mirrors crop-review page) ────────────────────────────
+
+function CroppedPreview({ imageUrl, imageWidthPx, imageHeightPx, cropTop, cropBottom }: {
+  imageUrl: string;
+  imageWidthPx: number;
+  imageHeightPx: number;
+  cropTop: number;
+  cropBottom: number;
+}) {
+  const w = imageWidthPx || 1836;
+  const h = imageHeightPx || 1134;
+  const top = Math.max(0, cropTop);
+  const bottom = Math.max(0, cropBottom);
+  const visibleHeight = Math.max(1, h - top - bottom);
+  return (
+    <div
+      className="w-full rounded border overflow-hidden relative"
+      style={{ borderColor: 'var(--fog)', aspectRatio: `${w} / ${visibleHeight}` }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageUrl}
+        alt="Cropped preview"
+        className="absolute left-0 w-full"
+        style={{ top: 0, transform: `translateY(-${(top / h * 100).toFixed(4)}%)` }}
+      />
+    </div>
+  );
+}
+
+function FullImageWithLines({ imageUrl, imageHeightPx, cropTop, cropBottom }: {
+  imageUrl: string;
+  imageHeightPx: number;
+  cropTop: number;
+  cropBottom: number;
+}) {
+  const h = imageHeightPx || 1134;
+  const topPct = (Math.max(0, cropTop) / h * 100).toFixed(2) + '%';
+  const bottomPct = (Math.max(0, cropBottom) / h * 100).toFixed(2) + '%';
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={imageUrl} alt="Full image" style={{ width: '100%', display: 'block', borderRadius: 4 }} />
+      <div style={{ position: 'absolute', top: topPct, left: 0, right: 0, height: 2, background: 'rgba(77,143,174,0.85)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: bottomPct, left: 0, right: 0, height: 2, background: 'rgba(224,166,175,0.85)', pointerEvents: 'none' }} />
+    </div>
+  );
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ParsedRow {
@@ -110,6 +159,11 @@ export default function AdminBreakfastProblemsClient({
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<EditDraft | null>(null);
+
+  // Crop state (for math image problems in edit mode)
+  const [cropTop, setCropTop] = useState(0);
+  const [cropBottom, setCropBottom] = useState(0);
+  const [savingCrop, setSavingCrop] = useState(false);
 
   // ── File handler: routes PDF → parse-pdf API, CSV → local parse ───────────
 
@@ -233,7 +287,30 @@ export default function AdminBreakfastProblemsClient({
       skill:              detailProblem.skill ?? '',
       difficulty:         detailProblem.difficulty ?? '',
     });
+    setCropTop(detailProblem.crop_top_px ?? 0);
+    setCropBottom(detailProblem.crop_bottom_px ?? 0);
     setIsEditing(true);
+  }
+
+  async function handleSaveCrop() {
+    if (!detailProblem) return;
+    setSavingCrop(true);
+    try {
+      const res = await fetch(`/api/admin/breakfast-problems/${detailProblem.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ crop_top_px: cropTop, crop_bottom_px: cropBottom }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+      const updated = await res.json();
+      setProblems((prev) => prev.map((p) => p.id === detailProblem.id ? { ...p, ...updated } : p));
+      setDetailProblem((prev) => prev ? { ...prev, ...updated } : prev);
+      toast.success('Crop saved.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Save failed');
+    } finally {
+      setSavingCrop(false);
+    }
   }
 
   async function handleSave() {
@@ -617,7 +694,7 @@ export default function AdminBreakfastProblemsClient({
           }
         }}
       >
-        <DialogContent style={{ maxWidth: 560 }}>
+        <DialogContent style={{ maxWidth: detailProblem?.question_image_url && detailProblem?.category === 'Math' ? 960 : 560 }}>
           {detailProblem && (
             <>
               <DialogHeader>
@@ -648,190 +725,358 @@ export default function AdminBreakfastProblemsClient({
               </DialogHeader>
 
               {/* ── View mode ─── */}
-              {!isEditing && (
-                <>
-                  {detailProblem.question_image_url && (() => {
-                    const w = detailProblem.image_width_px || 1836;
-                    const h = detailProblem.image_height_px || 1134;
-                    const top = detailProblem.crop_top_px || 0;
-                    const bottom = detailProblem.crop_bottom_px || 0;
-                    const visibleHeight = Math.max(1, h - top - bottom);
-                    return (
-                      <div
-                        className="w-full rounded-md border overflow-hidden relative"
-                        style={{ borderColor: 'var(--fog)', aspectRatio: `${w} / ${visibleHeight}` }}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={detailProblem.question_image_url!}
-                          alt="Problem"
-                          className="absolute left-0 w-full"
-                          style={{ top: 0, transform: `translateY(-${(top / h * 100).toFixed(4)}%)` }}
+              {!isEditing && (() => {
+                const isMathImage = detailProblem.category === 'Math' && !!detailProblem.question_image_url;
+                return (
+                  <>
+                    {isMathImage ? (
+                      // Math image problem: show cropped preview prominently
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>
+                          Student view (cropped)
+                        </p>
+                        <CroppedPreview
+                          imageUrl={detailProblem.question_image_url!}
+                          imageWidthPx={detailProblem.image_width_px ?? 1836}
+                          imageHeightPx={detailProblem.image_height_px ?? 1134}
+                          cropTop={detailProblem.crop_top_px ?? 0}
+                          cropBottom={detailProblem.crop_bottom_px ?? 0}
                         />
+                        <p className="text-xs mt-2" style={{ color: 'var(--mist)' }}>
+                          Crop: top {detailProblem.crop_top_px ?? 0}px · bottom {detailProblem.crop_bottom_px ?? 0}px
+                          &nbsp;·&nbsp;Image: {detailProblem.image_width_px ?? '?'} × {detailProblem.image_height_px ?? '?'} px
+                        </p>
                       </div>
-                    );
-                  })()}
-
-                  <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
-                    {detailProblem.question}
-                  </p>
-
-                  <div className="space-y-2">
-                    {(['A', 'B', 'C', 'D'] as const).map((letter) => {
-                      const key = `choice_${letter.toLowerCase()}` as keyof BreakfastProblem;
-                      const isCorrect = detailProblem.correct_answer === letter;
-                      return (
-                        <div
-                          key={letter}
-                          className="flex items-start gap-2 px-3 py-2 rounded-lg text-sm"
-                          style={{
-                            background: isCorrect ? 'rgba(22,163,74,0.08)' : 'var(--frost)',
-                            border: isCorrect ? '1px solid rgba(22,163,74,0.35)' : '1px solid var(--fog)',
-                            color: isCorrect ? '#16a34a' : 'var(--charcoal)',
-                            fontWeight: isCorrect ? 600 : 400,
-                          }}
-                        >
-                          <strong>{letter}.</strong>
-                          <span className="flex-1">{detailProblem[key] as string}</span>
-                          {isCorrect && <span className="text-xs ml-auto shrink-0">Correct</span>}
+                    ) : (
+                      // Text-based problem: show question and choices as before
+                      <>
+                        {detailProblem.question_image_url && (() => {
+                          const w = detailProblem.image_width_px || 1836;
+                          const h = detailProblem.image_height_px || 1134;
+                          const top = detailProblem.crop_top_px || 0;
+                          const bottom = detailProblem.crop_bottom_px || 0;
+                          const visibleHeight = Math.max(1, h - top - bottom);
+                          return (
+                            <div
+                              className="w-full rounded-md border overflow-hidden relative"
+                              style={{ borderColor: 'var(--fog)', aspectRatio: `${w} / ${visibleHeight}` }}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={detailProblem.question_image_url!}
+                                alt="Problem"
+                                className="absolute left-0 w-full"
+                                style={{ top: 0, transform: `translateY(-${(top / h * 100).toFixed(4)}%)` }}
+                              />
+                            </div>
+                          );
+                        })()}
+                        <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
+                          {detailProblem.question}
+                        </p>
+                        <div className="space-y-2">
+                          {(['A', 'B', 'C', 'D'] as const).map((letter) => {
+                            const key = `choice_${letter.toLowerCase()}` as keyof BreakfastProblem;
+                            const isCorrect = detailProblem.correct_answer === letter;
+                            return (
+                              <div
+                                key={letter}
+                                className="flex items-start gap-2 px-3 py-2 rounded-lg text-sm"
+                                style={{
+                                  background: isCorrect ? 'rgba(22,163,74,0.08)' : 'var(--frost)',
+                                  border: isCorrect ? '1px solid rgba(22,163,74,0.35)' : '1px solid var(--fog)',
+                                  color: isCorrect ? '#16a34a' : 'var(--charcoal)',
+                                  fontWeight: isCorrect ? 600 : 400,
+                                }}
+                              >
+                                <strong>{letter}.</strong>
+                                <span className="flex-1">{detailProblem[key] as string}</span>
+                                {isCorrect && <span className="text-xs ml-auto shrink-0">Correct</span>}
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                  </div>
+                      </>
+                    )}
 
-                  {detailProblem.answer_explanation && (
-                    <div
-                      className="rounded-lg px-3 py-2 text-sm"
-                      style={{ background: 'var(--frost)', border: '1px solid var(--fog)' }}
-                    >
-                      <p className="text-xs font-semibold mb-1" style={{ color: 'var(--slate)' }}>Explanation</p>
-                      <p style={{ color: 'var(--charcoal)' }}>{detailProblem.answer_explanation}</p>
-                    </div>
-                  )}
-
-                  {detailProblem.flag_count > 0 && (
-                    <div className="rounded-lg px-3 py-2 text-xs" style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B' }}>
-                      <div className="flex items-center gap-1 font-semibold mb-0.5">
-                        <Flag className="h-3 w-3" />
-                        Flagged by {detailProblem.flag_count} student{detailProblem.flag_count !== 1 ? 's' : ''}
+                    {detailProblem.answer_explanation && (
+                      <div
+                        className="rounded-lg px-3 py-2 text-sm"
+                        style={{ background: 'var(--frost)', border: '1px solid var(--fog)' }}
+                      >
+                        <p className="text-xs font-semibold mb-1" style={{ color: 'var(--slate)' }}>Explanation</p>
+                        <p style={{ color: 'var(--charcoal)' }}>{detailProblem.answer_explanation}</p>
                       </div>
-                      {detailProblem.latest_flag_reason && (
-                        <p style={{ color: '#7F1D1D' }}>Latest reason: &ldquo;{detailProblem.latest_flag_reason}&rdquo;</p>
-                      )}
-                    </div>
-                  )}
+                    )}
 
-                  <DialogFooter showCloseButton>
-                    <button
-                      onClick={enterEditMode}
-                      className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-md"
-                      style={{ color: 'var(--sky-deeper)', background: 'rgba(77,143,174,0.1)', border: '1px solid rgba(77,143,174,0.2)' }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" /> Edit
-                    </button>
-                  </DialogFooter>
-                </>
-              )}
+                    {detailProblem.flag_count > 0 && (
+                      <div className="rounded-lg px-3 py-2 text-xs" style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B' }}>
+                        <div className="flex items-center gap-1 font-semibold mb-0.5">
+                          <Flag className="h-3 w-3" />
+                          Flagged by {detailProblem.flag_count} student{detailProblem.flag_count !== 1 ? 's' : ''}
+                        </div>
+                        {detailProblem.latest_flag_reason && (
+                          <p style={{ color: '#7F1D1D' }}>Latest reason: &ldquo;{detailProblem.latest_flag_reason}&rdquo;</p>
+                        )}
+                      </div>
+                    )}
+
+                    <DialogFooter showCloseButton>
+                      <button
+                        onClick={enterEditMode}
+                        className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-md"
+                        style={{ color: 'var(--sky-deeper)', background: 'rgba(77,143,174,0.1)', border: '1px solid rgba(77,143,174,0.2)' }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" /> Edit
+                      </button>
+                    </DialogFooter>
+                  </>
+                );
+              })()}
 
               {/* ── Edit mode ─── */}
-              {isEditing && draft && (
-                <>
-                  <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
-                    <div>
-                      <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Question</label>
-                      <Textarea
-                        className="mt-1"
-                        value={draft.question}
-                        onChange={(e) => setDraft((d) => d ? { ...d, question: e.target.value } : d)}
-                      />
-                    </div>
-                    {(['a', 'b', 'c', 'd'] as const).map((letter) => (
-                      <div key={letter}>
-                        <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>
-                          Choice {letter.toUpperCase()}
-                        </label>
-                        <Input
-                          className="mt-1"
-                          value={draft[`choice_${letter}` as keyof EditDraft]}
-                          onChange={(e) => setDraft((d) => d ? { ...d, [`choice_${letter}`]: e.target.value } : d)}
-                        />
-                      </div>
-                    ))}
-                    <div>
-                      <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Correct Answer</label>
-                      <select
-                        className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={draft.correct_answer}
-                        onChange={(e) => setDraft((d) => d ? { ...d, correct_answer: e.target.value } : d)}
-                      >
-                        {['A', 'B', 'C', 'D'].map((l) => <option key={l} value={l}>{l}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Answer Explanation</label>
-                      <Textarea
-                        className="mt-1"
-                        placeholder="Optional explanation shown to tutors…"
-                        value={draft.answer_explanation}
-                        onChange={(e) => setDraft((d) => d ? { ...d, answer_explanation: e.target.value } : d)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Category</label>
-                      <select
-                        className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={draft.category}
-                        onChange={(e) => setDraft((d) => d ? { ...d, category: e.target.value } : d)}
-                      >
-                        <option value="">None</option>
-                        <option value="Math">Math</option>
-                        <option value="Reading and Writing">Reading and Writing</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Skill</label>
-                      <Input
-                        className="mt-1"
-                        value={draft.skill}
-                        onChange={(e) => setDraft((d) => d ? { ...d, skill: e.target.value } : d)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Difficulty</label>
-                      <select
-                        className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={draft.difficulty}
-                        onChange={(e) => setDraft((d) => d ? { ...d, difficulty: e.target.value } : d)}
-                      >
-                        <option value="">None</option>
-                        <option value="Easy">Easy</option>
-                        <option value="Medium">Medium</option>
-                        <option value="Hard">Hard</option>
-                      </select>
-                    </div>
-                  </div>
+              {isEditing && draft && (() => {
+                const isMathImage = detailProblem.category === 'Math' && !!detailProblem.question_image_url;
+                const imageHeightPx = detailProblem.image_height_px ?? 1134;
+                const overCropped = cropTop + cropBottom >= imageHeightPx;
 
-                  <DialogFooter>
-                    <button
-                      onClick={() => { setIsEditing(false); setDraft(null); }}
-                      disabled={saving}
-                      className="text-sm px-4 py-2 rounded-md border"
-                      style={{ borderColor: 'var(--fog)', color: 'var(--slate)' }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="flex items-center gap-2 text-sm px-4 py-2 rounded-md"
-                      style={{ background: 'var(--sky-deeper)', color: 'white' }}
-                    >
-                      {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                      {saving ? 'Saving…' : 'Save Changes'}
-                    </button>
-                  </DialogFooter>
-                </>
-              )}
+                return (
+                  <>
+                    {isMathImage ? (
+                      // ── Math image problem: two-column crop tool + metadata ──
+                      <div className="flex gap-5 items-start min-h-0">
+                        {/* Left: cropped student view */}
+                        <div style={{ flex: '0 0 55%', minWidth: 0 }}>
+                          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>
+                            Student view (cropped)
+                          </p>
+                          <CroppedPreview
+                            imageUrl={detailProblem.question_image_url!}
+                            imageWidthPx={detailProblem.image_width_px ?? 1836}
+                            imageHeightPx={imageHeightPx}
+                            cropTop={cropTop}
+                            cropBottom={cropBottom}
+                          />
+                          {overCropped && (
+                            <p className="text-xs mt-2" style={{ color: '#b91c1c' }}>
+                              Warning: crop values exceed image height — nothing will be visible.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Right: full image with lines + crop controls + metadata */}
+                        <div style={{ flex: '0 0 45%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>
+                              Full image — blue = top cut, pink = bottom cut
+                            </p>
+                            <FullImageWithLines
+                              imageUrl={detailProblem.question_image_url!}
+                              imageHeightPx={imageHeightPx}
+                              cropTop={cropTop}
+                              cropBottom={cropBottom}
+                            />
+                          </div>
+
+                          {/* Crop inputs */}
+                          <div
+                            className="rounded-lg p-3 space-y-3"
+                            style={{ background: 'var(--frost)', border: '1px solid var(--fog)' }}
+                          >
+                            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
+                              Crop Controls
+                            </p>
+                            <div className="flex gap-3">
+                              <div className="flex-1">
+                                <label className="text-xs font-semibold block mb-1" style={{ color: 'var(--slate)' }}>Top (px)</label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  value={cropTop}
+                                  onChange={(e) => setCropTop(Math.max(0, parseInt(e.target.value) || 0))}
+                                  style={{ borderLeft: '3px solid rgba(77,143,174,0.7)' }}
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <label className="text-xs font-semibold block mb-1" style={{ color: 'var(--slate)' }}>Bottom (px)</label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  value={cropBottom}
+                                  onChange={(e) => setCropBottom(Math.max(0, parseInt(e.target.value) || 0))}
+                                  style={{ borderLeft: '3px solid rgba(224,166,175,0.9)' }}
+                                />
+                              </div>
+                            </div>
+                            <p className="text-xs" style={{ color: 'var(--mist)' }}>
+                              Image: {detailProblem.image_width_px ?? '?'} × {imageHeightPx} px
+                            </p>
+                            <button
+                              onClick={handleSaveCrop}
+                              disabled={savingCrop || overCropped}
+                              className="flex items-center justify-center gap-2 w-full text-sm py-2 rounded-md"
+                              style={{
+                                background: savingCrop || overCropped ? 'var(--fog)' : 'var(--rose)',
+                                color: savingCrop || overCropped ? 'var(--mist)' : 'white',
+                                border: 'none',
+                                cursor: savingCrop || overCropped ? 'not-allowed' : 'pointer',
+                                fontWeight: 600,
+                              }}
+                            >
+                              {savingCrop && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                              {savingCrop ? 'Saving…' : 'Save Crop'}
+                            </button>
+                          </div>
+
+                          {/* Metadata fields */}
+                          <div
+                            className="rounded-lg p-3 space-y-3"
+                            style={{ background: 'var(--frost)', border: '1px solid var(--fog)' }}
+                          >
+                            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
+                              Metadata
+                            </p>
+                            <div>
+                              <label className="text-xs font-semibold block mb-1" style={{ color: 'var(--slate)' }}>Correct Answer</label>
+                              <select
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                value={draft.correct_answer}
+                                onChange={(e) => setDraft((d) => d ? { ...d, correct_answer: e.target.value } : d)}
+                              >
+                                {['A', 'B', 'C', 'D'].map((l) => <option key={l} value={l}>{l}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs font-semibold block mb-1" style={{ color: 'var(--slate)' }}>Skill</label>
+                              <Input
+                                value={draft.skill}
+                                onChange={(e) => setDraft((d) => d ? { ...d, skill: e.target.value } : d)}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-semibold block mb-1" style={{ color: 'var(--slate)' }}>Difficulty</label>
+                              <select
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                value={draft.difficulty}
+                                onChange={(e) => setDraft((d) => d ? { ...d, difficulty: e.target.value } : d)}
+                              >
+                                <option value="">None</option>
+                                <option value="Easy">Easy</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Hard">Hard</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs font-semibold block mb-1" style={{ color: 'var(--slate)' }}>Answer Explanation</label>
+                              <Textarea
+                                placeholder="Optional explanation shown to tutors…"
+                                value={draft.answer_explanation}
+                                onChange={(e) => setDraft((d) => d ? { ...d, answer_explanation: e.target.value } : d)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      // ── Text-based problem (R&W or plain-text Math): full field set ──
+                      <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
+                        <div>
+                          <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Question</label>
+                          <Textarea
+                            className="mt-1"
+                            value={draft.question}
+                            onChange={(e) => setDraft((d) => d ? { ...d, question: e.target.value } : d)}
+                          />
+                        </div>
+                        {(['a', 'b', 'c', 'd'] as const).map((letter) => (
+                          <div key={letter}>
+                            <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>
+                              Choice {letter.toUpperCase()}
+                            </label>
+                            <Input
+                              className="mt-1"
+                              value={draft[`choice_${letter}` as keyof EditDraft]}
+                              onChange={(e) => setDraft((d) => d ? { ...d, [`choice_${letter}`]: e.target.value } : d)}
+                            />
+                          </div>
+                        ))}
+                        <div>
+                          <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Correct Answer</label>
+                          <select
+                            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            value={draft.correct_answer}
+                            onChange={(e) => setDraft((d) => d ? { ...d, correct_answer: e.target.value } : d)}
+                          >
+                            {['A', 'B', 'C', 'D'].map((l) => <option key={l} value={l}>{l}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Answer Explanation</label>
+                          <Textarea
+                            className="mt-1"
+                            placeholder="Optional explanation shown to tutors…"
+                            value={draft.answer_explanation}
+                            onChange={(e) => setDraft((d) => d ? { ...d, answer_explanation: e.target.value } : d)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Category</label>
+                          <select
+                            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            value={draft.category}
+                            onChange={(e) => setDraft((d) => d ? { ...d, category: e.target.value } : d)}
+                          >
+                            <option value="">None</option>
+                            <option value="Math">Math</option>
+                            <option value="Reading and Writing">Reading and Writing</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Skill</label>
+                          <Input
+                            className="mt-1"
+                            value={draft.skill}
+                            onChange={(e) => setDraft((d) => d ? { ...d, skill: e.target.value } : d)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Difficulty</label>
+                          <select
+                            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            value={draft.difficulty}
+                            onChange={(e) => setDraft((d) => d ? { ...d, difficulty: e.target.value } : d)}
+                          >
+                            <option value="">None</option>
+                            <option value="Easy">Easy</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Hard">Hard</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    <DialogFooter>
+                      <button
+                        onClick={() => { setIsEditing(false); setDraft(null); }}
+                        disabled={saving}
+                        className="text-sm px-4 py-2 rounded-md border"
+                        style={{ borderColor: 'var(--fog)', color: 'var(--slate)' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="flex items-center gap-2 text-sm px-4 py-2 rounded-md"
+                        style={{ background: 'var(--sky-deeper)', color: 'white' }}
+                      >
+                        {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        {saving ? 'Saving…' : 'Save Changes'}
+                      </button>
+                    </DialogFooter>
+                  </>
+                );
+              })()}
             </>
           )}
         </DialogContent>
