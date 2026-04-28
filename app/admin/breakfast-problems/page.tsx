@@ -11,6 +11,7 @@ export interface BreakfastProblem {
   choice_c: string;
   choice_d: string;
   correct_answer: string;
+  answer_explanation: string | null;
   category: string | null;
   skill: string | null;
   difficulty: string | null;

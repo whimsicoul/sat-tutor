@@ -465,12 +465,46 @@ export async function deleteBreakfastProblem(id: string) {
   await sql`DELETE FROM breakfast_problems WHERE id = ${id}`;
 }
 
+export async function updateBreakfastProblem(
+  id: string,
+  fields: {
+    question?: string;
+    choice_a?: string;
+    choice_b?: string;
+    choice_c?: string;
+    choice_d?: string;
+    correct_answer?: string;
+    answer_explanation?: string | null;
+    category?: string | null;
+    skill?: string | null;
+    difficulty?: string | null;
+  }
+) {
+  const rows = await sql`
+    UPDATE breakfast_problems SET
+      question           = COALESCE(${fields.question        ?? null}, question),
+      choice_a           = COALESCE(${fields.choice_a        ?? null}, choice_a),
+      choice_b           = COALESCE(${fields.choice_b        ?? null}, choice_b),
+      choice_c           = COALESCE(${fields.choice_c        ?? null}, choice_c),
+      choice_d           = COALESCE(${fields.choice_d        ?? null}, choice_d),
+      correct_answer     = COALESCE(${fields.correct_answer  ?? null}, correct_answer),
+      answer_explanation = ${'answer_explanation' in fields ? fields.answer_explanation : null}::text,
+      category           = ${'category'   in fields ? fields.category   : null}::text,
+      skill              = ${'skill'       in fields ? fields.skill       : null}::text,
+      difficulty         = ${'difficulty'  in fields ? fields.difficulty  : null}::text
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return rows[0] ?? null;
+}
+
 export async function getAllBreakfastProblemsWithFlagCounts() {
   return sql`
     SELECT
       bp.id, bp.question, bp.choice_a, bp.choice_b, bp.choice_c, bp.choice_d,
       bp.correct_answer, bp.category, bp.skill, bp.difficulty,
       bp.external_id, bp.created_at,
+      bp.answer_explanation,
       COUNT(bpf.id)::int AS flag_count,
       MAX(bpf.reason)    AS latest_flag_reason
     FROM breakfast_problems bp
@@ -633,6 +667,7 @@ export async function getBreakfastResultsForTutorStudents(tutorId: string) {
   return sql`
     SELECT
       sbr.id,
+      sbr.problem_id,
       sbr.student_answer,
       sbr.is_correct,
       sbr.submitted_at,
@@ -644,6 +679,7 @@ export async function getBreakfastResultsForTutorStudents(tutorId: string) {
       bp.choice_d,
       bp.correct_answer,
       bp.category,
+      bp.answer_explanation,
       u.id   AS student_id,
       u.name AS student_name
     FROM student_breakfast_responses sbr

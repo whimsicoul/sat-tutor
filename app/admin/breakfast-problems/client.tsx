@@ -4,8 +4,10 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Upload, Trash2, Coffee, BarChart2, FileText, CheckCircle2, X, Loader2, Flag } from 'lucide-react';
+import { Upload, Trash2, Coffee, BarChart2, FileText, CheckCircle2, X, Loader2, Flag, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import type { BreakfastProblem } from './page';
@@ -36,6 +38,19 @@ interface CsvRow {
   skill?: string;
   difficulty?: string;
   external_id?: string;
+}
+
+interface EditDraft {
+  question: string;
+  choice_a: string;
+  choice_b: string;
+  choice_c: string;
+  choice_d: string;
+  correct_answer: string;
+  answer_explanation: string;
+  category: string;
+  skill: string;
+  difficulty: string;
 }
 
 // ── CSV parser (robust quoted-field handling) ─────────────────────────────────
@@ -90,6 +105,11 @@ export default function AdminBreakfastProblemsClient({
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Math' | 'Reading and Writing'>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
   const [detailProblem, setDetailProblem] = useState<BreakfastProblem | null>(null);
+
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState<EditDraft | null>(null);
 
   // ── File handler: routes PDF → parse-pdf API, CSV → local parse ───────────
 
@@ -195,6 +215,54 @@ export default function AdminBreakfastProblemsClient({
     if (!res.ok) { toast.error('Delete failed.'); return; }
     setProblems((prev) => prev.filter((p) => p.id !== id));
     toast.success('Problem deleted.');
+  }
+
+  // ── Edit ──────────────────────────────────────────────────────────────────
+
+  function enterEditMode() {
+    if (!detailProblem) return;
+    setDraft({
+      question:           detailProblem.question,
+      choice_a:           detailProblem.choice_a,
+      choice_b:           detailProblem.choice_b,
+      choice_c:           detailProblem.choice_c,
+      choice_d:           detailProblem.choice_d,
+      correct_answer:     detailProblem.correct_answer,
+      answer_explanation: detailProblem.answer_explanation ?? '',
+      category:           detailProblem.category ?? '',
+      skill:              detailProblem.skill ?? '',
+      difficulty:         detailProblem.difficulty ?? '',
+    });
+    setIsEditing(true);
+  }
+
+  async function handleSave() {
+    if (!detailProblem || !draft) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/breakfast-problems/${detailProblem.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...draft,
+          answer_explanation: draft.answer_explanation || null,
+          category:   draft.category   || null,
+          skill:      draft.skill      || null,
+          difficulty: draft.difficulty || null,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+      const updated = await res.json();
+      setProblems((prev) => prev.map((p) => p.id === detailProblem.id ? { ...p, ...updated } : p));
+      setDetailProblem((prev) => prev ? { ...prev, ...updated } : prev);
+      setIsEditing(false);
+      setDraft(null);
+      toast.success('Problem updated.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -539,12 +607,32 @@ export default function AdminBreakfastProblemsClient({
         </div>
       )}
 
-      <Dialog open={detailProblem !== null} onOpenChange={(open) => { if (!open) setDetailProblem(null); }}>
+      <Dialog
+        open={detailProblem !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailProblem(null);
+            setIsEditing(false);
+            setDraft(null);
+          }
+        }}
+      >
         <DialogContent style={{ maxWidth: 560 }}>
           {detailProblem && (
             <>
               <DialogHeader>
-                <DialogTitle>Problem Detail</DialogTitle>
+                <div className="flex items-center justify-between">
+                  <DialogTitle>Problem Detail</DialogTitle>
+                  {!isEditing && (
+                    <button
+                      onClick={enterEditMode}
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded"
+                      style={{ color: 'var(--sky-deeper)', background: 'rgba(77,143,174,0.1)', border: '1px solid rgba(77,143,174,0.2)' }}
+                    >
+                      <Pencil className="h-3 w-3" /> Edit
+                    </button>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {detailProblem.category && (
                     <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--frost)', color: 'var(--slate)', border: '1px solid var(--fog)' }}>
@@ -570,46 +658,161 @@ export default function AdminBreakfastProblemsClient({
                 </div>
               </DialogHeader>
 
-              <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
-                {detailProblem.question}
-              </p>
+              {/* ── View mode ─── */}
+              {!isEditing && (
+                <>
+                  <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
+                    {detailProblem.question}
+                  </p>
 
-              <div className="space-y-2">
-                {(['A', 'B', 'C', 'D'] as const).map((letter) => {
-                  const key = `choice_${letter.toLowerCase()}` as keyof BreakfastProblem;
-                  const isCorrect = detailProblem.correct_answer === letter;
-                  return (
-                    <div
-                      key={letter}
-                      className="flex items-start gap-2 px-3 py-2 rounded-lg text-sm"
-                      style={{
-                        background: isCorrect ? 'rgba(22,163,74,0.08)' : 'var(--frost)',
-                        border: isCorrect ? '1px solid rgba(22,163,74,0.35)' : '1px solid var(--fog)',
-                        color: isCorrect ? '#16a34a' : 'var(--charcoal)',
-                        fontWeight: isCorrect ? 600 : 400,
-                      }}
-                    >
-                      <strong>{letter}.</strong>
-                      <span className="flex-1">{detailProblem[key] as string}</span>
-                      {isCorrect && <span className="text-xs ml-auto shrink-0">Correct</span>}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {detailProblem.flag_count > 0 && (
-                <div className="rounded-lg px-3 py-2 text-xs" style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B' }}>
-                  <div className="flex items-center gap-1 font-semibold mb-0.5">
-                    <Flag className="h-3 w-3" />
-                    Flagged by {detailProblem.flag_count} student{detailProblem.flag_count !== 1 ? 's' : ''}
+                  <div className="space-y-2">
+                    {(['A', 'B', 'C', 'D'] as const).map((letter) => {
+                      const key = `choice_${letter.toLowerCase()}` as keyof BreakfastProblem;
+                      const isCorrect = detailProblem.correct_answer === letter;
+                      return (
+                        <div
+                          key={letter}
+                          className="flex items-start gap-2 px-3 py-2 rounded-lg text-sm"
+                          style={{
+                            background: isCorrect ? 'rgba(22,163,74,0.08)' : 'var(--frost)',
+                            border: isCorrect ? '1px solid rgba(22,163,74,0.35)' : '1px solid var(--fog)',
+                            color: isCorrect ? '#16a34a' : 'var(--charcoal)',
+                            fontWeight: isCorrect ? 600 : 400,
+                          }}
+                        >
+                          <strong>{letter}.</strong>
+                          <span className="flex-1">{detailProblem[key] as string}</span>
+                          {isCorrect && <span className="text-xs ml-auto shrink-0">Correct</span>}
+                        </div>
+                      );
+                    })}
                   </div>
-                  {detailProblem.latest_flag_reason && (
-                    <p style={{ color: '#7F1D1D' }}>Latest reason: &ldquo;{detailProblem.latest_flag_reason}&rdquo;</p>
+
+                  {detailProblem.answer_explanation && (
+                    <div
+                      className="rounded-lg px-3 py-2 text-sm"
+                      style={{ background: 'var(--frost)', border: '1px solid var(--fog)' }}
+                    >
+                      <p className="text-xs font-semibold mb-1" style={{ color: 'var(--slate)' }}>Explanation</p>
+                      <p style={{ color: 'var(--charcoal)' }}>{detailProblem.answer_explanation}</p>
+                    </div>
                   )}
-                </div>
+
+                  {detailProblem.flag_count > 0 && (
+                    <div className="rounded-lg px-3 py-2 text-xs" style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B' }}>
+                      <div className="flex items-center gap-1 font-semibold mb-0.5">
+                        <Flag className="h-3 w-3" />
+                        Flagged by {detailProblem.flag_count} student{detailProblem.flag_count !== 1 ? 's' : ''}
+                      </div>
+                      {detailProblem.latest_flag_reason && (
+                        <p style={{ color: '#7F1D1D' }}>Latest reason: &ldquo;{detailProblem.latest_flag_reason}&rdquo;</p>
+                      )}
+                    </div>
+                  )}
+
+                  <DialogFooter showCloseButton />
+                </>
               )}
 
-              <DialogFooter showCloseButton />
+              {/* ── Edit mode ─── */}
+              {isEditing && draft && (
+                <>
+                  <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
+                    <div>
+                      <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Question</label>
+                      <Textarea
+                        className="mt-1"
+                        value={draft.question}
+                        onChange={(e) => setDraft((d) => d ? { ...d, question: e.target.value } : d)}
+                      />
+                    </div>
+                    {(['a', 'b', 'c', 'd'] as const).map((letter) => (
+                      <div key={letter}>
+                        <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>
+                          Choice {letter.toUpperCase()}
+                        </label>
+                        <Input
+                          className="mt-1"
+                          value={draft[`choice_${letter}` as keyof EditDraft]}
+                          onChange={(e) => setDraft((d) => d ? { ...d, [`choice_${letter}`]: e.target.value } : d)}
+                        />
+                      </div>
+                    ))}
+                    <div>
+                      <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Correct Answer</label>
+                      <select
+                        className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={draft.correct_answer}
+                        onChange={(e) => setDraft((d) => d ? { ...d, correct_answer: e.target.value } : d)}
+                      >
+                        {['A', 'B', 'C', 'D'].map((l) => <option key={l} value={l}>{l}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Answer Explanation</label>
+                      <Textarea
+                        className="mt-1"
+                        placeholder="Optional explanation shown to tutors…"
+                        value={draft.answer_explanation}
+                        onChange={(e) => setDraft((d) => d ? { ...d, answer_explanation: e.target.value } : d)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Category</label>
+                      <select
+                        className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={draft.category}
+                        onChange={(e) => setDraft((d) => d ? { ...d, category: e.target.value } : d)}
+                      >
+                        <option value="">None</option>
+                        <option value="Math">Math</option>
+                        <option value="Reading and Writing">Reading and Writing</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Skill</label>
+                      <Input
+                        className="mt-1"
+                        value={draft.skill}
+                        onChange={(e) => setDraft((d) => d ? { ...d, skill: e.target.value } : d)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>Difficulty</label>
+                      <select
+                        className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={draft.difficulty}
+                        onChange={(e) => setDraft((d) => d ? { ...d, difficulty: e.target.value } : d)}
+                      >
+                        <option value="">None</option>
+                        <option value="Easy">Easy</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Hard">Hard</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <button
+                      onClick={() => { setIsEditing(false); setDraft(null); }}
+                      disabled={saving}
+                      className="text-sm px-4 py-2 rounded-md border"
+                      style={{ borderColor: 'var(--fog)', color: 'var(--slate)' }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="flex items-center gap-2 text-sm px-4 py-2 rounded-md"
+                      style={{ background: 'var(--sky-deeper)', color: 'white' }}
+                    >
+                      {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      {saving ? 'Saving…' : 'Save Changes'}
+                    </button>
+                  </DialogFooter>
+                </>
+              )}
             </>
           )}
         </DialogContent>

@@ -5,6 +5,7 @@ import TutorBreakfastClient from './client';
 
 export interface BreakfastResult {
   id: string;
+  problem_id: string;
   student_answer: string;
   is_correct: boolean;
   submitted_at: string;
@@ -15,6 +16,7 @@ export interface BreakfastResult {
   choice_c: string;
   choice_d: string;
   correct_answer: string;
+  answer_explanation: string | null;
   category: string | null;
   student_id: string;
   student_name: string;
