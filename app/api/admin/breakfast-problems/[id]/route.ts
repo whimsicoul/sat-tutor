@@ -28,6 +28,19 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
   if (body.correct_answer) body.correct_answer = String(body.correct_answer).toUpperCase();
 
+  if (body.crop_top_px !== undefined) {
+    const v = Number(body.crop_top_px);
+    if (!Number.isInteger(v) || v < 0) {
+      return NextResponse.json({ error: 'crop_top_px must be a non-negative integer' }, { status: 400 });
+    }
+  }
+  if (body.crop_bottom_px !== undefined) {
+    const v = Number(body.crop_bottom_px);
+    if (!Number.isInteger(v) || v < 0) {
+      return NextResponse.json({ error: 'crop_bottom_px must be a non-negative integer' }, { status: 400 });
+    }
+  }
+
   const updated = await updateBreakfastProblem(params.id, {
     question:           body.question,
     choice_a:           body.choice_a,
@@ -39,6 +52,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     category:           body.category,
     skill:              body.skill,
     difficulty:         body.difficulty,
+    crop_top_px:    body.crop_top_px    !== undefined ? Number(body.crop_top_px)    : undefined,
+    crop_bottom_px: body.crop_bottom_px !== undefined ? Number(body.crop_bottom_px) : undefined,
   });
 
   if (!updated) {

@@ -478,6 +478,8 @@ export async function updateBreakfastProblem(
     category?: string | null;
     skill?: string | null;
     difficulty?: string | null;
+    crop_top_px?: number | null;
+    crop_bottom_px?: number | null;
   }
 ) {
   const rows = await sql`
@@ -491,11 +493,22 @@ export async function updateBreakfastProblem(
       answer_explanation = ${'answer_explanation' in fields ? fields.answer_explanation : null}::text,
       category           = ${'category'   in fields ? fields.category   : null}::text,
       skill              = ${'skill'       in fields ? fields.skill       : null}::text,
-      difficulty         = ${'difficulty'  in fields ? fields.difficulty  : null}::text
+      difficulty         = ${'difficulty'  in fields ? fields.difficulty  : null}::text,
+      crop_top_px        = COALESCE(${fields.crop_top_px    ?? null}::int, crop_top_px),
+      crop_bottom_px     = COALESCE(${fields.crop_bottom_px ?? null}::int, crop_bottom_px)
     WHERE id = ${id}
     RETURNING *
   `;
   return rows[0] ?? null;
+}
+
+export async function getBreakfastProblemsForCropReview() {
+  return sql`
+    SELECT id, question_image_url, crop_top_px, crop_bottom_px, image_width_px, image_height_px
+    FROM breakfast_problems
+    WHERE question_image_url IS NOT NULL
+    ORDER BY id ASC
+  `;
 }
 
 export async function getAllBreakfastProblemsWithFlagCounts() {
