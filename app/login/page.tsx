@@ -36,7 +36,7 @@ export default function LoginPage() {
     const data = await res.json();
     const role = data?.user?.role;
 
-    router.push(role === 'admin' ? '/admin' : role === 'tutor' ? '/tutor/problem-sets' : '/student/problem-sets');
+    router.push(role === 'admin' ? '/admin' : role === 'tutor' ? '/tutor' : '/student');
     router.refresh();
   }
 

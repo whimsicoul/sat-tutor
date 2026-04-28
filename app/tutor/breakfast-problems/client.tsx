@@ -277,18 +277,7 @@ export default function TutorBreakfastClient({
           {detailResult && (
             <>
               <DialogHeader>
-                <div className="flex items-center justify-between">
-                  <DialogTitle>Problem Detail</DialogTitle>
-                  {!isEditing && (
-                    <button
-                      onClick={enterEditMode}
-                      className="flex items-center gap-1 text-xs px-2 py-1 rounded"
-                      style={{ color: 'var(--sky-deeper)', background: 'rgba(77,143,174,0.1)', border: '1px solid rgba(77,143,174,0.2)' }}
-                    >
-                      <Pencil className="h-3 w-3" /> Edit
-                    </button>
-                  )}
-                </div>
+                <DialogTitle>Problem Detail</DialogTitle>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   {detailResult.category && (
                     <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--frost)', color: 'var(--slate)', border: '1px solid var(--fog)' }}>
@@ -379,7 +368,15 @@ export default function TutorBreakfastClient({
                     </div>
                   )}
 
-                  <DialogFooter showCloseButton />
+                  <DialogFooter showCloseButton>
+                    <button
+                      onClick={enterEditMode}
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded"
+                      style={{ color: 'var(--sky-deeper)', background: 'rgba(77,143,174,0.1)', border: '1px solid rgba(77,143,174,0.2)' }}
+                    >
+                      <Pencil className="h-3 w-3" /> Edit
+                    </button>
+                  </DialogFooter>
                 </>
               )}
 
