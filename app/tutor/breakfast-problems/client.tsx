@@ -310,30 +310,27 @@ export default function TutorBreakfastClient({
               {/* ── View mode ─── */}
               {!isEditing && (
                 <>
-                  {detailResult.question_image_url && (
-                    <div
-                      className="w-full overflow-hidden rounded-md border"
-                      style={{
-                        borderColor: 'var(--fog)',
-                        height:
-                          detailResult.image_height_px != null &&
-                          detailResult.crop_top_px != null &&
-                          detailResult.crop_bottom_px != null
-                            ? detailResult.image_height_px - detailResult.crop_top_px - detailResult.crop_bottom_px
-                            : 'auto',
-                      }}
-                    >
-                      <img
-                        src={detailResult.question_image_url}
-                        alt="Problem"
-                        style={{
-                          width: '100%',
-                          transform: `translateY(-${detailResult.crop_top_px ?? 0}px)`,
-                          display: 'block',
-                        }}
-                      />
-                    </div>
-                  )}
+                  {detailResult.question_image_url && (() => {
+                    const w = detailResult.image_width_px || 1836;
+                    const h = detailResult.image_height_px || 1134;
+                    const top = detailResult.crop_top_px || 0;
+                    const bottom = detailResult.crop_bottom_px || 0;
+                    const visibleHeight = Math.max(1, h - top - bottom);
+                    return (
+                      <div
+                        className="w-full rounded-md border overflow-hidden relative"
+                        style={{ borderColor: 'var(--fog)', aspectRatio: `${w} / ${visibleHeight}` }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={detailResult.question_image_url!}
+                          alt="Problem"
+                          className="absolute left-0 w-full"
+                          style={{ top: 0, transform: `translateY(-${(top / h * 100).toFixed(4)}%)` }}
+                        />
+                      </div>
+                    );
+                  })()}
 
                   <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
                     {detailResult.question}
