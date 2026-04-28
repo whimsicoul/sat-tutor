@@ -518,6 +518,8 @@ export async function getAllBreakfastProblemsWithFlagCounts() {
       bp.correct_answer, bp.category, bp.skill, bp.difficulty,
       bp.external_id, bp.created_at,
       bp.answer_explanation,
+      bp.question_image_url, bp.crop_top_px, bp.crop_bottom_px,
+      bp.image_width_px, bp.image_height_px,
       COUNT(bpf.id)::int AS flag_count,
       MAX(bpf.reason)    AS latest_flag_reason
     FROM breakfast_problems bp
@@ -697,6 +699,8 @@ export async function getBreakfastResultsForTutorStudents(tutorId: string) {
       bp.correct_answer,
       bp.category,
       bp.answer_explanation,
+      bp.question_image_url, bp.crop_top_px, bp.crop_bottom_px,
+      bp.image_width_px, bp.image_height_px,
       u.id   AS student_id,
       u.name AS student_name
     FROM student_breakfast_responses sbr
@@ -723,13 +727,18 @@ export async function getAllBreakfastResults() {
   return sql`
     SELECT
       sbr.id,
+      sbr.problem_id,
       sbr.student_answer,
       sbr.is_correct,
       sbr.submitted_at,
       sba.assigned_date,
       bp.question,
+      bp.choice_a, bp.choice_b, bp.choice_c, bp.choice_d,
       bp.correct_answer,
       bp.category,
+      bp.answer_explanation,
+      bp.question_image_url, bp.crop_top_px, bp.crop_bottom_px,
+      bp.image_width_px, bp.image_height_px,
       u.id   AS student_id,
       u.name AS student_name
     FROM student_breakfast_responses sbr

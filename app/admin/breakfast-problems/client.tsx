@@ -661,6 +661,31 @@ export default function AdminBreakfastProblemsClient({
               {/* ── View mode ─── */}
               {!isEditing && (
                 <>
+                  {detailProblem.question_image_url && (
+                    <div
+                      className="w-full overflow-hidden rounded-md border"
+                      style={{
+                        borderColor: 'var(--fog)',
+                        height:
+                          detailProblem.image_height_px != null &&
+                          detailProblem.crop_top_px != null &&
+                          detailProblem.crop_bottom_px != null
+                            ? detailProblem.image_height_px - detailProblem.crop_top_px - detailProblem.crop_bottom_px
+                            : 'auto',
+                      }}
+                    >
+                      <img
+                        src={detailProblem.question_image_url}
+                        alt="Problem"
+                        style={{
+                          width: '100%',
+                          transform: `translateY(-${detailProblem.crop_top_px ?? 0}px)`,
+                          display: 'block',
+                        }}
+                      />
+                    </div>
+                  )}
+
                   <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
                     {detailProblem.question}
                   </p>

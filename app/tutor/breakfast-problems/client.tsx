@@ -310,6 +310,31 @@ export default function TutorBreakfastClient({
               {/* ── View mode ─── */}
               {!isEditing && (
                 <>
+                  {detailResult.question_image_url && (
+                    <div
+                      className="w-full overflow-hidden rounded-md border"
+                      style={{
+                        borderColor: 'var(--fog)',
+                        height:
+                          detailResult.image_height_px != null &&
+                          detailResult.crop_top_px != null &&
+                          detailResult.crop_bottom_px != null
+                            ? detailResult.image_height_px - detailResult.crop_top_px - detailResult.crop_bottom_px
+                            : 'auto',
+                      }}
+                    >
+                      <img
+                        src={detailResult.question_image_url}
+                        alt="Problem"
+                        style={{
+                          width: '100%',
+                          transform: `translateY(-${detailResult.crop_top_px ?? 0}px)`,
+                          display: 'block',
+                        }}
+                      />
+                    </div>
+                  )}
+
                   <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
                     {detailResult.question}
                   </p>

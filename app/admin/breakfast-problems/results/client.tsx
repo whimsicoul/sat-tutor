@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import type { BreakfastResult } from './page';
 
 export default function AdminBreakfastResultsClient({
@@ -13,6 +14,7 @@ export default function AdminBreakfastResultsClient({
 }) {
   const studentNames = Array.from(new Set(results.map((r) => r.student_name))).sort();
   const [filterStudent, setFilterStudent] = useState('all');
+  const [detailResult, setDetailResult] = useState<BreakfastResult | null>(null);
 
   const filtered = filterStudent === 'all'
     ? results
@@ -102,10 +104,21 @@ export default function AdminBreakfastResultsClient({
                     {dateRows.map((r, i) => (
                       <div
                         key={r.id}
-                        className="px-5 py-3 flex items-start gap-3"
+                        onClick={() => setDetailResult(r)}
+                        className="px-5 py-3 flex items-start gap-3 cursor-pointer"
                         style={{
                           borderBottom: i < dateRows.length - 1 ? '1px solid var(--fog)' : 'none',
                           background: r.is_correct ? 'transparent' : 'rgba(224,166,175,0.07)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = r.is_correct
+                            ? 'rgba(0,0,0,0.03)'
+                            : 'rgba(224,166,175,0.14)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = r.is_correct
+                            ? 'transparent'
+                            : 'rgba(224,166,175,0.07)';
                         }}
                       >
                         <div className="mt-0.5 shrink-0">
@@ -133,6 +146,115 @@ export default function AdminBreakfastResultsClient({
           );
         })
       )}
+
+      {/* ── Detail Modal ─── */}
+      <Dialog
+        open={detailResult !== null}
+        onOpenChange={(open) => { if (!open) setDetailResult(null); }}
+      >
+        <DialogContent style={{ maxWidth: 580 }}>
+          {detailResult && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Problem Detail</DialogTitle>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  {detailResult.category && (
+                    <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--frost)', color: 'var(--slate)', border: '1px solid var(--fog)' }}>
+                      {detailResult.category}
+                    </span>
+                  )}
+                  <span className="text-xs" style={{ color: 'var(--mist)' }}>
+                    {detailResult.student_name} answered{' '}
+                    <strong style={{ color: detailResult.is_correct ? '#16a34a' : 'var(--rose-deeper)' }}>
+                      {detailResult.student_answer}
+                    </strong>
+                    {!detailResult.is_correct && (
+                      <> · Correct: <strong style={{ color: '#16a34a' }}>{detailResult.correct_answer}</strong></>
+                    )}
+                  </span>
+                  <span className="text-xs" style={{ color: 'var(--mist)' }}>
+                    {format(new Date(detailResult.assigned_date), 'MMM d, yyyy')}
+                  </span>
+                </div>
+              </DialogHeader>
+
+              {detailResult.question_image_url && (
+                <div
+                  className="w-full overflow-hidden rounded-md border"
+                  style={{
+                    borderColor: 'var(--fog)',
+                    height:
+                      detailResult.image_height_px != null &&
+                      detailResult.crop_top_px != null &&
+                      detailResult.crop_bottom_px != null
+                        ? detailResult.image_height_px - detailResult.crop_top_px - detailResult.crop_bottom_px
+                        : 'auto',
+                  }}
+                >
+                  <img
+                    src={detailResult.question_image_url}
+                    alt="Problem"
+                    style={{
+                      width: '100%',
+                      transform: `translateY(-${detailResult.crop_top_px ?? 0}px)`,
+                      display: 'block',
+                    }}
+                  />
+                </div>
+              )}
+
+              <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
+                {detailResult.question}
+              </p>
+
+              <div className="space-y-2">
+                {(['A', 'B', 'C', 'D'] as const).map((letter) => {
+                  const key = `choice_${letter.toLowerCase()}` as keyof BreakfastResult;
+                  const isCorrect = detailResult.correct_answer === letter;
+                  const isStudentWrong = !detailResult.is_correct && detailResult.student_answer === letter;
+                  return (
+                    <div
+                      key={letter}
+                      className="flex items-start gap-2 px-3 py-2 rounded-lg text-sm"
+                      style={{
+                        background: isCorrect
+                          ? 'rgba(22,163,74,0.08)'
+                          : isStudentWrong
+                          ? 'rgba(224,166,175,0.18)'
+                          : 'var(--frost)',
+                        border: isCorrect
+                          ? '1px solid rgba(22,163,74,0.35)'
+                          : isStudentWrong
+                          ? '1px solid rgba(224,166,175,0.5)'
+                          : '1px solid var(--fog)',
+                        color: isCorrect ? '#16a34a' : isStudentWrong ? 'var(--rose-deeper)' : 'var(--charcoal)',
+                        fontWeight: isCorrect || isStudentWrong ? 600 : 400,
+                      }}
+                    >
+                      <strong>{letter}.</strong>
+                      <span className="flex-1">{detailResult[key] as string}</span>
+                      {isCorrect && <span className="text-xs ml-auto shrink-0">Correct</span>}
+                      {isStudentWrong && <span className="text-xs ml-auto shrink-0">Student picked</span>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {detailResult.answer_explanation && (
+                <div
+                  className="rounded-lg px-3 py-2 text-sm"
+                  style={{ background: 'var(--frost)', border: '1px solid var(--fog)' }}
+                >
+                  <p className="text-xs font-semibold mb-1" style={{ color: 'var(--slate)' }}>Explanation</p>
+                  <p style={{ color: 'var(--charcoal)' }}>{detailResult.answer_explanation}</p>
+                </div>
+              )}
+
+              <DialogFooter showCloseButton />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
