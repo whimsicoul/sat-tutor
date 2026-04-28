@@ -185,14 +185,19 @@ export default function StudentBreakfastClient({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       {a.question_image_url ? (
-                        <Image
-                          src={a.question_image_url}
-                          alt="Math question"
-                          width={800}
-                          height={400}
-                          className="w-full rounded border"
+                        <div
+                          className="w-full rounded border overflow-hidden relative"
                           style={{ borderColor: 'var(--fog)' }}
-                        />
+                        >
+                          <Image
+                            src={a.question_image_url}
+                            alt="Math question"
+                            width={800}
+                            height={400}
+                            className="w-full"
+                            style={{ marginTop: '-220px', display: 'block' }}
+                          />
+                        </div>
                       ) : (
                         <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
                           {a.question}
