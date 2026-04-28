@@ -16,20 +16,18 @@ function CroppedPreview({ problem, cropTop, cropBottom }: { problem: CropProblem
   const top = Math.max(0, cropTop);
   const bottom = Math.max(0, cropBottom);
   const visibleHeight = Math.max(1, h - top - bottom);
-  const pb = (visibleHeight / w * 100).toFixed(4) + '%';
-  const topOffsetPct = (top / w * 100).toFixed(4) + '%';
 
   return (
     <div
       className="w-full rounded border overflow-hidden relative"
-      style={{ borderColor: 'var(--fog)', paddingBottom: pb, height: 0 }}
+      style={{ borderColor: 'var(--fog)', aspectRatio: `${w} / ${visibleHeight}` }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={problem.question_image_url}
         alt="Cropped preview"
         className="absolute left-0 w-full"
-        style={{ top: `-${topOffsetPct}` }}
+        style={{ top: 0, transform: `translateY(-${(top / h * 100).toFixed(4)}%)` }}
       />
     </div>
   );

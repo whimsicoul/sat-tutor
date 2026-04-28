@@ -189,22 +189,18 @@ export default function StudentBreakfastClient({
                           const h = a.image_height_px || 1134;
                           const top = a.crop_top_px || 0;
                           const bottom = a.crop_bottom_px || 0;
-                          const visibleHeight = h - top - bottom;
-                          // paddingBottom % is relative to container width — sets visible height as aspect ratio
-                          const pb = (visibleHeight / w * 100).toFixed(4) + '%';
-                          // top offset: top/w * 100% resolves against container width, matching image scale
-                          const topOffsetPct = (top / w * 100).toFixed(4) + '%';
+                          const visibleHeight = Math.max(1, h - top - bottom);
                           return (
                             <div
                               className="w-full rounded border overflow-hidden relative"
-                              style={{ borderColor: 'var(--fog)', paddingBottom: pb, height: 0 }}
+                              style={{ borderColor: 'var(--fog)', aspectRatio: `${w} / ${visibleHeight}` }}
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={a.question_image_url!}
                                 alt="Math question"
                                 className="absolute left-0 w-full"
-                                style={{ top: `-${topOffsetPct}` }}
+                                style={{ top: 0, transform: `translateY(-${(top / h * 100).toFixed(4)}%)` }}
                               />
                             </div>
                           );
