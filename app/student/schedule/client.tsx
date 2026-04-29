@@ -30,7 +30,7 @@ function MeetingRequestForm({ onRequested }: { onRequested: (session: SessionRow
     if (!date || !time) return;
     setSubmitting(true);
     try {
-      const proposedTime = new Date(`${date}T${time}`).toISOString();
+      const proposedTime = `${date}T${time}:00`;
       const res = await fetch('/api/student/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -44,8 +44,8 @@ function MeetingRequestForm({ onRequested }: { onRequested: (session: SessionRow
       const newSession = await res.json();
       onRequested({
         id: newSession.id,
-        proposed_time: newSession.proposed_time,
-        status: 'pending',
+        proposed_time: proposedTime,
+        status: newSession.status ?? 'approved',
         created_at: newSession.created_at,
         tutor_name: newSession.tutor_name ?? '',
         problem_sets: [],

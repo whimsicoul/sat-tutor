@@ -141,9 +141,39 @@ export default function TutorScheduleClient({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     initial.map((s: any) => ({ ...s, proposed_time: s.proposed_time instanceof Date ? s.proposed_time.toISOString() : s.proposed_time }))
   );
+  const [localSatDates, setLocalSatDates] = useState<TutorSatDate[]>(satDates);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [selectedSession, setSelectedSession] = useState<TutorSessionRow | null>(null);
+
+  // Add SAT date form
+  const [showAddSat, setShowAddSat] = useState(false);
+  const [satStudentId, setSatStudentId] = useState('');
+  const [satTestDate, setSatTestDate] = useState('');
+  const [addingSat, setAddingSat] = useState(false);
+
+  async function handleAddSatDate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!satStudentId || !satTestDate) { toast.error('Please select a student and date.'); return; }
+    setAddingSat(true);
+    try {
+      const res = await fetch('/api/tutor/sat-dates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: satStudentId, testDate: satTestDate }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
+      const created = await res.json();
+      const student = students.find((s) => s.id === satStudentId);
+      setLocalSatDates((prev) => [...prev, { id: created.id, test_date: satTestDate, student_id: satStudentId, student_name: student?.name ?? '' }]);
+      setSatStudentId(''); setSatTestDate(''); setShowAddSat(false);
+      toast.success('SAT date added.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add SAT date.');
+    } finally {
+      setAddingSat(false);
+    }
+  }
 
   // Propose modal
   const [showPropose, setShowPropose] = useState(false);
@@ -183,9 +213,9 @@ export default function TutorScheduleClient({
 
   const satDatesByDay = useMemo(() => {
     const set = new Set<string>();
-    for (const d of satDates) set.add(d.test_date);
+    for (const d of localSatDates) set.add(d.test_date);
     return set;
-  }, [satDates]);
+  }, [localSatDates]);
 
   // ── Day selection ──────────────────────────────────────────────────────
 
@@ -252,11 +282,11 @@ export default function TutorScheduleClient({
     if (!studentId || !date || !time) { toast.error('Please fill all fields.'); return; }
     setProposing(true);
     try {
-      const proposedTime = new Date(`${date}T${time}`).toISOString();
+      const proposedTime = `${date}T${time}:00`;
 
       if (isRecurring) {
         const days = recurType === 'weekly'
-          ? [new Date(`${date}T${time}`).getDay()]
+          ? [new Date(proposedTime).getDay()]
           : customDays;
 
         if (days.length === 0) { toast.error('Select at least one day.'); setProposing(false); return; }
@@ -287,7 +317,7 @@ export default function TutorScheduleClient({
         if (!res.ok) throw new Error('Failed');
         const newSession = await res.json();
         const student = students.find((s) => s.id === studentId);
-        setSessions((prev) => [{ ...newSession, student_name: student?.name ?? '', problem_sets: [] }, ...prev]);
+        setSessions((prev) => [{ ...newSession, proposed_time: proposedTime, student_name: student?.name ?? '', problem_sets: [] }, ...prev]);
         toast.success('Session added!');
       }
 
@@ -647,28 +677,72 @@ export default function TutorScheduleClient({
       )}
 
       {/* SAT Test Dates */}
-      {satDates.length > 0 && (
-        <div className="portal-card-sky p-6">
-          <div className="flex items-center gap-2 mb-4">
+      <div className="portal-card-sky p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
             <GraduationCap size={16} style={{ color: 'var(--sky-deeper)' }} />
             <h2 className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>Students&apos; Official SAT Dates</h2>
           </div>
-          <div className="flex flex-col gap-2">
-            {satDates.map((d) => (
-              <div
-                key={d.id}
-                className="flex items-center justify-between rounded-lg px-4 py-2"
-                style={{ background: 'rgba(168,203,222,0.12)', border: '1px solid rgba(168,203,222,0.25)' }}
-              >
-                <span className="text-xs font-semibold" style={{ color: 'var(--charcoal)' }}>{d.student_name}</span>
-                <span className="text-sm font-semibold" style={{ color: 'var(--sky-deeper)' }}>
-                  {format(new Date(d.test_date + 'T12:00:00'), 'MMMM d, yyyy')}
-                </span>
-              </div>
-            ))}
-          </div>
+          <button
+            onClick={() => setShowAddSat((v) => !v)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+            style={{ background: 'rgba(168,203,222,0.18)', color: 'var(--sky-deeper)', border: '1px solid rgba(168,203,222,0.3)', cursor: 'pointer' }}
+          >
+            <Plus size={12} /> Add Date
+          </button>
         </div>
-      )}
+        {showAddSat && (
+          <form onSubmit={handleAddSatDate} className="flex items-end gap-3 flex-wrap mb-4 p-3 rounded-lg" style={{ background: 'rgba(168,203,222,0.08)', border: '1px solid rgba(168,203,222,0.2)' }}>
+            <div style={{ flex: '1 1 160px', minWidth: 140 }}>
+              <label className="block text-xs font-semibold mb-1 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>Student</label>
+              <select
+                value={satStudentId}
+                onChange={(e) => setSatStudentId(e.target.value)}
+                required
+                style={{ width: '100%', padding: '0.4rem 0.6rem', borderRadius: '0.5rem', fontSize: '0.8rem', border: '1px solid var(--fog)', background: 'var(--white)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif" }}
+              >
+                <option value="">Select student…</option>
+                {students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: '1 1 140px', minWidth: 130 }}>
+              <label className="block text-xs font-semibold mb-1 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>Date</label>
+              <input
+                type="date"
+                value={satTestDate}
+                onChange={(e) => setSatTestDate(e.target.value)}
+                required
+                style={{ width: '100%', padding: '0.4rem 0.6rem', borderRadius: '0.5rem', fontSize: '0.8rem', border: '1px solid var(--fog)', background: 'var(--white)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif" }}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={addingSat}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+              style={{ background: 'var(--sky)', color: 'var(--charcoal)', border: 'none', cursor: addingSat ? 'not-allowed' : 'pointer' }}
+            >
+              {addingSat ? 'Saving…' : 'Save'}
+            </button>
+          </form>
+        )}
+        {localSatDates.length === 0 && !showAddSat && (
+          <p className="text-xs" style={{ color: 'var(--mist)' }}>No SAT dates added yet.</p>
+        )}
+        <div className="flex flex-col gap-2">
+          {localSatDates.map((d) => (
+            <div
+              key={d.id}
+              className="flex items-center justify-between rounded-lg px-4 py-2"
+              style={{ background: 'rgba(168,203,222,0.12)', border: '1px solid rgba(168,203,222,0.25)' }}
+            >
+              <span className="text-xs font-semibold" style={{ color: 'var(--charcoal)' }}>{d.student_name}</span>
+              <span className="text-sm font-semibold" style={{ color: 'var(--sky-deeper)' }}>
+                {format(new Date(d.test_date + 'T12:00:00'), 'MMMM d, yyyy')}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Propose session modal */}
       {showPropose && (

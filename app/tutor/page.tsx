@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import sql from '@/lib/db';
 import Link from 'next/link';
-import { Users, CalendarDays, Clock, BookOpen, ArrowRight } from 'lucide-react';
+import { Users, CalendarDays, BookOpen, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import TodayDate from '@/components/shared/TodayDate';
 
@@ -15,12 +15,11 @@ export default async function TutorDashboardPage() {
   const now = new Date().toISOString();
   const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [assignedStudents, problemSetsCount, upcomingThisWeek, pendingCount, upcomingFive] =
+  const [assignedStudents, problemSetsCount, upcomingThisWeek, upcomingFive] =
     await Promise.all([
       sql`SELECT COUNT(*) AS count FROM tutor_student_assignments WHERE tutor_id = ${tutorId}`,
       sql`SELECT COUNT(*) AS count FROM problem_sets WHERE tutor_id = ${tutorId}`,
       sql`SELECT COUNT(*) AS count FROM sessions WHERE tutor_id = ${tutorId} AND proposed_time >= ${now} AND proposed_time <= ${weekEnd}`,
-      sql`SELECT COUNT(*) AS count FROM sessions WHERE tutor_id = ${tutorId} AND status = 'pending'`,
       sql`
         SELECT s.id, s.proposed_time, s.status, u.name AS student_name
         FROM sessions s
@@ -34,14 +33,12 @@ export default async function TutorDashboardPage() {
   const [assignedRow] = assignedStudents as Record<string, number>[];
   const [problemSetsRow] = problemSetsCount as Record<string, number>[];
   const [upcomingRow] = upcomingThisWeek as Record<string, number>[];
-  const [pendingRow] = pendingCount as Record<string, number>[];
   const sessions = upcomingFive as Record<string, unknown>[];
 
   const stats = [
     { label: 'Assigned Students', value: assignedRow.count, icon: Users, accent: 'sky', href: '/tutor/schedule' },
     { label: 'Problem Sets Created', value: problemSetsRow.count, icon: BookOpen, accent: 'sky', href: '/tutor/problem-sets' },
     { label: 'Sessions This Week', value: upcomingRow.count, icon: CalendarDays, accent: 'rose', href: '/tutor/schedule' },
-    { label: 'Pending Approvals', value: pendingRow.count, icon: Clock, accent: 'rose', href: '/tutor/schedule' },
   ];
 
   const quickActions = [
@@ -74,7 +71,7 @@ export default async function TutorDashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 40 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 40 }}>
         {stats.map(({ label, value, icon: Icon, accent, href }) => {
           const isRose = accent === 'rose';
           return (

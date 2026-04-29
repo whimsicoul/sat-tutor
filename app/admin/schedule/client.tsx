@@ -112,7 +112,7 @@ export default function ScheduleClient({
   sessions: initial,
   tutors,
   students,
-  satDates = [],
+  satDates: initialSatDates = [],
 }: {
   sessions: AdminSession[];
   tutors: UserOption[];
@@ -121,12 +121,16 @@ export default function ScheduleClient({
 }) {
   const [mounted, setMounted] = useState(false);
   const [sessions, setSessions] = useState<AdminSession[]>(initial);
+  const [satDates, setSatDates] = useState<AdminSatDate[]>(initialSatDates);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [satDialogOpen, setSatDialogOpen] = useState(false);
   const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(() => new Date());
 
   useEffect(() => { setMounted(true); }, []);
   const [saving, setSaving] = useState(false);
+  const [satSaving, setSatSaving] = useState(false);
+  const [satForm, setSatForm] = useState({ studentId: '', testDate: '' });
 
   const [form, setForm] = useState<{
     tutorId: string;
@@ -143,6 +147,32 @@ export default function ScheduleClient({
     recurrence: 'none',
     endDate: '',
   });
+
+  async function handleCreateSatDate() {
+    if (!satForm.studentId || !satForm.testDate) {
+      toast.error('Please select a student and date');
+      return;
+    }
+    setSatSaving(true);
+    try {
+      const res = await fetch('/api/admin/sat-dates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: satForm.studentId, testDate: satForm.testDate }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
+      const created = await res.json();
+      const student = students.find((s) => s.id === satForm.studentId);
+      setSatDates((prev) => [...prev, { ...created, test_date: satForm.testDate, student_id: satForm.studentId, student_name: student?.name ?? '' }]);
+      setSatDialogOpen(false);
+      setSatForm({ studentId: '', testDate: '' });
+      toast.success('SAT date added');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error adding SAT date');
+    } finally {
+      setSatSaving(false);
+    }
+  }
 
   // Session detail / problem-sets modal state
   const [detailSession, setDetailSession] = useState<AdminSession | null>(null);
@@ -305,13 +335,22 @@ export default function ScheduleClient({
             All sessions across tutors and students
           </p>
         </div>
-        <button
-          onClick={() => setDialogOpen(true)}
-          className="btn-sky"
-          style={{ gap: 8 }}
-        >
-          <Plus size={16} /> New Session
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={() => setSatDialogOpen(true)}
+            className="btn-sky"
+            style={{ gap: 8, background: 'rgba(168,93,106,0.12)', color: 'var(--rose-deeper)', border: '1px solid rgba(168,93,106,0.25)' }}
+          >
+            <Plus size={16} /> New SAT Date
+          </button>
+          <button
+            onClick={() => setDialogOpen(true)}
+            className="btn-sky"
+            style={{ gap: 8 }}
+          >
+            <Plus size={16} /> New Session
+          </button>
+        </div>
       </div>
 
       {/* Calendar legend */}
@@ -463,6 +502,42 @@ export default function ScheduleClient({
               style={{ background: 'var(--sky)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", border: 'none' }}
             >
               {detailSaving ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New SAT date dialog */}
+      <Dialog open={satDialogOpen} onOpenChange={setSatDialogOpen}>
+        <DialogContent style={{ maxWidth: 400 }}>
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)', letterSpacing: '-0.02em' }}>New SAT Test Date</DialogTitle>
+          </DialogHeader>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
+            <div>
+              <Label>Student</Label>
+              <select
+                value={satForm.studentId}
+                onChange={(e) => setSatForm((f) => ({ ...f, studentId: e.target.value }))}
+                style={{ display: 'block', width: '100%', marginTop: 4, height: 32, padding: '0 8px', borderRadius: 8, border: '1px solid var(--fog)', background: 'transparent', fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+              >
+                <option value="">Select student…</option>
+                {students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label>Test Date</Label>
+              <Input type="date" value={satForm.testDate} onChange={(e) => setSatForm((f) => ({ ...f, testDate: e.target.value }))} className="mt-1" />
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setSatDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleCreateSatDate}
+              disabled={satSaving}
+              style={{ background: 'var(--sky)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", border: 'none' }}
+            >
+              {satSaving ? 'Saving…' : 'Add SAT Date'}
             </Button>
           </DialogFooter>
         </DialogContent>

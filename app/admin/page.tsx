@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import sql from '@/lib/db';
 import Link from 'next/link';
-import { Users, CalendarDays, Clock, ArrowRight } from 'lucide-react';
+import { Users, CalendarDays, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import TodayDate from '@/components/shared/TodayDate';
 
@@ -14,12 +14,11 @@ export default async function AdminDashboardPage() {
   const now = new Date().toISOString();
   const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [tutorCount, studentCount, upcomingThisWeek, pendingCount, upcomingFive] =
+  const [tutorCount, studentCount, upcomingThisWeek, upcomingFive] =
     await Promise.all([
       sql`SELECT COUNT(*) AS count FROM users WHERE role = 'tutor' AND active = true`,
       sql`SELECT COUNT(*) AS count FROM users WHERE role = 'student' AND active = true`,
       sql`SELECT COUNT(*) AS count FROM sessions WHERE proposed_time >= ${now} AND proposed_time <= ${weekEnd}`,
-      sql`SELECT COUNT(*) AS count FROM sessions WHERE status = 'pending'`,
       sql`
         SELECT s.id, s.proposed_time, s.status,
                t.name AS tutor_name, st.name AS student_name
@@ -35,14 +34,12 @@ export default async function AdminDashboardPage() {
   const [tutorRow] = tutorCount as Record<string, number>[];
   const [studentRow] = studentCount as Record<string, number>[];
   const [upcomingRow] = upcomingThisWeek as Record<string, number>[];
-  const [pendingRow] = pendingCount as Record<string, number>[];
   const sessions = upcomingFive as Record<string, unknown>[];
 
   const stats = [
     { label: 'Active Tutors', value: tutorRow.count, icon: Users, accent: 'sky', href: '/admin/users?role=tutor' },
     { label: 'Active Students', value: studentRow.count, icon: Users, accent: 'rose', href: '/admin/users?role=student' },
     { label: 'Sessions This Week', value: upcomingRow.count, icon: CalendarDays, accent: 'sky', href: '/admin/schedule' },
-    { label: 'Pending Approvals', value: pendingRow.count, icon: Clock, accent: 'rose', href: '/admin/schedule' },
   ];
 
   const quickActions = [
@@ -75,7 +72,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 40 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 40 }}>
         {stats.map(({ label, value, icon: Icon, accent, href }) => {
           const isRose = accent === 'rose';
           return (
