@@ -128,6 +128,7 @@ export default function ScheduleClient({
   const [date, setDate] = useState(() => new Date());
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { setSessions(initial); }, [initial]);
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState<{
@@ -183,7 +184,6 @@ export default function ScheduleClient({
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
-      setSessions((prev) => prev.map((s) => s.id === id ? { ...s, status } : s));
       setSelected((prev) => { const next = new Set(prev); next.delete(id); return next; });
       router.refresh();
     } catch {
@@ -202,7 +202,6 @@ export default function ScheduleClient({
         body: JSON.stringify({ ids, status }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
-      setSessions((prev) => prev.map((s) => ids.includes(s.id) ? { ...s, status } : s));
       setSelected(new Set());
       toast.success(`${ids.length} session${ids.length > 1 ? 's' : ''} ${status}`);
       router.refresh();
@@ -314,8 +313,6 @@ export default function ScheduleClient({
     }
     setSaving(true);
     try {
-      let newSessions: AdminSession[] = [];
-
       if (form.recurrence === 'none') {
         const proposedTime = new Date(`${form.date}T${form.time}`).toISOString();
         const res = await fetch('/api/admin/sessions', {
@@ -324,16 +321,6 @@ export default function ScheduleClient({
           body: JSON.stringify({ tutorId: form.tutorId, studentId: form.studentId, proposedTime }),
         });
         if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
-        const created = await res.json();
-        const tutor = tutors.find((t) => t.id === form.tutorId);
-        const student = students.find((s) => s.id === form.studentId);
-        newSessions = [{
-          ...created,
-          tutor_id: form.tutorId,
-          tutor_name: tutor?.name ?? '',
-          student_id: form.studentId,
-          student_name: student?.name ?? '',
-        }];
         toast.success('Session created');
       } else {
         const res = await fetch('/api/admin/session-series', {
@@ -349,23 +336,10 @@ export default function ScheduleClient({
           }),
         });
         if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
-        const { sessions: created } = await res.json() as { sessions: Record<string, unknown>[] };
-        const tutor = tutors.find((t) => t.id === form.tutorId);
-        const student = students.find((s) => s.id === form.studentId);
-        newSessions = created.map((s) => ({
-          ...(s as Omit<AdminSession, 'tutor_id' | 'tutor_name' | 'student_id' | 'student_name'>),
-          tutor_id: form.tutorId,
-          tutor_name: tutor?.name ?? '',
-          student_id: form.studentId,
-          student_name: student?.name ?? '',
-          status: (s.status as AdminSession['status']) ?? 'pending',
-          id: s.id as string,
-          proposed_time: s.proposed_time as string,
-        }));
-        toast.success(`${newSessions.length} recurring sessions created`);
+        const { sessions: created } = await res.json() as { sessions: unknown[] };
+        toast.success(`${created.length} recurring sessions created`);
       }
 
-      setSessions((prev) => [...prev, ...newSessions]);
       setDialogOpen(false);
       setForm({ tutorId: '', studentId: '', date: '', time: '', recurrence: 'none', endDate: '' });
       router.refresh();
