@@ -4,7 +4,7 @@ import sql from '@/lib/db';
 import Link from 'next/link';
 import { CalendarDays, BookOpen, BarChart2, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
-import TodayDate from './TodayDate';
+import TodayDate from '@/components/shared/TodayDate';
 
 export default async function StudentDashboardPage() {
   const session = await auth();

@@ -4,7 +4,7 @@ import sql from '@/lib/db';
 import Link from 'next/link';
 import { Users, CalendarDays, Clock, BookOpen, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
-import TodayDate from './TodayDate';
+import TodayDate from '@/components/shared/TodayDate';
 
 export default async function TutorDashboardPage() {
   const session = await auth();
