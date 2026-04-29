@@ -32,19 +32,22 @@ export async function POST(req: Request) {
   const rrule = recurrence === 'biweekly' ? 'FREQ=WEEKLY;INTERVAL=2' : 'FREQ=WEEKLY';
   const series = await createSessionSeries(tutorId, studentId, rrule, startDate, endDate) as { id: string };
 
+  // Build occurrences as UTC timestamps so server timezone never shifts the date.
+  // startDate/endDate are YYYY-MM-DD strings; time is HH:MM.
+  const [startYear, startMonth, startDay] = (startDate as string).split('-').map(Number);
   const [hours, minutes] = (time as string).split(':').map(Number);
-  const start = new Date(startDate + 'T00:00:00');
-  const cutoff = endDate
-    ? new Date(endDate + 'T23:59:59')
-    : new Date(start.getTime() + 6 * 30 * 24 * 60 * 60 * 1000);
 
-  const intervalDays = recurrence === 'biweekly' ? 14 : 7;
+  const startUtc = Date.UTC(startYear, startMonth - 1, startDay, hours, minutes, 0, 0);
+  const cutoffUtc = endDate
+    ? (() => { const [y, mo, d] = (endDate as string).split('-').map(Number); return Date.UTC(y, mo - 1, d, 23, 59, 59, 0); })()
+    : startUtc + 6 * 30 * 24 * 60 * 60 * 1000;
+
+  const intervalMs = (recurrence === 'biweekly' ? 14 : 7) * 24 * 60 * 60 * 1000;
   const occurrences: string[] = [];
-  let current = new Date(start);
-  current.setHours(hours, minutes, 0, 0);
-  while (current <= cutoff) {
-    occurrences.push(current.toISOString());
-    current = new Date(current.getTime() + intervalDays * 24 * 60 * 60 * 1000);
+  let current = startUtc;
+  while (current <= cutoffUtc) {
+    occurrences.push(new Date(current).toISOString());
+    current += intervalMs;
   }
 
   const created = await Promise.all(

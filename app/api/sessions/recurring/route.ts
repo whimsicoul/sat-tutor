@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
 import { emailStudentSessionProposed } from '@/lib/email';
-import { parseISO, addMonths, isBefore, isEqual } from 'date-fns';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -26,31 +25,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No valid days in recurrence rule' }, { status: 400 });
   }
 
-  // Calculate window: up to endDate or 6 months ahead if none
-  const windowEnd = endDate
-    ? parseISO(endDate)
-    : addMonths(parseISO(startDate), 6);
-
-  // Generate all occurrence dates
-  const occurrences: Date[] = [];
+  // Build occurrences as UTC timestamps so server timezone never shifts the date.
+  const [startYear, startMonth, startDay] = (startDate as string).split('-').map(Number);
   const [h, m] = time.split(':').map(Number);
 
-  // Walk week-by-week from startDate
-  const cursor = parseISO(startDate);
-  // Iterate day by day from startDate to windowEnd
-  // For efficiency, iterate day by day from startDate to windowEnd
+  const windowEndUtc = endDate
+    ? (() => { const [y, mo, d] = (endDate as string).split('-').map(Number); return Date.UTC(y, mo - 1, d, 23, 59, 59); })()
+    : Date.UTC(startYear, startMonth - 1, startDay, h, m, 0) + 6 * 30 * 24 * 60 * 60 * 1000;
+
   const dayMs = 24 * 60 * 60 * 1000;
-  let d = new Date(cursor);
-  while (isBefore(d, windowEnd) || isEqual(d, windowEnd)) {
-    if (targetDays.includes(d.getDay())) {
-      // Only include from startDate onward
-      if (!isBefore(d, cursor) || isEqual(d, cursor)) {
-        const occurrence = new Date(d);
-        occurrence.setHours(h, m, 0, 0);
-        occurrences.push(occurrence);
-      }
+  const occurrences: Date[] = [];
+  // Iterate day by day in UTC
+  let cur = Date.UTC(startYear, startMonth - 1, startDay);
+  while (cur <= windowEndUtc) {
+    const dayOfWeek = new Date(cur).getUTCDay();
+    if (targetDays.includes(dayOfWeek)) {
+      occurrences.push(new Date(Date.UTC(
+        new Date(cur).getUTCFullYear(),
+        new Date(cur).getUTCMonth(),
+        new Date(cur).getUTCDate(),
+        h, m, 0, 0
+      )));
     }
-    d = new Date(d.getTime() + dayMs);
+    cur += dayMs;
   }
 
   if (occurrences.length === 0) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   startOfWeek, endOfWeek, isSameMonth, isSameDay,
@@ -137,6 +138,7 @@ export default function TutorScheduleClient({
   allProblemSets: TutorAllProblemSet[];
   satDates: TutorSatDate[];
 }) {
+  const router = useRouter();
   const [sessions, setSessions] = useState(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     initial.map((s: any) => ({ ...s, proposed_time: s.proposed_time instanceof Date ? s.proposed_time.toISOString() : s.proposed_time }))
@@ -278,6 +280,7 @@ export default function TutorScheduleClient({
           ...prev,
         ]);
         toast.success(`${newSessions.length} recurring sessions proposed!`);
+        router.refresh();
       } else {
         const res = await fetch('/api/sessions', {
           method: 'POST',
@@ -289,6 +292,7 @@ export default function TutorScheduleClient({
         const student = students.find((s) => s.id === studentId);
         setSessions((prev) => [{ ...newSession, student_name: student?.name ?? '', problem_sets: [] }, ...prev]);
         toast.success('Session proposed! The student has been notified.');
+        router.refresh();
       }
 
       setStudentId(''); setDate(''); setTime('09:00');

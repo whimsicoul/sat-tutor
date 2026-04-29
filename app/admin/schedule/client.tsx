@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Calendar, dateFnsLocalizer, Views, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
@@ -119,6 +120,7 @@ export default function ScheduleClient({
   students: UserOption[];
   satDates?: AdminSatDate[];
 }) {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [sessions, setSessions] = useState<AdminSession[]>(initial);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -183,6 +185,7 @@ export default function ScheduleClient({
       if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
       setSessions((prev) => prev.map((s) => s.id === id ? { ...s, status } : s));
       setSelected((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      router.refresh();
     } catch {
       toast.error(`Failed to ${status} session`);
     }
@@ -202,6 +205,7 @@ export default function ScheduleClient({
       setSessions((prev) => prev.map((s) => ids.includes(s.id) ? { ...s, status } : s));
       setSelected(new Set());
       toast.success(`${ids.length} session${ids.length > 1 ? 's' : ''} ${status}`);
+      router.refresh();
     } catch {
       toast.error(`Failed to ${status} sessions`);
     } finally {
@@ -364,6 +368,7 @@ export default function ScheduleClient({
       setSessions((prev) => [...prev, ...newSessions]);
       setDialogOpen(false);
       setForm({ tutorId: '', studentId: '', date: '', time: '', recurrence: 'none', endDate: '' });
+      router.refresh();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Error creating session');
     } finally {
