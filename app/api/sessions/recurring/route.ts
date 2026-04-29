@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
-import { emailStudentSessionProposed } from '@/lib/email';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -23,6 +22,15 @@ export async function POST(req: Request) {
 
   if (targetDays.length === 0) {
     return NextResponse.json({ error: 'No valid days in recurrence rule' }, { status: 400 });
+  }
+
+  // Verify this student is assigned to the tutor
+  const [assignment] = await sql`
+    SELECT 1 FROM tutor_student_assignments
+    WHERE tutor_id = ${session.user.id} AND student_id = ${studentId}
+  `;
+  if (!assignment) {
+    return NextResponse.json({ error: 'Student not assigned to you' }, { status: 403 });
   }
 
   // Build occurrences as UTC timestamps so server timezone never shifts the date.
@@ -69,25 +77,11 @@ export async function POST(req: Request) {
     capped.map((time) =>
       sql`
         INSERT INTO sessions (tutor_id, student_id, proposed_time, status, series_id)
-        VALUES (${session.user.id}, ${studentId}, ${time.toISOString()}, 'pending', ${series.id})
+        VALUES (${session.user.id}, ${studentId}, ${time.toISOString()}, 'approved', ${series.id})
         RETURNING *
       `.then((rows) => rows[0])
     )
   );
-
-  // Send one email for the series
-  try {
-    const [student] = await sql`SELECT name, email FROM users WHERE id = ${studentId}`;
-    const [tutor] = await sql`SELECT name FROM users WHERE id = ${session.user.id}`;
-    await emailStudentSessionProposed({
-      studentEmail: student.email as string,
-      studentName: student.name as string,
-      proposedTime: capped[0],
-      tutorName: tutor.name as string,
-    });
-  } catch (err) {
-    console.error('[email error]', err);
-  }
 
   return NextResponse.json(newSessions, { status: 201 });
 }

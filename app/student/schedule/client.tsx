@@ -54,7 +54,7 @@ function MeetingRequestForm({ onRequested }: { onRequested: (session: SessionRow
         recurrence_rule: null,
       });
       setDate(''); setTime('');
-      toast.success('Meeting request submitted! Your tutor will review it.');
+      toast.success('Session scheduled!');
     } catch {
       toast.error('Failed to submit request.');
     } finally {
@@ -69,7 +69,7 @@ function MeetingRequestForm({ onRequested }: { onRequested: (session: SessionRow
         <h2 className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>Request a Meeting</h2>
       </div>
       <p className="text-xs mb-4" style={{ color: 'var(--mist)' }}>
-        Propose a date and time — your tutor and admin will be notified to approve.
+        Pick a date and time to schedule a session with your tutor.
       </p>
       <form onSubmit={handleSubmit} className="flex items-end gap-3 flex-wrap">
         <div style={{ flex: '1 1 160px', minWidth: 160 }}>
@@ -333,20 +333,6 @@ export default function StudentScheduleClient({
   const daySessions = selectedDay
     ? (sessionsByDay[format(selectedDay, 'yyyy-MM-dd')] ?? [])
     : [];
-
-  async function updateStatus(id: string, status: 'approved' | 'denied') {
-    const res = await fetch(`/api/sessions/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
-    if (!res.ok) { toast.error('Failed to update session status.'); return; }
-    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
-    if (selectedSession?.id === id) {
-      setSelectedSession((prev) => prev ? { ...prev, status } : prev);
-    }
-    toast.success(status === 'approved' ? 'Session approved!' : 'Session declined.');
-  }
 
   async function downloadICS(id: string) {
     const res = await fetch(`/api/sessions/${id}/ics`);
@@ -626,40 +612,6 @@ export default function StudentScheduleClient({
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  {selectedSession.status === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => updateStatus(selectedSession.id, 'approved')}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-                        style={{
-                          background: 'rgba(168,203,222,0.18)',
-                          color: 'var(--sky-deeper)',
-                          border: '1px solid rgba(168,203,222,0.4)',
-                          cursor: 'pointer',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(168,203,222,0.3)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(168,203,222,0.18)'; }}
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => updateStatus(selectedSession.id, 'denied')}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-                        style={{
-                          background: 'transparent',
-                          color: 'var(--rose-deeper)',
-                          border: '1px solid rgba(224,166,175,0.4)',
-                          cursor: 'pointer',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rose-ultra)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                      >
-                        <XCircle className="h-4 w-4" />
-                        Decline
-                      </button>
-                    </>
-                  )}
                   {selectedSession.status === 'approved' && (
                     <>
                       <button

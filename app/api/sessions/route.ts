@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
-import { emailStudentSessionProposed } from '@/lib/email';
 
 export async function GET() {
   const session = await auth();
@@ -49,24 +48,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
+  // Verify this student is assigned to the tutor
+  const [assignment] = await sql`
+    SELECT 1 FROM tutor_student_assignments
+    WHERE tutor_id = ${session.user.id} AND student_id = ${studentId}
+  `;
+  if (!assignment) {
+    return NextResponse.json({ error: 'Student not assigned to you' }, { status: 403 });
+  }
+
   const [newSession] = await sql`
     INSERT INTO sessions (tutor_id, student_id, proposed_time, status)
-    VALUES (${session.user.id}, ${studentId}, ${proposedTime}, 'pending')
+    VALUES (${session.user.id}, ${studentId}, ${proposedTime}, 'approved')
     RETURNING *
   `;
-
-  try {
-    const [student] = await sql`SELECT name, email FROM users WHERE id = ${studentId}`;
-    const [tutor] = await sql`SELECT name FROM users WHERE id = ${session.user.id}`;
-    await emailStudentSessionProposed({
-      studentEmail: student.email as string,
-      studentName: student.name as string,
-      proposedTime: new Date(proposedTime),
-      tutorName: tutor.name as string,
-    });
-  } catch (err) {
-    console.error('[email error]', err);
-  }
 
   return NextResponse.json(newSession, { status: 201 });
 }

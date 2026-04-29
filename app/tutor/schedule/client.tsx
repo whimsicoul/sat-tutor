@@ -277,7 +277,7 @@ export default function TutorScheduleClient({
           ...newSessions.map((s: TutorSessionRow) => ({ ...s, student_name: student?.name ?? '', problem_sets: [] })),
           ...prev,
         ]);
-        toast.success(`${newSessions.length} recurring sessions proposed!`);
+        toast.success(`${newSessions.length} recurring sessions added!`);
       } else {
         const res = await fetch('/api/sessions', {
           method: 'POST',
@@ -288,7 +288,7 @@ export default function TutorScheduleClient({
         const newSession = await res.json();
         const student = students.find((s) => s.id === studentId);
         setSessions((prev) => [{ ...newSession, student_name: student?.name ?? '', problem_sets: [] }, ...prev]);
-        toast.success('Session proposed! The student has been notified.');
+        toast.success('Session added!');
       }
 
       setStudentId(''); setDate(''); setTime('09:00');
@@ -343,7 +343,7 @@ export default function TutorScheduleClient({
           style={{ background: 'var(--sky)', color: 'var(--charcoal)', border: 'none', cursor: 'pointer' }}
         >
           <Plus className="h-4 w-4" />
-          Propose Session
+          Add Session
         </button>
       </div>
 
@@ -693,7 +693,7 @@ export default function TutorScheduleClient({
                   <Send className="h-3.5 w-3.5" style={{ color: 'var(--sky-deeper)' }} />
                 </div>
                 <h2 className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
-                  Propose a Session
+                  Add a Session
                 </h2>
               </div>
               <button onClick={() => setShowPropose(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mist)' }}>
@@ -841,7 +841,7 @@ export default function TutorScheduleClient({
                 }}
               >
                 <Send className="h-4 w-4" />
-                {proposing ? 'Proposing…' : isRecurring ? 'Propose Recurring Sessions' : 'Propose Session'}
+                {proposing ? 'Saving…' : isRecurring ? 'Add Recurring Sessions' : 'Add Session'}
               </button>
             </form>
           </div>

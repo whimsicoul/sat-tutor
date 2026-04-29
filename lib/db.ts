@@ -225,7 +225,7 @@ export async function adminCreateSession(
 ) {
   const rows = await sql`
     INSERT INTO sessions (tutor_id, student_id, proposed_time, status, series_id)
-    VALUES (${tutorId}, ${studentId}, ${proposedTime}, 'pending', ${seriesId ?? null})
+    VALUES (${tutorId}, ${studentId}, ${proposedTime}, 'approved', ${seriesId ?? null})
     RETURNING *
   `;
   return rows[0];

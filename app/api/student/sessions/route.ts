@@ -1,6 +1,5 @@
 import { auth } from '@/lib/auth';
 import { getAssignedTutorForStudent } from '@/lib/db';
-import { sendMeetingRequestEmail } from '@/lib/email';
 import sql from '@/lib/db';
 import { NextResponse } from 'next/server';
 
@@ -22,19 +21,9 @@ export async function POST(req: Request) {
 
   const [row] = await sql`
     INSERT INTO sessions (tutor_id, student_id, proposed_time, status)
-    VALUES (${tutor.id as string}, ${session.user.id}, ${proposedTime}, 'pending')
+    VALUES (${tutor.id as string}, ${session.user.id}, ${proposedTime}, 'approved')
     RETURNING id, tutor_id, student_id, proposed_time, status, created_at
   `;
-
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (adminEmail) {
-    sendMeetingRequestEmail({
-      tutorEmail: tutor.email as string,
-      adminEmail,
-      studentName: session.user.name ?? 'A student',
-      proposedTime: new Date(proposedTime),
-    }).catch(() => {});
-  }
 
   return NextResponse.json({ ...row, tutor_name: tutor.name }, { status: 201 });
 }
