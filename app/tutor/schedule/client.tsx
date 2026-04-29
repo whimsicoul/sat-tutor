@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo } from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   startOfWeek, endOfWeek, isSameMonth, isSameDay,
@@ -138,11 +137,10 @@ export default function TutorScheduleClient({
   allProblemSets: TutorAllProblemSet[];
   satDates: TutorSatDate[];
 }) {
-  const router = useRouter();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const normalize = (s: any) => ({ ...s, proposed_time: s.proposed_time instanceof Date ? s.proposed_time.toISOString() : s.proposed_time });
-  const [sessions, setSessions] = useState(() => initial.map(normalize));
-  useEffect(() => { setSessions(initial.map(normalize)); }, [initial]);
+  const [sessions, setSessions] = useState(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    initial.map((s: any) => ({ ...s, proposed_time: s.proposed_time instanceof Date ? s.proposed_time.toISOString() : s.proposed_time }))
+  );
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [selectedSession, setSelectedSession] = useState<TutorSessionRow | null>(null);
@@ -274,8 +272,12 @@ export default function TutorScheduleClient({
         });
         if (!res.ok) throw new Error('Failed');
         const newSessions = await res.json();
+        const student = students.find((s) => s.id === studentId);
+        setSessions((prev) => [
+          ...newSessions.map((s: TutorSessionRow) => ({ ...s, student_name: student?.name ?? '', problem_sets: [] })),
+          ...prev,
+        ]);
         toast.success(`${newSessions.length} recurring sessions proposed!`);
-        router.refresh();
       } else {
         const res = await fetch('/api/sessions', {
           method: 'POST',
@@ -283,8 +285,10 @@ export default function TutorScheduleClient({
           body: JSON.stringify({ studentId, proposedTime }),
         });
         if (!res.ok) throw new Error('Failed');
+        const newSession = await res.json();
+        const student = students.find((s) => s.id === studentId);
+        setSessions((prev) => [{ ...newSession, student_name: student?.name ?? '', problem_sets: [] }, ...prev]);
         toast.success('Session proposed! The student has been notified.');
-        router.refresh();
       }
 
       setStudentId(''); setDate(''); setTime('09:00');
