@@ -1,5 +1,5 @@
 /**
- * Converts ACT-Practice-Test.pdf pages to PNG images using mupdf (already installed).
+ * Converts ACT1.pdf pages to PNG images using mupdf (already installed).
  * Run from the project root: node scripts/convert-act-pdf-to-images-mupdf.mjs
  *
  * Output: act-images/ directory in the project root with PNGs named by section and page number.
@@ -11,7 +11,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PDF_PATH = join(__dirname, '..', 'ACT-Practice-Test.pdf');
+const PDF_PATH = join(__dirname, '..', 'ACT1.pdf');
 const OUT_DIR = join(__dirname, '..', 'act-images');
 
 const SECTIONS = {
@@ -22,7 +22,7 @@ const SECTIONS = {
 };
 
 if (!existsSync(PDF_PATH)) {
-  console.error('ERROR: ACT-Practice-Test.pdf not found in project root.');
+  console.error('ERROR: ACT1.pdf not found in project root.');
   process.exit(1);
 }
 

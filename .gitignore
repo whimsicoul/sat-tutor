@@ -43,3 +43,6 @@ breakfast_problems/
 
 # ACT generated images (derived from PDF via scripts/convert-act-pdf-to-images-mupdf.mjs)
 act-images/
+
+# ACT source PDFs (local dev only, not needed at runtime)
+*.pdf

@@ -1,5 +1,5 @@
 /**
- * Converts ACT-Practice-Test.pdf pages to PNG images and uploads them to UploadThing.
+ * Converts ACT1.pdf pages to PNG images and uploads them to UploadThing.
  *
  * Usage:
  *   node scripts/convert-act-pdf-to-images.mjs
@@ -26,7 +26,7 @@ import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PDF_PATH = join(__dirname, '..', 'ACT-Practice-Test.pdf');
+const PDF_PATH = join(__dirname, '..', 'ACT1.pdf');
 
 // Page ranges for each section (1-indexed page numbers in the PDF)
 const SECTIONS = {

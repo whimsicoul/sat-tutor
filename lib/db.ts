@@ -385,6 +385,7 @@ export async function getTestResultsForTutorStudents(tutorId: string) {
   return sql`
     SELECT tr.id, tr.test_name, tr.test_date, tr.total_score, tr.math_score,
            tr.reading_writing_score, tr.notes, tr.pdf_url, tr.created_at,
+           tr.score_type, tr.act_english_score, tr.act_reading_score,
            s.name AS student_name
     FROM test_results tr
     JOIN users s ON s.id = tr.student_id
@@ -761,6 +762,38 @@ export async function getAllBreakfastResults() {
 
 // ─── ACT Practice Test ────────────────────────────────────────────────────────
 
+const ACT_SCALE: Record<string, Record<number, number>> = {
+  english: {
+    40:36,39:35,38:35,37:33,36:31,35:29,34:28,33:27,32:26,31:25,
+    30:24,29:23,28:22,27:22,26:21,25:20,24:20,23:19,22:18,21:17,
+    20:16,19:15,18:15,17:14,16:13,15:13,14:12,13:11,12:11,11:10,
+    10:10,9:10,8:9,7:8,6:7,5:7,4:6,3:5,2:3,1:2,0:1,
+  },
+  math: {
+    41:36,40:36,39:35,38:34,37:34,36:33,35:32,34:31,33:30,32:29,
+    31:29,30:28,29:27,28:27,27:26,26:25,25:24,24:23,23:22,22:21,
+    21:20,20:19,19:19,18:18,17:17,16:17,15:17,14:16,13:16,12:15,
+    11:15,10:15,9:14,8:14,7:13,6:13,5:12,4:11,3:9,2:7,1:5,0:1,
+  },
+  reading: {
+    27:36,26:35,25:34,24:32,23:30,22:28,21:26,20:25,19:24,18:23,
+    17:22,16:21,15:20,14:18,13:17,12:16,11:15,10:14,9:13,8:12,
+    7:12,6:11,5:10,4:9,3:7,2:5,1:3,0:1,
+  },
+  science: {
+    34:36,33:35,32:34,31:33,30:32,29:31,28:30,27:29,26:28,25:27,
+    24:26,23:25,22:25,21:24,20:23,19:23,18:22,17:21,16:20,15:19,
+    14:18,13:18,12:17,11:16,10:15,9:14,8:12,7:12,6:11,5:10,
+    4:9,3:7,2:6,1:3,0:1,
+  },
+};
+
+export function actRawToScale(section: string, raw: number): number {
+  const table = ACT_SCALE[section];
+  if (!table) return 1;
+  return table[raw] ?? 1;
+}
+
 export async function getActPages(section: string) {
   return sql`
     SELECT id, section, page_number, image_url
@@ -821,7 +854,7 @@ export async function deleteActBubble(id: string) {
 
 export async function getActAnswerKey(section: string) {
   return sql`
-    SELECT section, question_number, correct_answer
+    SELECT section, question_number, correct_answer, is_scored, reporting_category
     FROM act_answer_key
     WHERE section = ${section}
     ORDER BY question_number ASC
@@ -946,5 +979,44 @@ export async function getAllActResults() {
     WHERE a.completed_at IS NOT NULL
     GROUP BY a.id, a.section, a.started_at, a.completed_at, u.id, u.name
     ORDER BY a.completed_at DESC
+  `;
+}
+
+// Returns the most-recent raw_correct count per section for a student (scored questions only)
+export async function getActScoredRawForStudent(studentId: string): Promise<{ section: string; raw_correct: number }[]> {
+  const rows = await sql`
+    SELECT
+      a.section,
+      SUM(CASE WHEN r.is_correct AND ak.is_scored THEN 1 ELSE 0 END)::int AS raw_correct
+    FROM act_test_attempts a
+    JOIN act_test_responses r ON r.attempt_id = a.id
+    JOIN act_answer_key ak ON ak.section = a.section AND ak.question_number = r.question_number
+    WHERE a.student_id = ${studentId}
+      AND a.completed_at IS NOT NULL
+      AND a.id IN (
+        SELECT DISTINCT ON (section) id
+        FROM act_test_attempts
+        WHERE student_id = ${studentId} AND completed_at IS NOT NULL
+        ORDER BY section, completed_at DESC
+      )
+    GROUP BY a.section
+  `;
+  return rows as { section: string; raw_correct: number }[];
+}
+
+export async function insertActCompositeResult(
+  studentId: string,
+  testName: string,
+  composite: number,
+  englishScale: number,
+  mathScale: number,
+  readingScale: number
+) {
+  return sql`
+    INSERT INTO test_results
+      (student_id, test_name, test_date, total_score, math_score, act_english_score, act_reading_score, score_type)
+    VALUES
+      (${studentId}, ${testName}, NOW(), ${composite}, ${mathScale}, ${englishScale}, ${readingScale}, 'act')
+    ON CONFLICT (student_id, test_name, score_type) DO NOTHING
   `;
 }

@@ -33,13 +33,35 @@ interface BubblePosition {
 interface GradeResult {
   questionNumber: number;
   isCorrect: boolean;
+  isScored: boolean;
   correctAnswer: string;
+  reportingCategory: string | null;
 }
+
+type SubcategoryMap = Record<string, { correct: number; total: number }>;
 
 type ViewState =
   | { mode: 'home' }
   | { mode: 'taking'; section: SectionKey; attemptId: string; startedAt: string; pages: PageData[]; bubbles: BubblePosition[] }
-  | { mode: 'results'; section: SectionKey; score: number; total: number; results: GradeResult[]; answers: Record<number, string> };
+  | { mode: 'results'; section: SectionKey; score: number; total: number; scaleScore: number; subcategories: SubcategoryMap; results: GradeResult[]; answers: Record<number, string>; compositeScore: number | null };
+
+const SUBCATEGORY_LABELS: Record<string, string> = {
+  POW: 'Production of Writing',
+  KLA: 'Knowledge of Language',
+  CSE: 'Conventions of Standard English',
+  IES: 'Integrating Essential Skills',
+  A: 'Algebra',
+  F: 'Functions',
+  G: 'Geometry',
+  N: 'Number & Quantity',
+  S: 'Statistics & Probability',
+  KID: 'Key Ideas & Details',
+  CS: 'Craft & Structure',
+  IKI: 'Integration of Knowledge & Ideas',
+  IOD: 'Interpretation of Data',
+  SIN: 'Scientific Investigation',
+  EMI: 'Evaluation of Models & Inferences',
+};
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -87,7 +109,17 @@ export default function StudentActTestClient({ pastResults }: { pastResults: Pas
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submit failed');
-      setView({ mode: 'results', section, score: data.score, total: data.total, results: data.results, answers: currentAnswers });
+      setView({
+        mode: 'results',
+        section,
+        score: data.score,
+        total: data.total,
+        scaleScore: data.scaleScore,
+        subcategories: data.subcategories ?? {},
+        results: data.results,
+        answers: currentAnswers,
+        compositeScore: data.compositeScore ?? null,
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to submit');
     } finally {
@@ -379,25 +411,53 @@ export default function StudentActTestClient({ pastResults }: { pastResults: Pas
   // Results view
   if (view.mode === 'results') {
     const sectionMeta = SECTIONS.find(s => s.key === view.section)!;
-    const pct = view.total > 0 ? Math.round((view.score / view.total) * 100) : 0;
+    const scaleColor = view.scaleScore >= 24 ? '#16a34a' : view.scaleScore >= 18 ? '#d97706' : '#dc2626';
 
     return (
       <div style={{ maxWidth: 700, margin: '0 auto' }}>
+        {/* Composite banner */}
+        {view.compositeScore !== null && (
+          <div style={{
+            background: 'rgba(37,99,235,0.08)',
+            border: '1px solid rgba(37,99,235,0.25)',
+            borderRadius: 10,
+            padding: '14px 20px',
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}>
+            <span style={{ fontSize: 22 }}>🎉</span>
+            <div>
+              <div style={{ fontWeight: 700, color: '#1d4ed8', fontSize: 15 }}>
+                ACT Composite Score: {view.compositeScore} / 36
+              </div>
+              <div style={{ fontSize: 13, color: '#3b82f6', marginTop: 2 }}>
+                All three required sections complete — score posted to your Test Results!
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Score card */}
         <div style={{
           border: '1px solid var(--border, #e2e8f0)',
           borderRadius: 12,
           padding: 32,
-          marginBottom: 32,
+          marginBottom: 24,
           textAlign: 'center',
         }}>
           <div style={{ fontSize: 14, color: 'var(--muted-foreground, #666)', textTransform: 'capitalize', marginBottom: 8 }}>
             ACT {view.section} — Results
           </div>
-          <div style={{ fontSize: 56, fontWeight: 800, color: pct >= 70 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626', lineHeight: 1 }}>
-            {pct}%
+          <div style={{ fontSize: 64, fontWeight: 800, color: scaleColor, lineHeight: 1 }}>
+            {view.scaleScore}
           </div>
-          <div style={{ fontSize: 18, color: 'var(--muted-foreground, #666)', marginTop: 8 }}>
-            {view.score} / {view.total} correct
+          <div style={{ fontSize: 13, color: 'var(--muted-foreground, #666)', marginTop: 4 }}>
+            Scale score (1–36)
+          </div>
+          <div style={{ fontSize: 16, color: 'var(--muted-foreground, #666)', marginTop: 8 }}>
+            {view.score} / {view.total} scored questions correct
           </div>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
             <button
@@ -433,6 +493,41 @@ export default function StudentActTestClient({ pastResults }: { pastResults: Pas
           </div>
         </div>
 
+        {/* Subcategory breakdown */}
+        {Object.keys(view.subcategories).length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Score by Category</h2>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              {Object.entries(view.subcategories).map(([cat, { correct, total }]) => {
+                const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+                const color = pct >= 70 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626';
+                return (
+                  <div key={cat} style={{
+                    border: '1px solid var(--border, #e2e8f0)',
+                    borderRadius: 8,
+                    padding: '10px 16px',
+                    minWidth: 160,
+                    flex: '1 1 160px',
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground, #888)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                      {cat}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--muted-foreground, #666)', marginBottom: 6 }}>
+                      {SUBCATEGORY_LABELS[cat] ?? cat}
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 16, color }}>
+                      {correct}/{total}
+                      <span style={{ fontWeight: 400, fontSize: 13, color: 'var(--muted-foreground, #666)', marginLeft: 6 }}>
+                        ({pct}%)
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Per-question breakdown */}
         <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Answer Review</h2>
         <div style={{ border: '1px solid var(--border, #e2e8f0)', borderRadius: 8, overflow: 'hidden' }}>
@@ -447,19 +542,28 @@ export default function StudentActTestClient({ pastResults }: { pastResults: Pas
             <tbody>
               {Array.from({ length: sectionMeta.questions }, (_, i) => i + 1).map(qn => {
                 const result = view.results.find(r => r.questionNumber === qn);
+                const isScored = result?.isScored ?? true;
                 const studentAns = view.answers[qn] ?? '–';
-                const correct = result?.correctAnswer ?? '?';
+                const correct = isScored ? (result?.correctAnswer ?? '?') : '—';
                 const isCorrect = result?.isCorrect ?? false;
                 const unanswered = !view.answers[qn];
                 return (
-                  <tr key={qn} style={{ borderBottom: '1px solid var(--border, #e2e8f0)', background: unanswered ? 'transparent' : isCorrect ? 'rgba(22,163,74,0.05)' : 'rgba(220,38,38,0.05)' }}>
-                    <td style={{ padding: '8px 16px', fontWeight: 600 }}>{qn}</td>
-                    <td style={{ padding: '8px 16px', color: unanswered ? 'var(--muted-foreground, #666)' : isCorrect ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{studentAns}</td>
-                    <td style={{ padding: '8px 16px' }}>{correct}</td>
+                  <tr key={qn} style={{
+                    borderBottom: '1px solid var(--border, #e2e8f0)',
+                    background: !isScored ? 'rgba(148,163,184,0.05)' : unanswered ? 'transparent' : isCorrect ? 'rgba(22,163,74,0.05)' : 'rgba(220,38,38,0.05)',
+                  }}>
+                    <td style={{ padding: '8px 16px', fontWeight: 600, color: !isScored ? 'var(--muted-foreground, #999)' : 'inherit' }}>{qn}</td>
+                    <td style={{ padding: '8px 16px', color: !isScored ? 'var(--muted-foreground, #999)' : unanswered ? 'var(--muted-foreground, #666)' : isCorrect ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                      {unanswered ? '–' : studentAns}
+                    </td>
+                    <td style={{ padding: '8px 16px', color: !isScored ? 'var(--muted-foreground, #999)' : 'inherit' }}>{correct}</td>
                     <td style={{ padding: '8px 16px' }}>
-                      {unanswered ? '–' : isCorrect
-                        ? <span style={{ color: '#16a34a', fontSize: 16 }}>✓</span>
-                        : <span style={{ color: '#dc2626', fontSize: 16 }}>✗</span>
+                      {!isScored
+                        ? <span style={{ fontSize: 11, color: 'var(--muted-foreground, #999)', fontStyle: 'italic' }}>Not Scored</span>
+                        : unanswered ? '–'
+                        : isCorrect
+                          ? <span style={{ color: '#16a34a', fontSize: 16 }}>✓</span>
+                          : <span style={{ color: '#dc2626', fontSize: 16 }}>✗</span>
                       }
                     </td>
                   </tr>

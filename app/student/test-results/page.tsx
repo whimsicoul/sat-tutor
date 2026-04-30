@@ -12,6 +12,9 @@ interface TestResult {
   reading_writing_score: number | null;
   notes: string | null;
   pdf_url: string | null;
+  score_type: string | null;
+  act_english_score: number | null;
+  act_reading_score: number | null;
   created_at: string;
 }
 
@@ -20,7 +23,8 @@ export default async function StudentTestResultsPage() {
   const userId = session!.user.id;
 
   const results = await sql`
-    SELECT id, test_name, test_date, total_score, math_score, reading_writing_score, notes, pdf_url, created_at
+    SELECT id, test_name, test_date, total_score, math_score, reading_writing_score,
+           notes, pdf_url, score_type, act_english_score, act_reading_score, created_at
     FROM test_results
     WHERE student_id = ${userId}
     ORDER BY test_date DESC
@@ -93,14 +97,23 @@ export default async function StudentTestResultsPage() {
                     <span className="text-2xl font-bold" style={{ color: 'var(--rose-deeper)', lineHeight: 1 }}>
                       {r.total_score}
                     </span>
-                    <span className="text-xs font-medium mt-0.5" style={{ color: 'var(--mist)' }}>Total</span>
+                    <span className="text-xs font-medium mt-0.5" style={{ color: 'var(--mist)' }}>{r.score_type === 'act' ? 'Composite' : 'Total'}</span>
                   </div>
                 )}
               </div>
 
               {/* Score breakdown */}
-              {(r.math_score != null || r.reading_writing_score != null) && (
+              {r.score_type === 'act' ? (
                 <div className="flex gap-3 flex-wrap mb-4">
+                  {r.act_english_score != null && (
+                    <div
+                      className="flex items-center gap-2 rounded-lg px-4 py-2"
+                      style={{ background: 'rgba(168,203,222,0.12)', border: '1px solid rgba(168,203,222,0.25)' }}
+                    >
+                      <span className="text-sm font-bold" style={{ color: 'var(--sky-deeper)' }}>{r.act_english_score}</span>
+                      <span className="text-xs" style={{ color: 'var(--slate)' }}>English</span>
+                    </div>
+                  )}
                   {r.math_score != null && (
                     <div
                       className="flex items-center gap-2 rounded-lg px-4 py-2"
@@ -110,16 +123,39 @@ export default async function StudentTestResultsPage() {
                       <span className="text-xs" style={{ color: 'var(--slate)' }}>Math</span>
                     </div>
                   )}
-                  {r.reading_writing_score != null && (
+                  {r.act_reading_score != null && (
                     <div
                       className="flex items-center gap-2 rounded-lg px-4 py-2"
                       style={{ background: 'rgba(168,203,222,0.12)', border: '1px solid rgba(168,203,222,0.25)' }}
                     >
-                      <span className="text-sm font-bold" style={{ color: 'var(--sky-deeper)' }}>{r.reading_writing_score}</span>
-                      <span className="text-xs" style={{ color: 'var(--slate)' }}>Reading &amp; Writing</span>
+                      <span className="text-sm font-bold" style={{ color: 'var(--sky-deeper)' }}>{r.act_reading_score}</span>
+                      <span className="text-xs" style={{ color: 'var(--slate)' }}>Reading</span>
                     </div>
                   )}
                 </div>
+              ) : (
+                (r.math_score != null || r.reading_writing_score != null) && (
+                  <div className="flex gap-3 flex-wrap mb-4">
+                    {r.math_score != null && (
+                      <div
+                        className="flex items-center gap-2 rounded-lg px-4 py-2"
+                        style={{ background: 'rgba(168,203,222,0.12)', border: '1px solid rgba(168,203,222,0.25)' }}
+                      >
+                        <span className="text-sm font-bold" style={{ color: 'var(--sky-deeper)' }}>{r.math_score}</span>
+                        <span className="text-xs" style={{ color: 'var(--slate)' }}>Math</span>
+                      </div>
+                    )}
+                    {r.reading_writing_score != null && (
+                      <div
+                        className="flex items-center gap-2 rounded-lg px-4 py-2"
+                        style={{ background: 'rgba(168,203,222,0.12)', border: '1px solid rgba(168,203,222,0.25)' }}
+                      >
+                        <span className="text-sm font-bold" style={{ color: 'var(--sky-deeper)' }}>{r.reading_writing_score}</span>
+                        <span className="text-xs" style={{ color: 'var(--slate)' }}>Reading &amp; Writing</span>
+                      </div>
+                    )}
+                  </div>
+                )
               )}
 
               {/* Notes */}
