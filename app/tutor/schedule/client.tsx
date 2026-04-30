@@ -8,7 +8,7 @@ import {
 } from 'date-fns';
 import {
   ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock,
-  Download, ExternalLink, Send, FileText, X, Edit2, Save, Plus, GraduationCap,
+  Download, ExternalLink, Send, FileText, X, Edit2, Save, Plus, GraduationCap, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
@@ -192,6 +192,7 @@ export default function TutorScheduleClient({
   const [editingPs, setEditingPs] = useState(false);
   const [psSelection, setPsSelection] = useState<string[]>([]);
   const [savingPs, setSavingPs] = useState(false);
+  const [deletingSession, setDeletingSession] = useState(false);
 
   // ── Calendar grid ──────────────────────────────────────────────────────
 
@@ -272,6 +273,21 @@ export default function TutorScheduleClient({
       toast.error('Failed to update problem sets.');
     } finally {
       setSavingPs(false);
+    }
+  }
+
+  async function handleDeleteSession(id: string) {
+    setDeletingSession(true);
+    try {
+      const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed');
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      closePanel();
+      toast.success('Session deleted.');
+    } catch {
+      toast.error('Failed to delete session.');
+    } finally {
+      setDeletingSession(false);
     }
   }
 
@@ -615,14 +631,25 @@ export default function TutorScheduleClient({
               {!editingPs ? (
                 <div>
                   <ProblemSetsBlock problemSets={selectedSession.problem_sets} />
-                  <button
-                    onClick={() => startEditingPs(selectedSession)}
-                    className="flex items-center gap-1.5 mt-3 text-xs font-semibold"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sky-deeper)' }}
-                  >
-                    <Edit2 size={12} />
-                    {selectedSession.problem_sets.length === 0 ? 'Assign problem sets' : 'Edit problem sets'}
-                  </button>
+                  <div className="flex items-center justify-between mt-3">
+                    <button
+                      onClick={() => startEditingPs(selectedSession)}
+                      className="flex items-center gap-1.5 text-xs font-semibold"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sky-deeper)' }}
+                    >
+                      <Edit2 size={12} />
+                      {selectedSession.problem_sets.length === 0 ? 'Assign problem sets' : 'Edit problem sets'}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteSession(selectedSession.id)}
+                      disabled={deletingSession}
+                      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
+                      style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', cursor: deletingSession ? 'not-allowed' : 'pointer', opacity: deletingSession ? 0.6 : 1 }}
+                    >
+                      <Trash2 size={12} />
+                      {deletingSession ? 'Deleting…' : 'Delete session'}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div style={{ marginTop: 12 }}>

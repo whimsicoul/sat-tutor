@@ -3,6 +3,27 @@ import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
 import { emailTutorSessionStatusChanged } from '@/lib/email';
 
+export async function DELETE(
+  _req: Request,
+  { params }: { params: { id: string } }
+) {
+  const session = await auth();
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  if (!session || (role !== 'student' && role !== 'tutor')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const [existing] = role === 'student'
+    ? await sql`SELECT id FROM sessions WHERE id = ${params.id} AND student_id = ${session.user.id}`
+    : await sql`SELECT id FROM sessions WHERE id = ${params.id} AND tutor_id = ${session.user.id}`;
+  if (!existing) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  await sql`DELETE FROM sessions WHERE id = ${params.id}`;
+  return new NextResponse(null, { status: 204 });
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: { id: string } }

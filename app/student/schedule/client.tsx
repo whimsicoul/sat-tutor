@@ -288,6 +288,7 @@ export default function StudentScheduleClient({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [selectedSession, setSelectedSession] = useState<SessionRow | null>(null);
+  const [deletingSession, setDeletingSession] = useState(false);
 
   const calendarDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(currentMonth));
@@ -333,6 +334,21 @@ export default function StudentScheduleClient({
   const daySessions = selectedDay
     ? (sessionsByDay[format(selectedDay, 'yyyy-MM-dd')] ?? [])
     : [];
+
+  async function handleDeleteSession(id: string) {
+    setDeletingSession(true);
+    try {
+      const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed');
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      closePanel();
+      toast.success('Session deleted.');
+    } catch {
+      toast.error('Failed to delete session.');
+    } finally {
+      setDeletingSession(false);
+    }
+  }
 
   async function downloadICS(id: string) {
     const res = await fetch(`/api/sessions/${id}/ics`);
@@ -656,6 +672,17 @@ export default function StudentScheduleClient({
               </div>
 
               <ProblemSetsBlock problemSets={selectedSession.problem_sets} />
+              <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => handleDeleteSession(selectedSession.id)}
+                  disabled={deletingSession}
+                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
+                  style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', cursor: deletingSession ? 'not-allowed' : 'pointer', opacity: deletingSession ? 0.6 : 1 }}
+                >
+                  <Trash2 size={12} />
+                  {deletingSession ? 'Deleting…' : 'Delete session'}
+                </button>
+              </div>
             </div>
           )}
         </div>

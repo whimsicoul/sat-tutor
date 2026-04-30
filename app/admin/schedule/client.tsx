@@ -6,7 +6,7 @@ import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { toast } from 'sonner';
-import { Plus, FileText, ExternalLink } from 'lucide-react';
+import { Plus, FileText, ExternalLink, Trash2 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -181,6 +181,7 @@ export default function ScheduleClient({
   const [selectedPsIds, setSelectedPsIds] = useState<Set<string>>(new Set());
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailSaving, setDetailSaving] = useState(false);
+  const [detailDeleting, setDetailDeleting] = useState(false);
 
   // Unique tutor IDs for color assignment
   const tutorIds = useMemo(
@@ -247,6 +248,22 @@ export default function ScheduleClient({
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  }
+
+  async function handleDeleteSession() {
+    if (!detailSession) return;
+    setDetailDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/sessions/${detailSession.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete');
+      setSessions((prev) => prev.filter((s) => s.id !== detailSession.id));
+      setDetailOpen(false);
+      toast.success('Session deleted');
+    } catch {
+      toast.error('Failed to delete session');
+    } finally {
+      setDetailDeleting(false);
+    }
   }
 
   async function handleSaveAttachments() {
@@ -494,15 +511,26 @@ export default function ScheduleClient({
             </div>
           )}
 
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setDetailOpen(false)}>Close</Button>
+          <DialogFooter className="mt-4" style={{ justifyContent: 'space-between' }}>
             <Button
-              onClick={handleSaveAttachments}
-              disabled={detailSaving || detailLoading}
-              style={{ background: 'var(--sky)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", border: 'none' }}
+              variant="outline"
+              onClick={handleDeleteSession}
+              disabled={detailDeleting || detailLoading}
+              style={{ color: '#EF4444', borderColor: 'rgba(239,68,68,0.3)', gap: 6 }}
             >
-              {detailSaving ? 'Saving…' : 'Save'}
+              <Trash2 size={14} />
+              {detailDeleting ? 'Deleting…' : 'Delete'}
             </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button variant="outline" onClick={() => setDetailOpen(false)}>Close</Button>
+              <Button
+                onClick={handleSaveAttachments}
+                disabled={detailSaving || detailLoading}
+                style={{ background: 'var(--sky)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", border: 'none' }}
+              >
+                {detailSaving ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
