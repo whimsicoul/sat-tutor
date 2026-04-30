@@ -758,3 +758,193 @@ export async function getAllBreakfastResults() {
     ORDER BY u.name ASC, sba.assigned_date DESC
   `;
 }
+
+// ─── ACT Practice Test ────────────────────────────────────────────────────────
+
+export async function getActPages(section: string) {
+  return sql`
+    SELECT id, section, page_number, image_url
+    FROM act_pages
+    WHERE section = ${section}
+    ORDER BY page_number ASC
+  `;
+}
+
+export async function upsertActPage(section: string, pageNumber: number, imageUrl: string) {
+  const rows = await sql`
+    INSERT INTO act_pages (section, page_number, image_url)
+    VALUES (${section}, ${pageNumber}, ${imageUrl})
+    ON CONFLICT (section, page_number) DO UPDATE SET image_url = EXCLUDED.image_url
+    RETURNING *
+  `;
+  return rows[0];
+}
+
+export async function deleteActPage(section: string, pageNumber: number) {
+  return sql`DELETE FROM act_pages WHERE section = ${section} AND page_number = ${pageNumber}`;
+}
+
+export async function deleteActPageById(id: string) {
+  return sql`DELETE FROM act_pages WHERE id = ${id}`;
+}
+
+export async function getActBubblePositions(section: string) {
+  return sql`
+    SELECT id, section, page_number, question_number, choice, x_percent, y_percent
+    FROM act_bubble_positions
+    WHERE section = ${section}
+    ORDER BY question_number ASC, choice ASC
+  `;
+}
+
+export async function upsertActBubble(
+  section: string,
+  pageNumber: number,
+  questionNumber: number,
+  choice: string,
+  xPercent: number,
+  yPercent: number
+) {
+  const rows = await sql`
+    INSERT INTO act_bubble_positions (section, page_number, question_number, choice, x_percent, y_percent)
+    VALUES (${section}, ${pageNumber}, ${questionNumber}, ${choice}, ${xPercent}, ${yPercent})
+    ON CONFLICT (section, question_number, choice)
+    DO UPDATE SET page_number = EXCLUDED.page_number, x_percent = EXCLUDED.x_percent, y_percent = EXCLUDED.y_percent
+    RETURNING *
+  `;
+  return rows[0];
+}
+
+export async function deleteActBubble(id: string) {
+  return sql`DELETE FROM act_bubble_positions WHERE id = ${id}`;
+}
+
+export async function getActAnswerKey(section: string) {
+  return sql`
+    SELECT section, question_number, correct_answer
+    FROM act_answer_key
+    WHERE section = ${section}
+    ORDER BY question_number ASC
+  `;
+}
+
+export async function bulkUpsertActAnswerKey(entries: { section: string; question_number: number; correct_answer: string }[]) {
+  for (const e of entries) {
+    await sql`
+      INSERT INTO act_answer_key (section, question_number, correct_answer)
+      VALUES (${e.section}, ${e.question_number}, ${e.correct_answer})
+      ON CONFLICT (section, question_number) DO UPDATE SET correct_answer = EXCLUDED.correct_answer
+    `;
+  }
+}
+
+export async function startActAttempt(studentId: string, section: string) {
+  const rows = await sql`
+    INSERT INTO act_test_attempts (student_id, section)
+    VALUES (${studentId}, ${section})
+    RETURNING id, started_at
+  `;
+  return rows[0];
+}
+
+export async function getActiveActAttempt(studentId: string, section: string) {
+  const rows = await sql`
+    SELECT id, started_at, completed_at
+    FROM act_test_attempts
+    WHERE student_id = ${studentId} AND section = ${section} AND completed_at IS NULL
+    ORDER BY started_at DESC
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
+export async function completeActAttempt(attemptId: string) {
+  return sql`
+    UPDATE act_test_attempts
+    SET completed_at = NOW()
+    WHERE id = ${attemptId}
+  `;
+}
+
+export async function saveActResponse(
+  attemptId: string,
+  studentId: string,
+  section: string,
+  questionNumber: number,
+  studentAnswer: string,
+  isCorrect: boolean
+) {
+  return sql`
+    INSERT INTO act_test_responses (attempt_id, student_id, section, question_number, student_answer, is_correct)
+    VALUES (${attemptId}, ${studentId}, ${section}, ${questionNumber}, ${studentAnswer}, ${isCorrect})
+    ON CONFLICT (attempt_id, question_number) DO UPDATE
+      SET student_answer = EXCLUDED.student_answer, is_correct = EXCLUDED.is_correct
+  `;
+}
+
+export async function getActResponses(attemptId: string) {
+  return sql`
+    SELECT question_number, student_answer, is_correct
+    FROM act_test_responses
+    WHERE attempt_id = ${attemptId}
+    ORDER BY question_number ASC
+  `;
+}
+
+export async function getActResultsForStudent(studentId: string) {
+  return sql`
+    SELECT
+      a.id AS attempt_id,
+      a.section,
+      a.started_at,
+      a.completed_at,
+      COUNT(r.id)::int AS total_questions,
+      SUM(CASE WHEN r.is_correct THEN 1 ELSE 0 END)::int AS correct_count
+    FROM act_test_attempts a
+    LEFT JOIN act_test_responses r ON r.attempt_id = a.id
+    WHERE a.student_id = ${studentId} AND a.completed_at IS NOT NULL
+    GROUP BY a.id, a.section, a.started_at, a.completed_at
+    ORDER BY a.completed_at DESC
+  `;
+}
+
+export async function getActResultsForTutorStudents(tutorId: string) {
+  return sql`
+    SELECT
+      a.id AS attempt_id,
+      a.section,
+      a.started_at,
+      a.completed_at,
+      u.id AS student_id,
+      u.name AS student_name,
+      COUNT(r.id)::int AS total_questions,
+      SUM(CASE WHEN r.is_correct THEN 1 ELSE 0 END)::int AS correct_count
+    FROM act_test_attempts a
+    JOIN users u ON u.id = a.student_id
+    JOIN tutor_student_assignments tsa ON tsa.student_id = u.id AND tsa.tutor_id = ${tutorId}
+    LEFT JOIN act_test_responses r ON r.attempt_id = a.id
+    WHERE a.completed_at IS NOT NULL
+    GROUP BY a.id, a.section, a.started_at, a.completed_at, u.id, u.name
+    ORDER BY u.name ASC, a.completed_at DESC
+  `;
+}
+
+export async function getAllActResults() {
+  return sql`
+    SELECT
+      a.id AS attempt_id,
+      a.section,
+      a.started_at,
+      a.completed_at,
+      u.id AS student_id,
+      u.name AS student_name,
+      COUNT(r.id)::int AS total_questions,
+      SUM(CASE WHEN r.is_correct THEN 1 ELSE 0 END)::int AS correct_count
+    FROM act_test_attempts a
+    JOIN users u ON u.id = a.student_id
+    LEFT JOIN act_test_responses r ON r.attempt_id = a.id
+    WHERE a.completed_at IS NOT NULL
+    GROUP BY a.id, a.section, a.started_at, a.completed_at, u.id, u.name
+    ORDER BY a.completed_at DESC
+  `;
+}
