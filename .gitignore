@@ -40,3 +40,6 @@ next-env.d.ts
 
 # breakfast problem PDFs
 breakfast_problems/
+
+# ACT generated images (derived from PDF via scripts/convert-act-pdf-to-images-mupdf.mjs)
+act-images/
