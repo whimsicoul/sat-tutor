@@ -328,7 +328,7 @@ export async function getAssignedTutorForStudent(studentId: string) {
 
 export async function getSatDatesByStudent(studentId: string) {
   return sql`
-    SELECT id, test_date, created_at
+    SELECT id, test_date, created_at, notes
     FROM sat_test_dates
     WHERE student_id = ${studentId}
     ORDER BY test_date ASC
@@ -337,7 +337,7 @@ export async function getSatDatesByStudent(studentId: string) {
 
 export async function getSatDatesForTutorStudents(tutorId: string) {
   return sql`
-    SELECT std.id, std.test_date, std.created_at,
+    SELECT std.id, std.test_date, std.created_at, std.notes,
            s.id AS student_id, s.name AS student_name
     FROM sat_test_dates std
     JOIN users s ON s.id = std.student_id
@@ -349,7 +349,7 @@ export async function getSatDatesForTutorStudents(tutorId: string) {
 
 export async function getAllSatDates() {
   return sql`
-    SELECT std.id, std.test_date, std.created_at,
+    SELECT std.id, std.test_date, std.created_at, std.notes,
            s.id AS student_id, s.name AS student_name
     FROM sat_test_dates std
     JOIN users s ON s.id = std.student_id
@@ -361,9 +361,18 @@ export async function createSatDate(studentId: string, testDate: string, created
   const rows = await sql`
     INSERT INTO sat_test_dates (student_id, test_date, created_by)
     VALUES (${studentId}, ${testDate}, ${createdBy})
-    RETURNING id, student_id, test_date, created_at
+    RETURNING id, student_id, test_date, created_at, notes
   `;
   return rows[0];
+}
+
+export async function updateSatDateNotes(id: string, notes: string | null) {
+  const rows = await sql`
+    UPDATE sat_test_dates SET notes = ${notes}
+    WHERE id = ${id}
+    RETURNING id, notes
+  `;
+  return rows[0] ?? null;
 }
 
 export async function deleteSatDate(id: string) {

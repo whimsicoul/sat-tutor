@@ -31,6 +31,7 @@ export interface AdminSatDate {
   test_date: string;
   student_id: string;
   student_name: string;
+  notes: string | null;
 }
 
 export default async function AdminSchedulePage() {
@@ -59,6 +60,7 @@ export default async function AdminSchedulePage() {
     test_date: d.test_date instanceof Date ? d.test_date.toISOString().split('T')[0] : String(d.test_date),
     student_id: d.student_id as string,
     student_name: d.student_name as string,
+    notes: (d.notes as string | null) ?? null,
   }));
 
   return (

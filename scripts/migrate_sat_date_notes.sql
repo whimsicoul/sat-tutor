@@ -1,0 +1,1 @@
+ALTER TABLE sat_test_dates ADD COLUMN IF NOT EXISTS notes TEXT;

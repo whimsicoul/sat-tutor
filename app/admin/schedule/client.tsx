@@ -49,7 +49,7 @@ function EventComponent({ event }: { event: CalEvent }) {
 
   if (event.type === 'sat') {
     return (
-      <div style={{ fontSize: 11, padding: '1px 4px', fontWeight: 600 }}>
+      <div style={{ fontSize: 11, padding: '1px 4px', fontWeight: 600, cursor: 'pointer' }}>
         🗓 SAT — {event.title}
       </div>
     );
@@ -184,6 +184,13 @@ export default function ScheduleClient({
   const [detailDeleting, setDetailDeleting] = useState(false);
   const [seriesDeleting, setSeriesDeleting] = useState(false);
 
+  // SAT date detail dialog
+  const [satDetailOpen, setSatDetailOpen] = useState(false);
+  const [satDetailDate, setSatDetailDate] = useState<AdminSatDate | null>(null);
+  const [satNotes, setSatNotes] = useState('');
+  const [satNotesSaving, setSatNotesSaving] = useState(false);
+  const [satDeleting, setSatDeleting] = useState(false);
+
   // Unique tutor IDs for color assignment
   const tutorIds = useMemo(
     () => Array.from(new Set(sessions.map((s) => s.tutor_id))),
@@ -223,6 +230,11 @@ export default function ScheduleClient({
   );
 
   async function handleSelectEvent(event: CalEvent) {
+    if (event.type === 'sat') {
+      const satDate = satDates.find((d) => `sat-${d.id}` === event.id);
+      if (satDate) handleSelectSatDate(satDate);
+      return;
+    }
     if (event.type !== 'session' || !event.resource) return;
     setDetailSession(event.resource);
     setDetailOpen(true);
@@ -265,6 +277,48 @@ export default function ScheduleClient({
       toast.error('Failed to delete series');
     } finally {
       setSeriesDeleting(false);
+    }
+  }
+
+  function handleSelectSatDate(satDate: AdminSatDate) {
+    setSatDetailDate(satDate);
+    setSatNotes(satDate.notes ?? '');
+    setSatDetailOpen(true);
+  }
+
+  async function handleSaveSatNotes() {
+    if (!satDetailDate) return;
+    setSatNotesSaving(true);
+    try {
+      const res = await fetch(`/api/admin/sat-dates/${satDetailDate.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: satNotes || null }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      setSatDates((prev) => prev.map((d) => d.id === satDetailDate.id ? { ...d, notes: satNotes || null } : d));
+      setSatDetailDate((prev) => prev ? { ...prev, notes: satNotes || null } : prev);
+      toast.success('Notes saved');
+    } catch {
+      toast.error('Failed to save notes');
+    } finally {
+      setSatNotesSaving(false);
+    }
+  }
+
+  async function handleDeleteSatDate() {
+    if (!satDetailDate) return;
+    setSatDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/sat-dates/${satDetailDate.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete');
+      setSatDates((prev) => prev.filter((d) => d.id !== satDetailDate.id));
+      setSatDetailOpen(false);
+      toast.success('SAT date deleted');
+    } catch {
+      toast.error('Failed to delete SAT date');
+    } finally {
+      setSatDeleting(false);
     }
   }
 
@@ -560,6 +614,80 @@ export default function ScheduleClient({
                 style={{ background: 'var(--sky)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", border: 'none' }}
               >
                 {detailSaving ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* SAT date detail dialog */}
+      <Dialog open={satDetailOpen} onOpenChange={setSatDetailOpen}>
+        <DialogContent style={{ maxWidth: 420 }}>
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)', letterSpacing: '-0.02em' }}>
+              SAT Test Date
+            </DialogTitle>
+          </DialogHeader>
+
+          {satDetailDate && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 4 }}>
+              <div style={{ background: 'var(--frost)', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--fog)' }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", marginBottom: 2 }}>
+                  {satDetailDate.student_name}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
+                  {format(new Date(satDetailDate.test_date + 'T12:00:00'), 'EEEE, MMMM d, yyyy')}
+                </div>
+              </div>
+
+              <div>
+                <Label style={{ fontFamily: "'Syne', sans-serif", fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', fontWeight: 700 }}>
+                  Notes
+                </Label>
+                <textarea
+                  value={satNotes}
+                  onChange={(e) => setSatNotes(e.target.value)}
+                  placeholder="Add notes about this test date…"
+                  rows={4}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    marginTop: 6,
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: '1px solid var(--fog)',
+                    background: 'var(--white)',
+                    fontSize: 13,
+                    color: 'var(--charcoal)',
+                    fontFamily: "'Syne', sans-serif",
+                    resize: 'vertical',
+                    outline: 'none',
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--sky)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(168,203,222,0.15)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--fog)'; e.currentTarget.style.boxShadow = 'none'; }}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="mt-4" style={{ justifyContent: 'space-between' }}>
+            <Button
+              variant="outline"
+              onClick={handleDeleteSatDate}
+              disabled={satDeleting}
+              style={{ color: '#EF4444', borderColor: 'rgba(239,68,68,0.3)', gap: 6 }}
+            >
+              <Trash2 size={14} />
+              {satDeleting ? 'Deleting…' : 'Delete'}
+            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button variant="outline" onClick={() => setSatDetailOpen(false)}>Close</Button>
+              <Button
+                onClick={handleSaveSatNotes}
+                disabled={satNotesSaving}
+                style={{ background: 'var(--sky)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", border: 'none' }}
+              >
+                {satNotesSaving ? 'Saving…' : 'Save Notes'}
               </Button>
             </div>
           </DialogFooter>
