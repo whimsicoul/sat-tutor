@@ -182,6 +182,7 @@ export default function ScheduleClient({
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailSaving, setDetailSaving] = useState(false);
   const [detailDeleting, setDetailDeleting] = useState(false);
+  const [seriesDeleting, setSeriesDeleting] = useState(false);
 
   // Unique tutor IDs for color assignment
   const tutorIds = useMemo(
@@ -248,6 +249,23 @@ export default function ScheduleClient({
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  }
+
+  async function handleDeleteSeries() {
+    if (!detailSession?.series_id) return;
+    setSeriesDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/session-series/${detailSession.series_id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete series');
+      const { seriesId } = await res.json() as { seriesId: string };
+      setSessions((prev) => prev.filter((s) => s.series_id !== seriesId));
+      setDetailOpen(false);
+      toast.success('Recurring series deleted');
+    } catch {
+      toast.error('Failed to delete series');
+    } finally {
+      setSeriesDeleting(false);
+    }
   }
 
   async function handleDeleteSession() {
@@ -512,15 +530,28 @@ export default function ScheduleClient({
           )}
 
           <DialogFooter className="mt-4" style={{ justifyContent: 'space-between' }}>
-            <Button
-              variant="outline"
-              onClick={handleDeleteSession}
-              disabled={detailDeleting || detailLoading}
-              style={{ color: '#EF4444', borderColor: 'rgba(239,68,68,0.3)', gap: 6 }}
-            >
-              <Trash2 size={14} />
-              {detailDeleting ? 'Deleting…' : 'Delete'}
-            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button
+                variant="outline"
+                onClick={handleDeleteSession}
+                disabled={detailDeleting || detailLoading}
+                style={{ color: '#EF4444', borderColor: 'rgba(239,68,68,0.3)', gap: 6 }}
+              >
+                <Trash2 size={14} />
+                {detailDeleting ? 'Deleting…' : 'Delete'}
+              </Button>
+              {detailSession?.series_id && (
+                <Button
+                  variant="outline"
+                  onClick={handleDeleteSeries}
+                  disabled={seriesDeleting || detailLoading}
+                  style={{ color: '#EF4444', borderColor: 'rgba(239,68,68,0.3)', gap: 6 }}
+                >
+                  <Trash2 size={14} />
+                  {seriesDeleting ? 'Deleting…' : 'Delete series'}
+                </Button>
+              )}
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button variant="outline" onClick={() => setDetailOpen(false)}>Close</Button>
               <Button

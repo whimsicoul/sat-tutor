@@ -10,5 +10,5 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   }
 
   await deleteSessionSeries(params.id);
-  return new NextResponse(null, { status: 204 });
+  return NextResponse.json({ seriesId: params.id });
 }

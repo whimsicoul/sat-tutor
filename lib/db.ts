@@ -261,6 +261,7 @@ export async function createSessionSeries(
 }
 
 export async function deleteSessionSeries(id: string) {
+  await sql`DELETE FROM sessions WHERE series_id = ${id}`;
   await sql`DELETE FROM session_series WHERE id = ${id}`;
 }
 
