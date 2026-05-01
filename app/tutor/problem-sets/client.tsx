@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Trash2, BookOpen, Key, Plus, Upload } from 'lucide-react';
+import { FileText, Trash2, BookOpen, Key, Plus, Upload, ClipboardList } from 'lucide-react';
+import Link from 'next/link';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { UploadButton } from '@uploadthing/react';
@@ -310,6 +311,23 @@ export default function TutorProblemSetsClient({
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
+                  {ps.extraction_status === 'done' && (
+                    <Link
+                      href={`/tutor/problem-sets/${ps.id}/review?studentId=${ps.student_id}`}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                      style={{
+                        background: 'rgba(224,166,175,0.14)',
+                        color: 'var(--rose-deeper)',
+                        border: '1px solid rgba(224,166,175,0.3)',
+                        textDecoration: 'none',
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(224,166,175,0.25)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(224,166,175,0.14)'; }}
+                    >
+                      <ClipboardList className="h-3.5 w-3.5" />
+                      Review
+                    </Link>
+                  )}
                   <a
                     href={ps.problem_pdf_url}
                     target="_blank"

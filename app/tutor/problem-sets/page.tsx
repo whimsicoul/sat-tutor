@@ -9,6 +9,7 @@ export default async function TutorProblemSetsPage() {
   const [problemSets, students] = await Promise.all([
     sql`
       SELECT ps.id, ps.title, ps.problem_pdf_url, ps.answer_pdf_url, ps.created_at,
+             ps.student_id, ps.extraction_status, ps.question_count,
              u.name AS student_name
       FROM problem_sets ps
       JOIN users u ON u.id = ps.student_id
@@ -32,7 +33,10 @@ export interface ProblemSetRow {
   problem_pdf_url: string;
   answer_pdf_url: string | null;
   created_at: string;
+  student_id: string;
   student_name: string;
+  extraction_status: string;
+  question_count: number | null;
 }
 
 export interface StudentOption {

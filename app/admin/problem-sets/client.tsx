@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Plus, FileText, Key, ExternalLink } from 'lucide-react';
+import { Plus, FileText, Key, ExternalLink, Pencil } from 'lucide-react';
 import { UploadButton } from '@uploadthing/react';
 import type { OurFileRouter } from '@/lib/uploadthing';
 import {
@@ -112,7 +113,7 @@ export default function ProblemSetsClient({
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--fog)', background: 'var(--frost)' }}>
-              {['Title', 'Student', 'Tutor', 'Files', 'Created'].map((h) => (
+              {['Title', 'Student', 'Tutor', 'Files', 'Created', ''].map((h) => (
                 <th key={h} style={{ textAlign: 'left', padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   {h}
                 </th>
@@ -163,6 +164,14 @@ export default function ProblemSetsClient({
                   </td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--mist)' }}>
                     {format(new Date(ps.created_at), 'MMM d, yyyy')}
+                  </td>
+                  <td style={{ padding: '14px 20px' }}>
+                    <Link
+                      href={`/admin/problem-sets/${ps.id}/edit`}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--rose-deeper)', textDecoration: 'none', background: 'rgba(224,166,175,0.14)', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(224,166,175,0.3)' }}
+                    >
+                      <Pencil size={12} /> Edit
+                    </Link>
                   </td>
                 </tr>
               ))

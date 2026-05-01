@@ -55,5 +55,24 @@ export async function POST(req: Request) {
     VALUES (${title}, ${studentId}, ${session.user.id}, ${problemPdfUrl}, ${answerPdfUrl ?? null})
     RETURNING *
   `;
+
+  // Fire extraction jobs in the background (non-blocking)
+  const origin = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+  const headers = { 'Content-Type': 'application/json', Cookie: req.headers.get('cookie') ?? '' };
+
+  fetch(`${origin}/api/problem-sets/extract`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ problemSetId: row.id, pdfUrl: problemPdfUrl, type: 'questions' }),
+  }).catch(() => {/* extraction errors are tracked in DB status column */});
+
+  if (answerPdfUrl) {
+    fetch(`${origin}/api/problem-sets/extract`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ problemSetId: row.id, pdfUrl: answerPdfUrl, type: 'answers' }),
+    }).catch(() => {/* extraction errors are tracked in DB status column */});
+  }
+
   return NextResponse.json(row, { status: 201 });
 }
