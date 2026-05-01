@@ -207,12 +207,14 @@ export default function StudentActTestClient({ pastResults }: { pastResults: Pas
               <div
                 key={s.key}
                 style={{
-                  border: '1px solid var(--border, #e2e8f0)',
+                  border: '2px solid #2563eb',
                   borderRadius: 12,
                   padding: 20,
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 12,
+                  background: '#f0f5ff',
+                  boxShadow: '0 2px 8px rgba(37,99,235,0.10)',
                 }}
               >
                 <div>
@@ -230,15 +232,17 @@ export default function StudentActTestClient({ pastResults }: { pastResults: Pas
                   onClick={() => handleStartSection(s.key)}
                   disabled={loading}
                   style={{
-                    background: 'var(--primary, #2563eb)',
+                    background: loading ? '#93aff7' : '#2563eb',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 8,
-                    padding: '8px 0',
+                    padding: '10px 0',
                     cursor: loading ? 'not-allowed' : 'pointer',
-                    fontWeight: 600,
-                    fontSize: 14,
-                    opacity: loading ? 0.6 : 1,
+                    fontWeight: 700,
+                    fontSize: 15,
+                    letterSpacing: '0.02em',
+                    boxShadow: loading ? 'none' : '0 2px 6px rgba(37,99,235,0.35)',
+                    transition: 'background 0.15s',
                   }}
                 >
                   {loading ? 'Loading…' : 'Start'}

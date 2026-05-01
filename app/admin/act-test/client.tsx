@@ -129,7 +129,21 @@ export default function AdminActTestClient({ initialPages, initialBubbles, initi
       return [...filtered, bubble];
     });
     toast.success(`Placed ${placingBubble.choice} for Q${placingBubble.questionNumber}`);
-  }, [placingBubble, section]);
+
+    // Auto-advance to the next choice, then next question
+    const currentChoices = CHOICES_FOR_QUESTION(placingBubble.questionNumber);
+    const currentChoiceIdx = currentChoices.indexOf(placingBubble.choice);
+    if (currentChoiceIdx < currentChoices.length - 1) {
+      setPlacingBubble({ questionNumber: placingBubble.questionNumber, choice: currentChoices[currentChoiceIdx + 1] });
+    } else {
+      const nextQ = placingBubble.questionNumber + 1;
+      if (nextQ <= sectionInfo.questions) {
+        setPlacingBubble({ questionNumber: nextQ, choice: CHOICES_FOR_QUESTION(nextQ)[0] });
+      } else {
+        setPlacingBubble(null);
+      }
+    }
+  }, [placingBubble, section, sectionInfo.questions]);
 
   async function handleDeleteBubble(bubbleId: string) {
     const res = await fetch('/api/admin/act-test/bubbles', {
