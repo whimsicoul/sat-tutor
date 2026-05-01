@@ -8,9 +8,9 @@ type Section = 'english' | 'math' | 'reading' | 'science';
 type AdminTab = 'pages' | 'bubbles' | 'answerkey';
 
 const SECTIONS: { value: Section; label: string; questions: number }[] = [
-  { value: 'english', label: 'English', questions: 75 },
-  { value: 'math', label: 'Math', questions: 60 },
-  { value: 'reading', label: 'Reading', questions: 40 },
+  { value: 'english', label: 'English', questions: 50 },
+  { value: 'math', label: 'Math', questions: 45 },
+  { value: 'reading', label: 'Reading', questions: 36 },
   { value: 'science', label: 'Science', questions: 40 },
 ];
 
