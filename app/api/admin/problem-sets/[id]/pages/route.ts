@@ -28,7 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json({ page }, { status: 201 });
 }
 
-export async function DELETE(req: NextRequest, _ctx: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest) {
   const session = await auth();
   if (!session || (session.user as { role?: string }).role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

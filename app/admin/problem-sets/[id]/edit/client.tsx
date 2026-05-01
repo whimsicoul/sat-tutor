@@ -7,7 +7,7 @@ import { UploadButton } from '@uploadthing/react';
 import type { OurFileRouter } from '@/lib/uploadthing';
 import {
   ArrowLeft, Plus, Pencil, Trash2, Image as ImageIcon, X, Check,
-  ChevronLeft, ChevronRight, MapPin, Key,
+  ChevronLeft, ChevronRight, Key,
 } from 'lucide-react';
 import type { PsQuestion, PsPage, PsPosition, PsAnswerKeyEntry } from './page';
 
@@ -406,7 +406,7 @@ export default function ProblemSetEditorClient({
 
           {questions.length === 0 && (
             <div className="portal-card" style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--mist)', fontSize: 13 }}>
-              No questions yet. Click "Add Question" or upload a problem set PDF to auto-extract.
+              No questions yet. Click &quot;Add Question&quot; or upload a problem set PDF to auto-extract.
             </div>
           )}
 
