@@ -98,34 +98,14 @@ export default function LoginPage() {
               letterSpacing: '-0.01em',
             }}
           >
-            &ldquo;Every score starts with a single session.&rdquo;
+            &ldquo;Practice tailored to you — every session, every skill, every score.&rdquo;
           </blockquote>
           <p className="text-sm" style={{ color: 'var(--slate)' }}>
-            Washington D.C. · SAT Preparation
+            Washington D.C. · Personalized SAT Preparation
           </p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-6 relative z-10">
-          {[
-            { val: '200+', lbl: 'Avg. Score Gain' },
-            { val: '98%', lbl: 'Satisfaction Rate' },
-          ].map((s) => (
-            <div
-              key={s.lbl}
-              className="p-4 rounded-xl"
-              style={{ background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.8)' }}
-            >
-              <p
-                className="text-2xl font-bold mb-0.5"
-                style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: 'var(--rose-deeper)' }}
-              >
-                {s.val}
-              </p>
-              <p className="text-xs" style={{ color: 'var(--slate)' }}>{s.lbl}</p>
-            </div>
-          ))}
-        </div>
+        <div className="relative z-10" />
       </div>
 
       {/* Right: login form */}
