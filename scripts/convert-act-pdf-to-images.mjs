@@ -1,81 +1,136 @@
 /**
- * Converts ACT1.pdf pages to PNG images and uploads them to UploadThing.
+ * Converts ACT1.pdf pages to PNG images, uploads them to UploadThing,
+ * and saves each URL to the act_pages table in the database.
  *
  * Usage:
  *   node scripts/convert-act-pdf-to-images.mjs
  *
  * Requirements:
  *   - pdftoppm must be installed (part of poppler-utils)
- *   - UPLOADTHING_TOKEN env var must be set (from .env.local)
+ *   - UPLOADTHING_TOKEN and DATABASE_URL must be set in .env.local
  *   - Run from the project root
- *
- * The ACT PDF has 4 sections starting at these pages (1-indexed within the extracted PDF):
- *   english:  pages 1–12   (50 questions, Test 1)
- *   math:     pages 13–24  (45 questions, Test 2)
- *   reading:  pages 25–32  (36 questions, Test 3)
- *   science:  pages 33–46  (40 questions, Test 4)
- *
- * After running, copy the printed JSON into the database via the admin answer-key page.
  */
 
 import { execSync } from 'child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PDF_PATH = join(__dirname, '..', 'ACT1.pdf');
+const ROOT = join(__dirname, '..');
+const PDF_PATH = join(ROOT, 'ACT1.pdf');
+
+// Load .env.local
+const envPath = join(ROOT, '.env.local');
+if (existsSync(envPath)) {
+  const lines = readFileSync(envPath, 'utf8').split('\n');
+  for (const line of lines) {
+    const match = line.match(/^([^#=]+)=(.*)$/);
+    if (match) process.env[match[1].trim()] = match[2].trim();
+  }
+}
+
+if (!process.env.UPLOADTHING_TOKEN) {
+  console.error('ERROR: UPLOADTHING_TOKEN not set in .env.local');
+  process.exit(1);
+}
+if (!process.env.DATABASE_URL) {
+  console.error('ERROR: DATABASE_URL not set in .env.local');
+  process.exit(1);
+}
 
 // Page ranges for each section (1-indexed page numbers in the PDF)
 const SECTIONS = {
-  english:  { start: 1,  end: 12 },
-  math:     { start: 13, end: 24 },
-  reading:  { start: 25, end: 32 },
-  science:  { start: 33, end: 46 },
+  english: { start: 1,  end: 12 },
+  math:    { start: 13, end: 24 },
+  reading: { start: 25, end: 32 },
+  science: { start: 33, end: 46 },
 };
+
+if (!existsSync(PDF_PATH)) {
+  console.error('ERROR: ACT1.pdf not found in project root.');
+  process.exit(1);
+}
 
 const OUT_DIR = join(tmpdir(), `act-images-${randomUUID()}`);
 mkdirSync(OUT_DIR, { recursive: true });
 
 console.log('Converting ACT PDF to images...');
 console.log(`PDF: ${PDF_PATH}`);
-console.log(`Output dir: ${OUT_DIR}`);
+console.log(`Output dir: ${OUT_DIR}\n`);
 
-if (!existsSync(PDF_PATH)) {
-  console.error('ERROR: ACT-Practice-Test.pdf not found in project root.');
-  process.exit(1);
-}
-
-// Convert all pages at 150dpi (good quality, reasonable file size)
 try {
   execSync(
     `pdftoppm -r 150 -png "${PDF_PATH}" "${join(OUT_DIR, 'page')}"`,
     { stdio: 'inherit' }
   );
-} catch (e) {
+} catch {
   console.error('pdftoppm failed. Make sure poppler-utils is installed.');
-  console.error('  Windows: choco install poppler  OR  download from https://github.com/oschwartz10612/poppler-Windows');
-  console.error('  Mac: brew install poppler');
-  console.error('  Linux: apt-get install poppler-utils');
   process.exit(1);
 }
 
-const files = readdirSync(OUT_DIR)
-  .filter(f => f.endsWith('.png'))
-  .sort();
+const files = readdirSync(OUT_DIR).filter(f => f.endsWith('.png')).sort();
+console.log(`\nGenerated ${files.length} pages. Starting upload...\n`);
 
-console.log(`\nGenerated ${files.length} pages.`);
-console.log('\nPage mapping by section:');
+// Dynamically import UTApi (ESM)
+const { UTApi } = await import('uploadthing/server');
+const utapi = new UTApi();
+
+// Dynamically import neon
+const { neon } = await import('@neondatabase/serverless');
+const sql = neon(process.env.DATABASE_URL);
+
+let uploaded = 0;
+let failed = 0;
+
 for (const [section, { start, end }] of Object.entries(SECTIONS)) {
-  console.log(`  ${section}: pages ${start}–${end} → files page-${String(start).padStart(3,'0')}.png through page-${String(end).padStart(3,'0')}.png`);
+  console.log(`\n── ${section.toUpperCase()} (pages ${start}–${end}) ──`);
+  for (let pageNum = start; pageNum <= end; pageNum++) {
+    const paddedPage = String(pageNum).padStart(2, '0');
+    const filename = `page-${paddedPage}.png`;
+    const filepath = join(OUT_DIR, filename);
+
+    if (!existsSync(filepath)) {
+      console.error(`  MISSING: ${filename}`);
+      failed++;
+      continue;
+    }
+
+    const sectionPageNum = pageNum - start + 1;
+    process.stdout.write(`  Uploading page ${sectionPageNum}/${end - start + 1} (${filename})... `);
+
+    try {
+      const fileData = readFileSync(filepath);
+      const blob = new Blob([fileData], { type: 'image/png' });
+      const utFile = new File([blob], `act1-${section}-page${sectionPageNum}.png`, { type: 'image/png' });
+
+      const response = await utapi.uploadFiles(utFile);
+      if (response.error) throw new Error(response.error.message);
+
+      const imageUrl = response.data.ufsUrl;
+
+      await sql`
+        INSERT INTO act_pages (section, page_number, image_url)
+        VALUES (${section}, ${sectionPageNum}, ${imageUrl})
+        ON CONFLICT (section, page_number) DO UPDATE SET image_url = EXCLUDED.image_url
+      `;
+
+      console.log(`done -> ${imageUrl}`);
+      uploaded++;
+    } catch (err) {
+      console.log(`FAILED: ${err.message}`);
+      failed++;
+    }
+  }
 }
 
-console.log('\n--- NEXT STEPS ---');
-console.log('1. The PNG files are in:', OUT_DIR);
-console.log('2. Go to /admin/act-test in the app and upload each section\'s pages using the page upload tool.');
-console.log('3. After uploading, use the bubble placement tool to mark question choice positions.');
-console.log('4. Enter the answer key in the admin answer key section.');
-console.log('\nFiles generated:');
-files.forEach((f, i) => console.log(`  ${String(i + 1).padStart(3, ' ')}. ${f}`));
+// Cleanup temp files
+rmSync(OUT_DIR, { recursive: true, force: true });
+
+console.log(`\n══════════════════════════════`);
+console.log(`Done. ${uploaded} uploaded, ${failed} failed.`);
+if (failed === 0) {
+  console.log('All pages are now in the database. Visit /admin/act-test to verify.');
+}
