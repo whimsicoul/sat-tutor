@@ -25,6 +25,7 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _routeContext: { params: Promise<{ id: string; stepId: string }> },
 ) {
   if (!await requireAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
