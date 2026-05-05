@@ -25,7 +25,7 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string; stepId: string }> },
+  _routeContext: { params: Promise<{ id: string; stepId: string }> },
 ) {
   if (!await requireAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { positionId } = await req.json() as { positionId: string };

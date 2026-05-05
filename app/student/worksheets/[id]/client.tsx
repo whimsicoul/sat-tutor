@@ -7,7 +7,7 @@ import {
   ArrowLeft, ChevronLeft, ChevronRight, BookOpen, Layers,
   Lock, Eye, EyeOff,
 } from 'lucide-react';
-import type { FlowStep, FlowPage, FlowPosition, FlowAnswerKey, FlowResponse } from './page';
+import type { FlowStep, FlowPage, FlowPosition, FlowAnswerKey } from './page';
 
 const CHOICES = ['A', 'B', 'C', 'D'] as const;
 type Choice = typeof CHOICES[number];

@@ -289,7 +289,6 @@ export default function WorksheetBuilderClient({
               ? (
                 <InstructionStepEditor
                   step={selectedStep}
-                  wsId={wsId}
                   onUpdate={(patch) => updateStepLocal(selectedStep.id, patch)}
                   onSaveField={saveStepField}
                 />
@@ -317,12 +316,10 @@ export default function WorksheetBuilderClient({
 
 function InstructionStepEditor({
   step,
-  wsId,
   onUpdate,
   onSaveField,
 }: {
   step: WsStep;
-  wsId: string;
   onUpdate: (patch: Partial<WsStep>) => void;
   onSaveField: (stepId: string, field: Record<string, unknown>) => Promise<boolean>;
 }) {
