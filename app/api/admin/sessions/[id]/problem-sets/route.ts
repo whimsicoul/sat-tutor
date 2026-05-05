@@ -14,6 +14,7 @@ async function requireAdmin() {
   return session;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!(await requireAdmin())) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

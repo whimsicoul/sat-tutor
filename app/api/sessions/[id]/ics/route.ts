@@ -4,6 +4,7 @@ import sql from '@/lib/db';
 import { generateICS } from '@/lib/calendar';
 
 export async function GET(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _req: Request,
   { params }: { params: { id: string } }
 ) {

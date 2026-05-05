@@ -8,6 +8,7 @@ import {
 } from '@/lib/db';
 import sql from '@/lib/db';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session || (session.user as { role?: string }).role !== 'admin') {

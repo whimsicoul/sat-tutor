@@ -4,6 +4,7 @@ import sql from '@/lib/db';
 import { adminUpdateSessionStatus } from '@/lib/db';
 
 export async function DELETE(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _req: Request,
   { params }: { params: { id: string } }
 ) {

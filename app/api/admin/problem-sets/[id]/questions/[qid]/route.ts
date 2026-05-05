@@ -29,6 +29,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   return NextResponse.json({ question: updated });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string; qid: string }> }) {
   const session = await auth();
   if (!session || (session.user as { role?: string }).role !== 'admin') {

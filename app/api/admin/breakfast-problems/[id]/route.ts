@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 
 const VALID_ANSWERS = new Set(['A', 'B', 'C', 'D']);
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   const session = await auth();
   if (!session?.user || session.user.role !== 'admin') {

@@ -19,6 +19,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
