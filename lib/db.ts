@@ -1325,3 +1325,204 @@ export async function getProblemSetResponsesForReview(problemSetId: string, stud
     ORDER BY q.question_number ASC
   `;
 }
+
+// ── Worksheets ────────────────────────────────────────────────────────────────
+
+export async function getAllWorksheets() {
+  return sql`
+    SELECT w.id, w.title, w.created_at,
+           s.name AS student_name,
+           a.name AS created_by_name,
+           (SELECT COUNT(*) FROM worksheet_steps ws WHERE ws.worksheet_id = w.id) AS step_count
+    FROM worksheets w
+    JOIN users s ON s.id = w.student_id
+    JOIN users a ON a.id = w.created_by
+    ORDER BY w.created_at DESC
+  `;
+}
+
+export async function createWorksheet(title: string, studentId: string, createdBy: string) {
+  const rows = await sql`
+    INSERT INTO worksheets (title, student_id, created_by)
+    VALUES (${title}, ${studentId}, ${createdBy})
+    RETURNING *
+  `;
+  return rows[0];
+}
+
+export async function getWorksheetById(id: string) {
+  const rows = await sql`SELECT * FROM worksheets WHERE id = ${id} LIMIT 1`;
+  return rows[0] ?? null;
+}
+
+export async function deleteWorksheet(id: string) {
+  await sql`DELETE FROM worksheets WHERE id = ${id}`;
+}
+
+export async function getWorksheetSteps(worksheetId: string) {
+  return sql`
+    SELECT * FROM worksheet_steps
+    WHERE worksheet_id = ${worksheetId}
+    ORDER BY step_order ASC
+  `;
+}
+
+export async function createWorksheetStep(
+  worksheetId: string,
+  stepOrder: number,
+  title: string,
+  type: 'instruction' | 'problems',
+  stageLabel: string | null,
+  lockedNav: boolean,
+  pdfUrl: string | null,
+) {
+  const rows = await sql`
+    INSERT INTO worksheet_steps (worksheet_id, step_order, title, type, stage_label, locked_nav, pdf_url)
+    VALUES (${worksheetId}, ${stepOrder}, ${title}, ${type}, ${stageLabel}, ${lockedNav}, ${pdfUrl})
+    RETURNING *
+  `;
+  return rows[0];
+}
+
+export async function updateWorksheetStep(
+  stepId: string,
+  fields: {
+    title?: string;
+    stageLabel?: string | null;
+    lockedNav?: boolean;
+    pdfUrl?: string | null;
+    stepOrder?: number;
+  },
+) {
+  const rows = await sql`
+    UPDATE worksheet_steps SET
+      title       = COALESCE(${fields.title ?? null}, title),
+      stage_label = CASE WHEN ${fields.stageLabel !== undefined} THEN ${fields.stageLabel ?? null} ELSE stage_label END,
+      locked_nav  = COALESCE(${fields.lockedNav ?? null}, locked_nav),
+      pdf_url     = CASE WHEN ${fields.pdfUrl !== undefined} THEN ${fields.pdfUrl ?? null} ELSE pdf_url END,
+      step_order  = COALESCE(${fields.stepOrder ?? null}, step_order)
+    WHERE id = ${stepId}
+    RETURNING *
+  `;
+  return rows[0];
+}
+
+export async function deleteWorksheetStep(stepId: string) {
+  await sql`DELETE FROM worksheet_steps WHERE id = ${stepId}`;
+}
+
+export async function reorderWorksheetSteps(worksheetId: string, orderedStepIds: string[]) {
+  for (let i = 0; i < orderedStepIds.length; i++) {
+    await sql`
+      UPDATE worksheet_steps SET step_order = ${i + 1}
+      WHERE id = ${orderedStepIds[i]} AND worksheet_id = ${worksheetId}
+    `;
+  }
+}
+
+export async function getWorksheetStepPages(stepId: string) {
+  return sql`
+    SELECT * FROM worksheet_step_pages
+    WHERE step_id = ${stepId}
+    ORDER BY page_number ASC
+  `;
+}
+
+export async function insertWorksheetStepPage(stepId: string, pageNumber: number, imageUrl: string) {
+  const rows = await sql`
+    INSERT INTO worksheet_step_pages (step_id, page_number, image_url)
+    VALUES (${stepId}, ${pageNumber}, ${imageUrl})
+    RETURNING *
+  `;
+  return rows[0];
+}
+
+export async function deleteWorksheetStepPage(pageId: string) {
+  await sql`DELETE FROM worksheet_step_pages WHERE id = ${pageId}`;
+}
+
+export async function getWorksheetStepPositions(stepId: string) {
+  return sql`
+    SELECT * FROM worksheet_step_positions
+    WHERE step_id = ${stepId}
+    ORDER BY question_number ASC, page_number ASC
+  `;
+}
+
+export async function upsertWorksheetStepPosition(
+  stepId: string,
+  questionNumber: number,
+  pageNumber: number,
+  xPercent: number,
+  yPercent: number,
+) {
+  const rows = await sql`
+    INSERT INTO worksheet_step_positions (step_id, question_number, page_number, x_percent, y_percent)
+    VALUES (${stepId}, ${questionNumber}, ${pageNumber}, ${xPercent}, ${yPercent})
+    RETURNING *
+  `;
+  return rows[0];
+}
+
+export async function deleteWorksheetStepPosition(positionId: string) {
+  await sql`DELETE FROM worksheet_step_positions WHERE id = ${positionId}`;
+}
+
+export async function getWorksheetStepAnswerKey(stepId: string) {
+  return sql`
+    SELECT * FROM worksheet_step_answer_key
+    WHERE step_id = ${stepId}
+    ORDER BY question_number ASC
+  `;
+}
+
+export async function saveWorksheetStepAnswerKey(
+  stepId: string,
+  entries: { questionNumber: number; correctAnswer: string }[],
+) {
+  await sql`DELETE FROM worksheet_step_answer_key WHERE step_id = ${stepId}`;
+  for (const e of entries) {
+    await sql`
+      INSERT INTO worksheet_step_answer_key (step_id, question_number, correct_answer)
+      VALUES (${stepId}, ${e.questionNumber}, ${e.correctAnswer})
+    `;
+  }
+}
+
+export async function getWorksheetsByStudent(studentId: string) {
+  return sql`
+    SELECT w.id, w.title, w.created_at,
+           a.name AS created_by_name,
+           (SELECT COUNT(*) FROM worksheet_steps ws WHERE ws.worksheet_id = w.id) AS step_count
+    FROM worksheets w
+    JOIN users a ON a.id = w.created_by
+    WHERE w.student_id = ${studentId}
+    ORDER BY w.created_at DESC
+  `;
+}
+
+export async function getWorksheetStepResponses(stepId: string, studentId: string) {
+  return sql`
+    SELECT * FROM worksheet_step_responses
+    WHERE step_id = ${stepId} AND student_id = ${studentId}
+    ORDER BY question_number ASC
+  `;
+}
+
+export async function upsertWorksheetStepResponse(
+  stepId: string,
+  studentId: string,
+  questionNumber: number,
+  selectedAnswer: string | null,
+  eliminatedChoices: string[],
+) {
+  await sql`
+    INSERT INTO worksheet_step_responses (step_id, student_id, question_number, selected_answer, eliminated_choices, updated_at)
+    VALUES (${stepId}, ${studentId}, ${questionNumber}, ${selectedAnswer}, ${eliminatedChoices}, now())
+    ON CONFLICT (step_id, student_id, question_number)
+    DO UPDATE SET
+      selected_answer    = EXCLUDED.selected_answer,
+      eliminated_choices = EXCLUDED.eliminated_choices,
+      updated_at         = now()
+  `;
+}
