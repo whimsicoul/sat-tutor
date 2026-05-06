@@ -1526,3 +1526,40 @@ export async function upsertWorksheetStepResponse(
       updated_at         = now()
   `;
 }
+
+export async function getWorksheetStepProblems(stepId: string) {
+  return sql`
+    SELECT id, step_id, question_number, question_image_url, correct_answer, explanation_image_url, created_at
+    FROM worksheet_step_problems
+    WHERE step_id = ${stepId}
+    ORDER BY question_number ASC
+  `;
+}
+
+export async function insertWorksheetStepProblem(stepId: string, questionNumber: number, questionImageUrl: string) {
+  const rows = await sql`
+    INSERT INTO worksheet_step_problems (step_id, question_number, question_image_url)
+    VALUES (${stepId}, ${questionNumber}, ${questionImageUrl})
+    RETURNING *
+  `;
+  return rows[0];
+}
+
+export async function deleteWorksheetStepProblem(problemId: string) {
+  await sql`DELETE FROM worksheet_step_problems WHERE id = ${problemId}`;
+}
+
+export async function updateWorksheetStepProblemAnswerKey(
+  stepId: string,
+  questionNumber: number,
+  correctAnswer: string | null,
+  explanationImageUrl: string | null,
+) {
+  const rows = await sql`
+    UPDATE worksheet_step_problems
+    SET correct_answer = ${correctAnswer}, explanation_image_url = ${explanationImageUrl}
+    WHERE step_id = ${stepId} AND question_number = ${questionNumber}
+    RETURNING *
+  `;
+  return rows[0];
+}

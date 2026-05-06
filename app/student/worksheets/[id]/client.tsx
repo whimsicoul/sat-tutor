@@ -7,7 +7,7 @@ import {
   ArrowLeft, ChevronLeft, ChevronRight, BookOpen, Layers,
   Lock, Eye, EyeOff,
 } from 'lucide-react';
-import type { FlowStep, FlowPage, FlowPosition, FlowAnswerKey } from './page';
+import type { FlowStep, FlowPage, FlowPosition, FlowAnswerKey, FlowProblem } from './page';
 
 const CHOICES = ['A', 'B', 'C', 'D'] as const;
 type Choice = typeof CHOICES[number];
@@ -186,6 +186,227 @@ function InstructionStep({ step }: { step: FlowStep }) {
 // ── Problems step ─────────────────────────────────────────────────────────────
 
 function ProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: string }) {
+  if (step.problems.length > 0) {
+    return <PdfProblemsStep step={step} worksheetId={worksheetId} />;
+  }
+  return <LegacyProblemsStep step={step} worksheetId={worksheetId} />;
+}
+
+// ── PDF-import problems step ──────────────────────────────────────────────────
+
+function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: string }) {
+  const problems = step.problems.slice().sort((a, b) => a.question_number - b.question_number);
+  const [currentQIdx, setCurrentQIdx] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const [revealing, setRevealing] = useState(false);
+
+  const currentProblem = problems[currentQIdx] as FlowProblem | undefined;
+
+  // For PDF-import problems we use a per-question response keyed by question_number
+  // and letter positions are encoded as questionNumber*10 + letterIndex (A=1..D=4)
+  const letterMap: Record<number, Choice> = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+  const letterToIndex: Record<string, number> = { A: 1, B: 2, C: 3, D: 4 };
+
+  // Responses keyed by question_number
+  const [responses, setResponses] = useState<Record<number, ResponseState>>(() => {
+    const map: Record<number, ResponseState> = {};
+    for (const r of step.initialResponses) {
+      map[r.question_number] = {
+        selectedAnswer: (r.selected_answer as Choice) ?? null,
+        eliminatedChoices: (r.eliminated_choices ?? []) as Choice[],
+      };
+    }
+    return map;
+  });
+
+  const saveTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+  const saveResponse = useCallback((questionNumber: number, state: ResponseState) => {
+    clearTimeout(saveTimers.current[questionNumber]);
+    saveTimers.current[questionNumber] = setTimeout(() => {
+      fetch(`/api/worksheets/${worksheetId}/steps/${step.id}/responses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionNumber,
+          selectedAnswer: state.selectedAnswer,
+          eliminatedChoices: state.eliminatedChoices,
+        }),
+      }).catch(() => undefined);
+    }, 300);
+  }, [worksheetId, step.id]);
+
+  function selectAnswer(questionNumber: number, choice: Choice) {
+    if (revealed) return;
+    setResponses((prev) => {
+      const existing = prev[questionNumber] ?? { selectedAnswer: null, eliminatedChoices: [] };
+      const next = { ...existing, selectedAnswer: existing.selectedAnswer === choice ? null : choice };
+      saveResponse(questionNumber, next);
+      return { ...prev, [questionNumber]: next };
+    });
+  }
+
+  async function revealAnswers() {
+    if (revealing || revealed) return;
+    setRevealing(true);
+    try {
+      // For PDF-import problems the answer is stored in the problem itself (correct_answer field)
+      // We don't need a separate reveal API call — it's already in the problems data
+      setRevealed(true);
+    } finally {
+      setRevealing(false);
+    }
+  }
+
+  const hasAnyAnswerKey = problems.some((p) => p.correct_answer);
+
+  if (!currentProblem) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, border: '1px dashed var(--fog)', borderRadius: 14, color: 'var(--mist)', fontSize: 13 }}>
+        No questions available.
+      </div>
+    );
+  }
+
+  // Get A/B/C/D positions for this question from positions array
+  // Encoded as: questionNumber * 10 + letterIndex (A=1, B=2, C=3, D=4)
+  const questionPositions = step.positions.filter(
+    (p) => Math.floor(p.question_number / 10) === currentProblem.question_number,
+  );
+
+  const state = responses[currentProblem.question_number] ?? { selectedAnswer: null, eliminatedChoices: [] };
+  const allAnswered = problems.every((p) => responses[p.question_number]?.selectedAnswer != null);
+  const canAdvance = !step.locked_nav || (responses[currentProblem.question_number]?.selectedAnswer != null);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Question image with positioned A/B/C/D bubbles */}
+      <div style={{ position: 'relative', width: '100%', borderRadius: 14, overflow: 'hidden', border: '1px solid var(--fog)' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={currentProblem.question_image_url} alt={`Question ${currentProblem.question_number}`} style={{ display: 'block', width: '100%' }} />
+
+        {questionPositions.map((pos) => {
+          const letter = letterMap[pos.question_number % 10];
+          if (!letter) return null;
+          const isSelected = state.selectedAnswer === letter;
+          const isCorrect = revealed && currentProblem.correct_answer === letter;
+          const isWrong = revealed && isSelected && currentProblem.correct_answer !== letter;
+          let bg = 'transparent';
+          let border = '1px solid var(--fog)';
+          let color = 'var(--mist)';
+          if (isCorrect) { bg = 'rgba(22,163,74,0.18)'; border = '1.5px solid #16a34a'; color = '#15803d'; }
+          else if (isWrong) { bg = 'rgba(239,68,68,0.18)'; border = '1.5px solid #ef4444'; color = '#b91c1c'; }
+          else if (isSelected) { bg = 'var(--rose)'; border = '1.5px solid var(--rose-deeper)'; color = 'var(--charcoal)'; }
+          return (
+            <div
+              key={pos.id}
+              onClick={() => selectAnswer(currentProblem.question_number, letter)}
+              style={{
+                position: 'absolute',
+                left: `${Number(pos.x_percent)}%`,
+                top: `${Number(pos.y_percent)}%`,
+                transform: 'translate(-50%, -50%)',
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                border,
+                background: bg,
+                color,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: revealed ? 'default' : 'pointer',
+                fontFamily: "'Syne', sans-serif",
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                transition: 'all 0.1s',
+              }}
+            >
+              {letter}
+            </div>
+          );
+        })}
+
+        {/* Fallback: if no positioned bubbles, show a floating ABCD row */}
+        {questionPositions.length === 0 && (
+          <div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6, background: 'rgba(255,255,255,0.92)', padding: '4px 10px', borderRadius: 20, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
+            {CHOICES.map((c) => {
+              const isSelected = state.selectedAnswer === c;
+              const isCorrect = revealed && currentProblem.correct_answer === c;
+              const isWrong = revealed && isSelected && currentProblem.correct_answer !== c;
+              let bg = 'transparent'; let border = '1px solid var(--fog)'; let color = 'var(--mist)';
+              if (isCorrect) { bg = 'rgba(22,163,74,0.18)'; border = '1.5px solid #16a34a'; color = '#15803d'; }
+              else if (isWrong) { bg = 'rgba(239,68,68,0.18)'; border = '1.5px solid #ef4444'; color = '#b91c1c'; }
+              else if (isSelected) { bg = 'var(--rose)'; border = '1.5px solid var(--rose-deeper)'; color = 'var(--charcoal)'; }
+              return (
+                <button key={c} onClick={() => selectAnswer(currentProblem.question_number, c)} style={{ width: 28, height: 28, borderRadius: '50%', border, background: bg, color, fontSize: 12, fontWeight: 700, cursor: revealed ? 'default' : 'pointer', fontFamily: "'Syne', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Explanation image (revealed) */}
+      {revealed && currentProblem.explanation_image_url && (
+        <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(22,163,74,0.3)', background: 'rgba(22,163,74,0.04)' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#15803d', padding: '8px 12px 0', margin: 0 }}>Explanation</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={currentProblem.explanation_image_url} alt="Explanation" style={{ display: 'block', width: '100%' }} />
+        </div>
+      )}
+
+      {/* Navigation */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <button
+          onClick={() => setCurrentQIdx((i) => Math.max(0, i - 1))}
+          disabled={currentQIdx === 0}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, border: '1px solid var(--fog)', background: currentQIdx === 0 ? 'transparent' : 'var(--frost)', color: currentQIdx === 0 ? 'var(--fog)' : 'var(--slate)', fontSize: 12, fontWeight: 600, cursor: currentQIdx === 0 ? 'default' : 'pointer', fontFamily: "'Syne', sans-serif" }}
+        >
+          <ChevronLeft size={14} /> Prev
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: 'var(--mist)', fontWeight: 500 }}>
+            Q{currentProblem.question_number} ({currentQIdx + 1} / {problems.length})
+          </span>
+          {hasAnyAnswerKey && (
+            <button
+              onClick={revealAnswers}
+              disabled={revealing}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 8, border: '1px solid rgba(224,166,175,0.4)', background: revealed ? 'rgba(224,166,175,0.14)' : 'transparent', color: 'var(--rose-deeper)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+            >
+              {revealed ? <Eye size={11} /> : <EyeOff size={11} />}
+              {revealing ? 'Loading…' : revealed ? 'Answers shown' : 'Reveal Answers'}
+            </button>
+          )}
+        </div>
+
+        <button
+          onClick={() => { if (canAdvance) setCurrentQIdx((i) => Math.min(problems.length - 1, i + 1)); }}
+          disabled={currentQIdx === problems.length - 1}
+          title={!canAdvance ? 'Answer this question first' : undefined}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, border: 'none', background: currentQIdx === problems.length - 1 ? 'var(--fog)' : (!canAdvance ? 'var(--fog)' : 'var(--rose)'), color: (currentQIdx === problems.length - 1 || !canAdvance) ? 'var(--mist)' : 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: (currentQIdx === problems.length - 1 || !canAdvance) ? 'not-allowed' : 'pointer', fontFamily: "'Syne', sans-serif", opacity: !canAdvance && currentQIdx < problems.length - 1 ? 0.6 : 1 }}
+        >
+          Next <ChevronRight size={14} />
+        </button>
+      </div>
+
+      {step.locked_nav && !allAnswered && (
+        <p style={{ fontSize: 11, color: 'var(--mist)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+          <Lock size={10} /> Answer all questions to continue
+        </p>
+      )}
+    </div>
+  );
+
+  void letterToIndex;
+}
+
+// ── Legacy (image-upload) problems step ──────────────────────────────────────
+
+function LegacyProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: string }) {
   const [pages] = useState<FlowPage[]>(step.pages);
   const [positions] = useState<FlowPosition[]>(step.positions);
   const [currentPageIdx, setCurrentPageIdx] = useState(0);

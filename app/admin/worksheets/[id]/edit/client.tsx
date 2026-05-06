@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { UploadButton } from '@uploadthing/react';
 import type { OurFileRouter } from '@/lib/uploadthing';
 import {
   ArrowLeft, Plus, Trash2, Image as ImageIcon, ChevronUp, ChevronDown,
-  BookOpen, Layers, Lock, Unlock, Key, GripVertical,
+  BookOpen, Layers, Lock, Unlock, Key, GripVertical, FileText, ChevronLeft, ChevronRight,
 } from 'lucide-react';
-import type { WsStep, WsPage, WsPosition, WsAnswerKeyEntry } from './page';
+import type { WsStep, WsPage, WsPosition, WsAnswerKeyEntry, WsProblem } from './page';
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -78,7 +78,7 @@ export default function WorksheetBuilderClient({
       });
       if (!res.ok) throw new Error('Failed to create step');
       const { step } = await res.json() as { step: Omit<WsStep, 'pages' | 'positions' | 'answerKey'> };
-      const full: WsStep = { ...step, type: step.type as 'instruction' | 'problems', pages: [], positions: [], answerKey: [] };
+      const full: WsStep = { ...step, type: step.type as 'instruction' | 'problems', pages: [], positions: [], answerKey: [], problems: [] };
       setSteps((prev) => [...prev, full]);
       setSelectedStepId(full.id);
       setAddingStep(false);
@@ -312,6 +312,689 @@ export default function WorksheetBuilderClient({
   );
 }
 
+// ── PDF Import Tab ────────────────────────────────────────────────────────────
+
+type PdfPhase = 'crop' | 'bubbles' | 'answerkey';
+
+interface CropRect { x: number; y: number; w: number; h: number }
+
+function PdfImportTab({
+  wsId,
+  stepId,
+  problems,
+  positions,
+  onProblemsChange,
+  onPositionsChange,
+}: {
+  wsId: string;
+  stepId: string;
+  problems: WsProblem[];
+  positions: WsPosition[];
+  onProblemsChange: (p: WsProblem[]) => void;
+  onPositionsChange: (p: WsPosition[]) => void;
+}) {
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfDoc, setPdfDoc] = useState<unknown>(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [phase, setPhase] = useState<PdfPhase>('crop');
+
+  // Crop state
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [cropRect, setCropRect] = useState<CropRect | null>(null);
+  const [croppingProblem, setCroppingProblem] = useState(false);
+
+  // Bubble placement state
+  const [bubbleQIdx, setBubbleQIdx] = useState(0);
+  const [placingBubbleLetter, setPlacingBubbleLetter] = useState<string | null>(null);
+
+  // Answer key state
+  const [akQIdx, setAkQIdx] = useState(0);
+  const [akEdits, setAkEdits] = useState<Record<number, { letter: string; expUrl: string | null }>>({});
+  const [akCropRect, setAkCropRect] = useState<CropRect | null>(null);
+  const [akDragStart, setAkDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [savingAk, setSavingAk] = useState<number | null>(null);
+
+  // Load pdf.js and render current page whenever pdfDoc or currentPage changes
+  useEffect(() => {
+    if (!pdfDoc || !canvasRef.current) return;
+    const doc = pdfDoc as { getPage: (n: number) => Promise<unknown> };
+    let cancelled = false;
+    (async () => {
+      const page = await doc.getPage(currentPage) as {
+        getViewport: (opts: { scale: number }) => { width: number; height: number };
+        render: (ctx: unknown) => { promise: Promise<void> };
+      };
+      if (cancelled) return;
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = canvasRef.current!;
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d')!;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+    })();
+    return () => { cancelled = true; };
+  }, [pdfDoc, currentPage]);
+
+  async function loadPdf(url: string) {
+    const pdfjsLib = await import('pdfjs-dist');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+    const doc = await pdfjsLib.getDocument(url).promise;
+    setPdfDoc(doc);
+    setTotalPages(doc.numPages);
+    setCurrentPage(1);
+    setCropRect(null);
+  }
+
+  function getCanvasRelativeRect(e: React.MouseEvent<HTMLCanvasElement>): { x: number; y: number } {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const scaleX = e.currentTarget.width / rect.width;
+    const scaleY = e.currentTarget.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  }
+
+  function onCropMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    const pos = getCanvasRelativeRect(e);
+    setDragStart(pos);
+    setCropRect(null);
+  }
+
+  function onCropMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (!dragStart || !canvasRef.current) return;
+    const pos = getCanvasRelativeRect(e);
+    const x = Math.min(dragStart.x, pos.x);
+    const y = Math.min(dragStart.y, pos.y);
+    const w = Math.abs(pos.x - dragStart.x);
+    const h = Math.abs(pos.y - dragStart.y);
+    setCropRect({ x, y, w, h });
+  }
+
+  function onCropMouseUp() {
+    setDragStart(null);
+  }
+
+  async function cropAndUpload(rect: CropRect): Promise<string | null> {
+    if (!canvasRef.current) return null;
+    const src = canvasRef.current;
+    const off = document.createElement('canvas');
+    off.width = rect.w;
+    off.height = rect.h;
+    const ctx = off.getContext('2d')!;
+    ctx.drawImage(src, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
+    const blob = await new Promise<Blob | null>((resolve) => off.toBlob(resolve, 'image/png'));
+    if (!blob) return null;
+    const formData = new FormData();
+    formData.append('file', new File([blob], 'crop.png', { type: 'image/png' }));
+    const res = await fetch('/api/admin/worksheets/upload-crop', { method: 'POST', body: formData });
+    if (!res.ok) return null;
+    const { url } = await res.json() as { url: string };
+    return url;
+  }
+
+  async function handleAddQuestion() {
+    if (!cropRect || cropRect.w < 10 || cropRect.h < 10) { toast.error('Draw a selection first'); return; }
+    setCroppingProblem(true);
+    try {
+      const url = await cropAndUpload(cropRect);
+      if (!url) { toast.error('Upload failed'); return; }
+      const nextNum = problems.length > 0 ? Math.max(...problems.map((p) => p.question_number)) + 1 : 1;
+      const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionNumber: nextNum, questionImageUrl: url }),
+      });
+      if (!res.ok) { toast.error('Failed to save question'); return; }
+      const { problem } = await res.json() as { problem: WsProblem };
+      onProblemsChange([...problems, problem]);
+      setCropRect(null);
+      toast.success(`Question ${nextNum} added`);
+    } catch {
+      toast.error('Failed to add question');
+    } finally {
+      setCroppingProblem(false);
+    }
+  }
+
+  async function handleDeleteProblem(problemId: string, qNum: number) {
+    if (!confirm(`Delete question ${qNum}?`)) return;
+    const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ problemId }),
+    });
+    if (!res.ok) { toast.error('Delete failed'); return; }
+    onProblemsChange(problems.filter((p) => p.id !== problemId));
+    toast.success(`Question ${qNum} deleted`);
+  }
+
+  // Bubble placement on cropped question image
+  async function handleBubbleImageClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (!placingBubbleLetter) return;
+    const problem = problems[bubbleQIdx];
+    if (!problem) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const xPercent = ((e.clientX - rect.left) / rect.width) * 100;
+    const yPercent = ((e.clientY - rect.top) / rect.height) * 100;
+    const questionNumber = problem.question_number;
+    const letterMap: Record<string, number> = { A: 1, B: 2, C: 3, D: 4 };
+    const encodedQNum = questionNumber * 10 + (letterMap[placingBubbleLetter] ?? 0);
+    const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/positions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionNumber: encodedQNum, pageNumber: questionNumber, xPercent, yPercent }),
+    });
+    if (!res.ok) { toast.error('Failed to place bubble'); return; }
+    const { position } = await res.json() as { position: WsPosition };
+    onPositionsChange([...positions.filter((p) => p.question_number !== encodedQNum), position]);
+    toast.success(`Placed ${placingBubbleLetter} on Q${questionNumber}`);
+  }
+
+  async function handleSaveAnswerKey(problem: WsProblem) {
+    const edit = akEdits[problem.question_number];
+    if (!edit?.letter) { toast.error('Select a correct answer first'); return; }
+    setSavingAk(problem.question_number);
+    try {
+      const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionNumber: problem.question_number,
+          correctAnswer: edit.letter,
+          explanationImageUrl: edit.expUrl ?? null,
+        }),
+      });
+      if (!res.ok) { toast.error('Save failed'); return; }
+      const { problem: updated } = await res.json() as { problem: WsProblem };
+      onProblemsChange(problems.map((p) => p.id === updated.id ? updated : p));
+      toast.success(`Answer key saved for Q${problem.question_number}`);
+    } catch {
+      toast.error('Save failed');
+    } finally {
+      setSavingAk(null);
+    }
+  }
+
+  async function handleCropExplanation(problem: WsProblem) {
+    if (!akCropRect || akCropRect.w < 10 || akCropRect.h < 10) { toast.error('Draw a selection on the PDF first'); return; }
+    const url = await cropAndUpload(akCropRect);
+    if (!url) { toast.error('Upload failed'); return; }
+    setAkEdits((prev) => ({ ...prev, [problem.question_number]: { ...prev[problem.question_number], letter: prev[problem.question_number]?.letter ?? '', expUrl: url } }));
+    setAkCropRect(null);
+    toast.success('Explanation image cropped');
+  }
+
+  const bubbleProblem = problems[bubbleQIdx] ?? null;
+  const akProblem = problems[akQIdx] ?? null;
+
+  const getPositionsForProblem = (qNum: number) =>
+    positions.filter((p) => Math.floor(p.question_number / 10) === qNum);
+
+  const letterFromEncoded = (encoded: number) => {
+    const letterMap: Record<number, string> = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
+    return letterMap[encoded % 10] ?? '?';
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Phase selector */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        {(['crop', 'bubbles', 'answerkey'] as PdfPhase[]).map((p) => {
+          const labels: Record<PdfPhase, string> = { crop: '1. Crop Questions', bubbles: '2. Place Bubbles', answerkey: '3. Answer Key' };
+          return (
+            <button
+              key={p}
+              onClick={() => setPhase(p)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 600,
+                fontFamily: "'Syne', sans-serif",
+                border: `1px solid ${phase === p ? 'rgba(224,166,175,0.5)' : 'var(--fog)'}`,
+                background: phase === p ? 'rgba(224,166,175,0.12)' : 'var(--frost)',
+                color: phase === p ? 'var(--charcoal)' : 'var(--mist)',
+                cursor: 'pointer',
+              }}
+            >
+              {labels[p]}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Phase 1: Crop Questions ── */}
+      {phase === 'crop' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {!pdfUrl ? (
+            <div style={{ border: '2px dashed rgba(168,203,222,0.4)', borderRadius: 10, padding: 24, background: 'rgba(168,203,222,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <FileText size={28} style={{ color: 'var(--sky-deeper)', opacity: 0.6 }} />
+              <p style={{ fontSize: 13, color: 'var(--mist)', textAlign: 'center' }}>Upload the PDF to start cropping questions</p>
+              <UploadButton<OurFileRouter, 'pdfUploader'>
+                endpoint="pdfUploader"
+                onClientUploadComplete={async (files) => {
+                  if (!files[0]) return;
+                  const url = files[0].ufsUrl ?? files[0].url;
+                  setPdfUrl(url);
+                  await loadPdf(url);
+                  toast.success('PDF loaded');
+                }}
+                onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
+                appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-xs font-semibold py-2 px-4 rounded-lg font-[Syne]' }}
+              />
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 20, alignItems: 'start' }}>
+              {/* PDF canvas */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: currentPage === 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span style={{ fontSize: 12, color: 'var(--slate)', fontWeight: 600 }}>Page {currentPage} / {totalPages}</span>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: currentPage === totalPages ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                  <button
+                    onClick={() => { setPdfUrl(null); setPdfDoc(null); setTotalPages(0); setCropRect(null); }}
+                    style={{ marginLeft: 'auto', fontSize: 11, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+                  >
+                    Change PDF
+                  </button>
+                </div>
+
+                <p style={{ fontSize: 11, color: 'var(--mist)', margin: 0 }}>
+                  Click and drag on the PDF to select a question region, then click <strong>Add Question</strong>.
+                </p>
+
+                {/* Canvas with selection overlay */}
+                <div style={{ position: 'relative', width: '100%', border: '1px solid var(--fog)', borderRadius: 10, overflow: 'hidden', userSelect: 'none' }}>
+                  <canvas
+                    ref={canvasRef}
+                    style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
+                    onMouseDown={onCropMouseDown}
+                    onMouseMove={onCropMouseMove}
+                    onMouseUp={onCropMouseUp}
+                  />
+                  {cropRect && cropRect.w > 4 && canvasRef.current && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: `${(cropRect.x / canvasRef.current.width) * 100}%`,
+                        top: `${(cropRect.y / canvasRef.current.height) * 100}%`,
+                        width: `${(cropRect.w / canvasRef.current.width) * 100}%`,
+                        height: `${(cropRect.h / canvasRef.current.height) * 100}%`,
+                        border: '2px solid rgba(168,203,222,0.9)',
+                        background: 'rgba(168,203,222,0.15)',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  )}
+                </div>
+
+                <button
+                  onClick={handleAddQuestion}
+                  disabled={croppingProblem || !cropRect}
+                  style={{
+                    alignSelf: 'flex-start',
+                    padding: '8px 20px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: cropRect ? 'var(--rose)' : 'var(--fog)',
+                    color: 'var(--charcoal)',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: cropRect ? 'pointer' : 'default',
+                    fontFamily: "'Syne', sans-serif",
+                  }}
+                >
+                  {croppingProblem ? 'Adding…' : '+ Add Question'}
+                </button>
+              </div>
+
+              {/* Questions list */}
+              <div>
+                <p style={sectionHead}>Cropped Questions ({problems.length})</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 600, overflowY: 'auto' }}>
+                  {problems.sort((a, b) => a.question_number - b.question_number).map((prob) => (
+                    <div key={prob.id} style={{ border: '1px solid var(--fog)', borderRadius: 8, overflow: 'hidden', background: 'var(--frost)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--charcoal)' }}>Q{prob.question_number}</span>
+                        <button
+                          onClick={() => handleDeleteProblem(prob.id, prob.question_number)}
+                          style={{ marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloud)', padding: 2, display: 'flex', alignItems: 'center' }}
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={prob.question_image_url} alt={`Q${prob.question_number}`} style={{ display: 'block', width: '100%' }} />
+                    </div>
+                  ))}
+                  {problems.length === 0 && <p style={{ fontSize: 11, color: 'var(--cloud)', textAlign: 'center', padding: 16 }}>No questions yet — crop from the PDF</p>}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Phase 2: Place Bubbles ── */}
+      {phase === 'bubbles' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {problems.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--mist)', textAlign: 'center', padding: 32 }}>Crop questions first in the &quot;Crop Questions&quot; phase.</p>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button
+                  onClick={() => setBubbleQIdx((i) => Math.max(0, i - 1))}
+                  disabled={bubbleQIdx === 0}
+                  style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === 0 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--charcoal)' }}>
+                  Q{bubbleProblem?.question_number} ({bubbleQIdx + 1} / {problems.length})
+                </span>
+                <button
+                  onClick={() => setBubbleQIdx((i) => Math.min(problems.length - 1, i + 1))}
+                  disabled={bubbleQIdx === problems.length - 1}
+                  style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+
+              {bubbleProblem && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: 16, alignItems: 'start' }}>
+                  <div>
+                    <p style={{ fontSize: 11, color: 'var(--mist)', marginBottom: 8 }}>
+                      Select a letter to place, then click on the question image to position it.
+                    </p>
+                    <div
+                      onClick={handleBubbleImageClick}
+                      style={{ position: 'relative', width: '100%', cursor: placingBubbleLetter ? 'crosshair' : 'default', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--fog)' }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={bubbleProblem.question_image_url} alt={`Q${bubbleProblem.question_number}`} style={{ display: 'block', width: '100%' }} />
+                      {getPositionsForProblem(bubbleProblem.question_number).map((pos) => (
+                        <div
+                          key={pos.id}
+                          style={{
+                            position: 'absolute',
+                            left: `${pos.x_percent}%`,
+                            top: `${pos.y_percent}%`,
+                            transform: 'translate(-50%, -50%)',
+                            background: 'rgba(224,166,175,0.9)',
+                            border: '2px solid #fff',
+                            borderRadius: '50%',
+                            width: 24,
+                            height: 24,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: '#1A1D23',
+                            fontFamily: "'Syne', sans-serif",
+                            pointerEvents: 'none',
+                          }}
+                        >
+                          {letterFromEncoded(pos.question_number)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <p style={sectionHead}>Select letter to place</p>
+                    {['A', 'B', 'C', 'D'].map((letter) => {
+                      const placed = getPositionsForProblem(bubbleProblem.question_number)
+                        .some((p) => letterFromEncoded(p.question_number) === letter);
+                      return (
+                        <button
+                          key={letter}
+                          onClick={() => setPlacingBubbleLetter((l) => l === letter ? null : letter)}
+                          style={{
+                            padding: '8px 0',
+                            borderRadius: 8,
+                            border: `1px solid ${placingBubbleLetter === letter ? 'rgba(224,166,175,0.5)' : placed ? 'rgba(21,128,61,0.4)' : 'var(--fog)'}`,
+                            background: placingBubbleLetter === letter ? 'rgba(224,166,175,0.15)' : placed ? 'rgba(21,128,61,0.08)' : 'var(--frost)',
+                            color: placed ? '#15803d' : 'var(--charcoal)',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            fontFamily: "'Syne', sans-serif",
+                          }}
+                        >
+                          {letter} {placed ? '✓' : ''}
+                        </button>
+                      );
+                    })}
+                    {getPositionsForProblem(bubbleProblem.question_number).map((pos) => (
+                      <div key={pos.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--slate)' }}>
+                        <span style={{ fontWeight: 600 }}>{letterFromEncoded(pos.question_number)}</span>
+                        <span style={{ color: 'var(--mist)' }}>({pos.x_percent.toFixed(0)}%, {pos.y_percent.toFixed(0)}%)</span>
+                        <button
+                          onClick={async () => {
+                            const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/positions`, {
+                              method: 'DELETE',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ positionId: pos.id }),
+                            });
+                            if (res.ok) onPositionsChange(positions.filter((p) => p.id !== pos.id));
+                          }}
+                          style={{ marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloud)', padding: 1, display: 'flex', alignItems: 'center' }}
+                        >
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Phase 3: Answer Key ── */}
+      {phase === 'answerkey' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {problems.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--mist)', textAlign: 'center', padding: 32 }}>Crop questions first.</p>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button
+                  onClick={() => setAkQIdx((i) => Math.max(0, i - 1))}
+                  disabled={akQIdx === 0}
+                  style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: akQIdx === 0 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--charcoal)' }}>
+                  Q{akProblem?.question_number} ({akQIdx + 1} / {problems.length})
+                </span>
+                <button
+                  onClick={() => setAkQIdx((i) => Math.min(problems.length - 1, i + 1))}
+                  disabled={akQIdx === problems.length - 1}
+                  style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: akQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+
+              {akProblem && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+                  {/* Left: question image + letter selector */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <p style={sectionHead}>Question {akProblem.question_number}</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={akProblem.question_image_url} alt={`Q${akProblem.question_number}`} style={{ display: 'block', width: '100%', borderRadius: 8, border: '1px solid var(--fog)' }} />
+
+                    <div>
+                      <p style={{ ...sectionHead, marginBottom: 8 }}>Correct Answer</p>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {['A', 'B', 'C', 'D'].map((letter) => {
+                          const current = akEdits[akProblem.question_number]?.letter ?? akProblem.correct_answer ?? '';
+                          return (
+                            <button
+                              key={letter}
+                              onClick={() => setAkEdits((prev) => ({ ...prev, [akProblem.question_number]: { ...prev[akProblem.question_number], letter, expUrl: prev[akProblem.question_number]?.expUrl ?? null } }))}
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: '50%',
+                                border: `1px solid ${current === letter ? 'var(--rose-deeper)' : 'var(--fog)'}`,
+                                background: current === letter ? 'var(--rose)' : 'var(--frost)',
+                                color: 'var(--charcoal)',
+                                fontSize: 13,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                fontFamily: "'Syne', sans-serif",
+                              }}
+                            >
+                              {letter}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Existing explanation */}
+                    {(akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url) && (
+                      <div>
+                        <p style={{ ...sectionHead, marginBottom: 6 }}>Explanation Image</p>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url!}
+                          alt="explanation"
+                          style={{ display: 'block', width: '100%', borderRadius: 8, border: '1px solid var(--fog)' }}
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => handleSaveAnswerKey(akProblem)}
+                      disabled={savingAk === akProblem.question_number}
+                      style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif", alignSelf: 'flex-start' }}
+                    >
+                      {savingAk === akProblem.question_number ? 'Saving…' : 'Save Answer Key'}
+                    </button>
+                  </div>
+
+                  {/* Right: PDF to crop explanation */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <p style={sectionHead}>Crop Explanation from PDF</p>
+                    {!pdfUrl ? (
+                      <div style={{ border: '2px dashed rgba(168,203,222,0.4)', borderRadius: 10, padding: 16, background: 'rgba(168,203,222,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                        <p style={{ fontSize: 11, color: 'var(--mist)', textAlign: 'center' }}>Upload or re-load the PDF to crop the explanation</p>
+                        <UploadButton<OurFileRouter, 'pdfUploader'>
+                          endpoint="pdfUploader"
+                          onClientUploadComplete={async (files) => {
+                            if (!files[0]) return;
+                            const url = files[0].ufsUrl ?? files[0].url;
+                            setPdfUrl(url);
+                            await loadPdf(url);
+                            toast.success('PDF loaded');
+                          }}
+                          onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
+                          appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-xs font-semibold py-1.5 px-3 rounded-lg font-[Syne]' }}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <button
+                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '3px 8px', cursor: currentPage === 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
+                          >
+                            <ChevronLeft size={12} />
+                          </button>
+                          <span style={{ fontSize: 11, color: 'var(--slate)', fontWeight: 600 }}>Page {currentPage} / {totalPages}</span>
+                          <button
+                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '3px 8px', cursor: currentPage === totalPages ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
+                          >
+                            <ChevronRight size={12} />
+                          </button>
+                        </div>
+                        <p style={{ fontSize: 11, color: 'var(--mist)', margin: 0 }}>
+                          Drag to select the explanation region, then click <strong>Crop Explanation</strong>.
+                        </p>
+                        <div style={{ position: 'relative', width: '100%', border: '1px solid var(--fog)', borderRadius: 8, overflow: 'hidden', userSelect: 'none' }}>
+                          <canvas
+                            ref={canvasRef}
+                            style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
+                            onMouseDown={(e) => { const p = getCanvasRelativeRect(e); setAkDragStart(p); setAkCropRect(null); }}
+                            onMouseMove={(e) => {
+                              if (!akDragStart) return;
+                              const pos = getCanvasRelativeRect(e);
+                              setAkCropRect({ x: Math.min(akDragStart.x, pos.x), y: Math.min(akDragStart.y, pos.y), w: Math.abs(pos.x - akDragStart.x), h: Math.abs(pos.y - akDragStart.y) });
+                            }}
+                            onMouseUp={() => setAkDragStart(null)}
+                          />
+                          {akCropRect && akCropRect.w > 4 && canvasRef.current && (
+                            <div
+                              style={{
+                                position: 'absolute',
+                                left: `${(akCropRect.x / canvasRef.current.width) * 100}%`,
+                                top: `${(akCropRect.y / canvasRef.current.height) * 100}%`,
+                                width: `${(akCropRect.w / canvasRef.current.width) * 100}%`,
+                                height: `${(akCropRect.h / canvasRef.current.height) * 100}%`,
+                                border: '2px solid rgba(224,166,175,0.9)',
+                                background: 'rgba(224,166,175,0.15)',
+                                pointerEvents: 'none',
+                              }}
+                            />
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleCropExplanation(akProblem)}
+                          disabled={!akCropRect}
+                          style={{
+                            alignSelf: 'flex-start',
+                            padding: '7px 16px',
+                            borderRadius: 8,
+                            border: 'none',
+                            background: akCropRect ? 'var(--rose)' : 'var(--fog)',
+                            color: 'var(--charcoal)',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: akCropRect ? 'pointer' : 'default',
+                            fontFamily: "'Syne', sans-serif",
+                          }}
+                        >
+                          Crop Explanation
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Instruction Step Editor ───────────────────────────────────────────────────
 
 function InstructionStepEditor({
@@ -432,7 +1115,7 @@ function InstructionStepEditor({
 
 // ── Problems Step Editor ──────────────────────────────────────────────────────
 
-type ProblemsTab = 'pages' | 'answerkey';
+type ProblemsTab = 'pages' | 'answerkey' | 'pdfimport';
 
 function ProblemsStepEditor({
   step,
@@ -454,6 +1137,7 @@ function ProblemsStepEditor({
   const [pages, setPages] = useState<WsPage[]>(step.pages);
   const [positions, setPositions] = useState<WsPosition[]>(step.positions);
   const [answerKey, setAnswerKey] = useState<WsAnswerKeyEntry[]>(step.answerKey);
+  const [problems, setProblems] = useState<WsProblem[]>(step.problems);
   const [activePage, setActivePage] = useState<number>(step.pages[0]?.page_number ?? 1);
   const [placingQuestion, setPlacingQuestion] = useState<number | null>(null);
   const [keyEdits, setKeyEdits] = useState<Record<number, string>>({});
@@ -610,6 +1294,9 @@ function ProblemsStepEditor({
         <button style={tabStyle(tab === 'answerkey')} onClick={() => setTab('answerkey')}>
           <Key size={12} style={{ display: 'inline', marginRight: 4 }} />Answer Key
         </button>
+        <button style={tabStyle(tab === 'pdfimport')} onClick={() => setTab('pdfimport')}>
+          <FileText size={12} style={{ display: 'inline', marginRight: 4 }} />PDF Import
+        </button>
       </div>
 
       {/* ── Pages & Bubbles tab ── */}
@@ -752,6 +1439,18 @@ function ProblemsStepEditor({
             )}
           </div>
         </div>
+      )}
+
+      {/* ── PDF Import tab ── */}
+      {tab === 'pdfimport' && (
+        <PdfImportTab
+          wsId={wsId}
+          stepId={stepId}
+          problems={problems}
+          positions={positions}
+          onProblemsChange={setProblems}
+          onPositionsChange={setPositions}
+        />
       )}
 
       {/* ── Answer Key tab ── */}

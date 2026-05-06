@@ -7,8 +7,17 @@ import {
   getWorksheetStepPositions,
   getWorksheetStepAnswerKey,
   getWorksheetStepResponses,
+  getWorksheetStepProblems,
 } from '@/lib/db';
 import WorksheetFlowClient from './client';
+
+export interface FlowProblem {
+  id: string;
+  question_number: number;
+  question_image_url: string;
+  correct_answer: string | null;
+  explanation_image_url: string | null;
+}
 
 export interface FlowStep {
   id: string;
@@ -22,6 +31,7 @@ export interface FlowStep {
   positions: FlowPosition[];
   answerKey: FlowAnswerKey[];
   initialResponses: FlowResponse[];
+  problems: FlowProblem[];
 }
 
 export interface FlowPage {
@@ -68,11 +78,12 @@ export default async function StudentWorksheetPage({
       id: string; step_order: number; title: string; type: string;
       stage_label: string | null; locked_nav: boolean; pdf_url: string | null;
     }[]).map(async (step) => {
-      const [pages, positions, answerKey, responses] = await Promise.all([
+      const [pages, positions, answerKey, responses, problems] = await Promise.all([
         getWorksheetStepPages(step.id),
         getWorksheetStepPositions(step.id),
         getWorksheetStepAnswerKey(step.id),
         getWorksheetStepResponses(step.id, user.id!),
+        getWorksheetStepProblems(step.id),
       ]);
       return {
         ...step,
@@ -81,6 +92,7 @@ export default async function StudentWorksheetPage({
         positions: positions as unknown as FlowPosition[],
         answerKey: answerKey as unknown as FlowAnswerKey[],
         initialResponses: (responses as unknown as FlowResponse[]),
+        problems: problems as unknown as FlowProblem[],
       } as FlowStep;
     }),
   );
