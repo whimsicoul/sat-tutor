@@ -373,7 +373,7 @@ function PdfImportTab({
   const [akDragStart, setAkDragStart] = useState<{ x: number; y: number } | null>(null);
   const [savingAk, setSavingAk] = useState<number | null>(null);
 
-  const [pdfZoom, setPdfZoom] = useState(1.0);
+  const [pdfZoom, setPdfZoom] = useState(1.5);
   const ZOOM_MIN = 0.25;
   const ZOOM_MAX = 3.0;
   const ZOOM_STEP = 0.25;
@@ -909,7 +909,7 @@ function PdfImportTab({
               {akProblem && (
                 <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
                   {/* Left: question image + answer selector */}
-                  <div style={{ width: 320, flexShrink: 0, overflowY: 'auto', padding: 16, borderRight: '1px solid var(--fog)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ width: 240, flexShrink: 0, overflowY: 'auto', padding: 16, borderRight: '1px solid var(--fog)', display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div>
                       <p style={sectionHead}>Question {akProblem.question_number}</p>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -923,7 +923,25 @@ function PdfImportTab({
                           return (
                             <button
                               key={letter}
-                              onClick={() => setAkEdits((prev) => ({ ...prev, [akProblem.question_number]: { ...prev[akProblem.question_number], letter, expUrl: prev[akProblem.question_number]?.expUrl ?? null } }))}
+                              onClick={async () => {
+                                const expUrl = akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url ?? null;
+                                setAkEdits((prev) => ({ ...prev, [akProblem.question_number]: { letter, expUrl: prev[akProblem.question_number]?.expUrl ?? null } }));
+                                setSavingAk(akProblem.question_number);
+                                try {
+                                  const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ questionNumber: akProblem.question_number, correctAnswer: letter, explanationImageUrl: expUrl }),
+                                  });
+                                  if (res.ok) {
+                                    const { problem: updated } = await res.json() as { problem: WsProblem };
+                                    onProblemsChange(problems.map((p) => p.id === updated.id ? updated : p));
+                                    if (akQIdx < problems.length - 1) setAkQIdx((i) => i + 1);
+                                  }
+                                } finally {
+                                  setSavingAk(null);
+                                }
+                              }}
                               style={{
                                 width: 44,
                                 height: 44,
