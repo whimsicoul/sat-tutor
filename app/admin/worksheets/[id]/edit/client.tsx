@@ -379,7 +379,7 @@ function PdfImportTab({
 
   async function loadPdf(url: string) {
     const pdfjsLib = await import('pdfjs-dist');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
     const doc = await pdfjsLib.getDocument(url).promise;
     setPdfDoc(doc);
     setTotalPages(doc.numPages);
