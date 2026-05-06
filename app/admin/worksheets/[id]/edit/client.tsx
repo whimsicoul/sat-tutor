@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { UploadButton } from '@uploadthing/react';
 import type { OurFileRouter } from '@/lib/uploadthing';
 import {
-  ArrowLeft, Plus, Trash2, Image as ImageIcon, ChevronUp, ChevronDown,
-  BookOpen, Layers, Lock, Unlock, Key, GripVertical, FileText, ChevronLeft, ChevronRight,
+  ArrowLeft, Plus, Trash2, ChevronUp, ChevronDown,
+  BookOpen, Layers, Lock, Unlock, GripVertical, FileText, ChevronLeft, ChevronRight,
   PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
-import type { WsStep, WsPage, WsPosition, WsAnswerKeyEntry, WsProblem } from './page';
+import type { WsStep, WsPosition, WsProblem } from './page';
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -555,26 +555,32 @@ function PdfImportTab({
     }
   }
 
-  async function handleSaveAnswerKey(problem: WsProblem) {
-    const edit = akEdits[problem.question_number];
-    if (!edit?.letter) { toast.error('Select a correct answer first'); return; }
-    setSavingAk(problem.question_number);
+  async function handleSaveAllAnswers() {
+    const answeredProblems = problems.filter((p) => {
+      const letter = akEdits[p.question_number]?.letter ?? p.correct_answer;
+      return letter && /^[A-D]$/i.test(letter);
+    });
+    if (answeredProblems.length === 0) { toast.error('No answers to save'); return; }
+    setSavingAk(-1);
     try {
-      const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          questionNumber: problem.question_number,
-          correctAnswer: edit.letter,
-          explanationImageUrl: edit.expUrl ?? null,
+      const results = await Promise.all(
+        answeredProblems.map(async (p) => {
+          const letter = (akEdits[p.question_number]?.letter ?? p.correct_answer ?? '').toUpperCase();
+          const expUrl = akEdits[p.question_number]?.expUrl ?? p.explanation_image_url ?? null;
+          const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questionNumber: p.question_number, correctAnswer: letter, explanationImageUrl: expUrl }),
+          });
+          if (!res.ok) throw new Error(`Q${p.question_number} failed`);
+          const { problem: updated } = await res.json() as { problem: WsProblem };
+          return updated;
         }),
-      });
-      if (!res.ok) { toast.error('Save failed'); return; }
-      const { problem: updated } = await res.json() as { problem: WsProblem };
-      onProblemsChange(problems.map((p) => p.id === updated.id ? updated : p));
-      toast.success(`Answer key saved for Q${problem.question_number}`);
-    } catch {
-      toast.error('Save failed');
+      );
+      onProblemsChange(problems.map((p) => results.find((u) => u.id === p.id) ?? p));
+      toast.success(`Saved ${results.length} answers`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setSavingAk(null);
     }
@@ -918,15 +924,14 @@ function PdfImportTab({
                 <button onClick={() => setAkQIdx((i) => Math.min(problems.length - 1, i + 1))} disabled={akQIdx === problems.length - 1} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: akQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronRight size={14} />
                 </button>
-                {akProblem && (
-                  <button
-                    onClick={() => handleSaveAnswerKey(akProblem)}
-                    disabled={savingAk === akProblem.question_number}
-                    style={{ marginLeft: 'auto', padding: '6px 18px', borderRadius: 8, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
-                  >
-                    {savingAk === akProblem.question_number ? 'Saving…' : 'Save Answer Key'}
-                  </button>
-                )}
+                {savingAk !== null && <span style={{ fontSize: 11, color: 'var(--mist)', marginLeft: 4 }}>Saving…</span>}
+                <button
+                  onClick={handleSaveAllAnswers}
+                  disabled={savingAk !== null}
+                  style={{ marginLeft: 'auto', padding: '6px 18px', borderRadius: 8, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: savingAk !== null ? 'default' : 'pointer', fontFamily: "'Syne', sans-serif" }}
+                >
+                  {savingAk === -1 ? 'Saving…' : 'Save All Answers'}
+                </button>
               </div>
 
               {akProblem && (
@@ -1195,8 +1200,6 @@ function InstructionStepEditor({
 
 // ── Problems Step Editor ──────────────────────────────────────────────────────
 
-type ProblemsTab = 'pages' | 'answerkey' | 'pdfimport';
-
 function ProblemsStepEditor({
   step,
   wsId,
@@ -1208,20 +1211,13 @@ function ProblemsStepEditor({
   onUpdate: (patch: Partial<WsStep>) => void;
   onSaveField: (stepId: string, field: Record<string, unknown>) => Promise<boolean>;
 }) {
-  const [tab, setTab] = useState<ProblemsTab>('pages');
   const [title, setTitle] = useState(step.title);
   const [stageLabel, setStageLabel] = useState(step.stage_label ?? '');
   const [lockedNav, setLockedNav] = useState(step.locked_nav);
   const [savingMeta, setSavingMeta] = useState(false);
 
-  const [pages, setPages] = useState<WsPage[]>(step.pages);
   const [positions, setPositions] = useState<WsPosition[]>(step.positions);
-  const [answerKey, setAnswerKey] = useState<WsAnswerKeyEntry[]>(step.answerKey);
   const [problems, setProblems] = useState<WsProblem[]>(step.problems);
-  const [activePage, setActivePage] = useState<number>(step.pages[0]?.page_number ?? 1);
-  const [placingQuestion, setPlacingQuestion] = useState<number | null>(null);
-  const [keyEdits, setKeyEdits] = useState<Record<number, string>>({});
-  const [savingKey, setSavingKey] = useState(false);
 
   const stepId = step.id;
 
@@ -1235,102 +1231,10 @@ function ProblemsStepEditor({
     setSavingMeta(false);
   }
 
-  async function handleDeletePage(pageId: string, pageNumber: number) {
-    if (!confirm(`Delete page ${pageNumber}?`)) return;
-    const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/pages/${pageId}`, { method: 'DELETE' });
-    if (!res.ok) { toast.error('Delete failed'); return; }
-    setPages((prev) => prev.filter((p) => p.id !== pageId));
-    toast.success('Page deleted');
-  }
-
-  const handleImageClick = useCallback(async (e: React.MouseEvent<HTMLDivElement>, pageNumber: number) => {
-    if (placingQuestion === null) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const xPercent = ((e.clientX - rect.left) / rect.width) * 100;
-    const yPercent = ((e.clientY - rect.top) / rect.height) * 100;
-
-    const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/positions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionNumber: placingQuestion, pageNumber, xPercent, yPercent }),
-    });
-    if (!res.ok) { toast.error('Failed to place marker'); return; }
-    const { position } = await res.json() as { position: WsPosition };
-    setPositions((prev) => [...prev.filter((p) => p.question_number !== placingQuestion), position]);
-    toast.success(`Placed Q${placingQuestion}`);
-
-    const placed = positions.map((p) => p.question_number);
-    const maxQ = Math.max(placingQuestion, ...placed);
-    const nextQ = placingQuestion + 1;
-    setPlacingQuestion(nextQ <= maxQ + 1 ? nextQ : null);
-  }, [placingQuestion, wsId, stepId, positions]);
-
-  async function handleDeletePosition(positionId: string, qNum: number) {
-    const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/positions`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ positionId }),
-    });
-    if (!res.ok) { toast.error('Failed to remove marker'); return; }
-    setPositions((prev) => prev.filter((p) => p.id !== positionId));
-    toast.success(`Removed Q${qNum}`);
-  }
-
-  function getKeyValue(qNum: number): string {
-    if (qNum in keyEdits) return keyEdits[qNum];
-    return answerKey.find((k) => k.question_number === qNum)?.correct_answer ?? '';
-  }
-
-  async function handleSaveAnswerKey() {
-    const allQNums = Array.from(
-      new Set([...answerKey.map((k) => k.question_number), ...Object.keys(keyEdits).map(Number)]),
-    ).sort((a, b) => a - b);
-    const entries = allQNums
-      .map((qNum) => ({ questionNumber: qNum, correctAnswer: getKeyValue(qNum).toUpperCase() }))
-      .filter((e) => /^[A-D]$/.test(e.correctAnswer));
-    if (entries.length === 0) { toast.error('No valid answers to save'); return; }
-    setSavingKey(true);
-    try {
-      const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/answer-key`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entries }),
-      });
-      if (!res.ok) throw new Error('Save failed');
-      setAnswerKey(entries.map((e) => ({ id: '', step_id: stepId, question_number: e.questionNumber, correct_answer: e.correctAnswer })));
-      setKeyEdits({});
-      toast.success(`Saved ${entries.length} answers`);
-    } catch {
-      toast.error('Save failed');
-    } finally {
-      setSavingKey(false);
-    }
-  }
-
-  const activePageData = pages.find((p) => p.page_number === activePage);
-  const positionsOnActivePage = positions.filter((p) => p.page_number === activePage);
-
-  const tabBtnStyle = (active: boolean): React.CSSProperties => ({
-    padding: '6px 14px',
-    borderRadius: 8,
-    fontSize: 12,
-    fontWeight: 600,
-    fontFamily: "'Syne', sans-serif",
-    border: `1px solid ${active ? 'rgba(224,166,175,0.5)' : 'var(--fog)'}`,
-    cursor: 'pointer',
-    background: active ? 'rgba(224,166,175,0.12)' : 'transparent',
-    color: active ? 'var(--charcoal)' : 'var(--mist)',
-    transition: 'all 0.15s',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 5,
-  });
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Compact settings + tab bar */}
+      {/* Settings bar */}
       <div style={{ borderBottom: '1px solid var(--fog)', background: 'var(--white)', flexShrink: 0 }}>
-        {/* Settings row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', flexWrap: 'wrap' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--rose-deeper)', background: 'rgba(224,166,175,0.14)', border: '1px solid rgba(224,166,175,0.3)', padding: '3px 10px', borderRadius: 20, flexShrink: 0 }}>
             <Layers size={11} /> Problems Step
@@ -1359,234 +1263,23 @@ function ProblemsStepEditor({
             {savingMeta ? 'Saving…' : 'Save'}
           </button>
         </div>
-        {/* Tab row */}
-        <div style={{ display: 'flex', gap: 6, padding: '0 20px 10px' }}>
-          <button style={tabBtnStyle(tab === 'pdfimport')} onClick={() => setTab('pdfimport')}>
-            <FileText size={12} />PDF Import
-          </button>
-          <button style={tabBtnStyle(tab === 'pages')} onClick={() => setTab('pages')}>
-            <ImageIcon size={12} />Pages & Bubbles
-          </button>
-          <button style={tabBtnStyle(tab === 'answerkey')} onClick={() => setTab('answerkey')}>
-            <Key size={12} />Answer Key
-          </button>
-        </div>
       </div>
 
-      {/* Tab content — fills remaining space */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-
-        {/* ── PDF Import tab ── */}
-        {tab === 'pdfimport' && (
-          <PdfImportTab
-            key={stepId}
-            wsId={wsId}
-            stepId={stepId}
-            problems={problems}
-            positions={positions}
-            onProblemsChange={setProblems}
-            onPositionsChange={setPositions}
-            initialPdfUrl={step.pdf_url ?? null}
-            onPdfUrlSave={async (url) => {
-              const ok = await onSaveField(stepId, { pdfUrl: url });
-              if (ok) onUpdate({ pdf_url: url });
-            }}
-          />
-        )}
-
-        {/* ── Pages & Bubbles tab ── */}
-        {tab === 'pages' && (
-          <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
-            {/* Left: page list + controls */}
-            <div style={{ width: 220, flexShrink: 0, borderRight: '1px solid var(--fog)', overflowY: 'auto', padding: '12px', background: 'var(--frost)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <p style={sectionHead}>Pages ({pages.length})</p>
-              <div style={{ border: '2px dashed rgba(168,203,222,0.4)', borderRadius: 10, padding: '10px 8px', background: 'rgba(168,203,222,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                <p style={{ fontSize: 11, color: 'var(--mist)', textAlign: 'center', margin: 0 }}>Upload page image</p>
-                <UploadButton<OurFileRouter, 'imageUploader'>
-                  endpoint="imageUploader"
-                  onClientUploadComplete={async (res) => {
-                    if (!res[0]) return;
-                    const pageNum = parseInt(prompt('Page number?') ?? '0', 10);
-                    if (!pageNum || pageNum < 1) { toast.error('Invalid page number'); return; }
-                    const r = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/pages`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ pageNumber: pageNum, imageUrl: res[0].ufsUrl }),
-                    });
-                    if (!r.ok) { toast.error('Failed to save page'); return; }
-                    const { page } = await r.json() as { page: WsPage };
-                    setPages((prev) => [...prev.filter((p) => p.page_number !== page.page_number), page].sort((a, b) => a.page_number - b.page_number));
-                    setActivePage(page.page_number);
-                    toast.success(`Page ${page.page_number} uploaded`);
-                  }}
-                  onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
-                  appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-xs font-semibold py-1.5 px-3 rounded-lg font-[Syne]' }}
-                />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {pages.map((p) => (
-                  <div
-                    key={p.id}
-                    onClick={() => setActivePage(p.page_number)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${activePage === p.page_number ? 'rgba(224,166,175,0.5)' : 'var(--fog)'}`, background: activePage === p.page_number ? 'rgba(224,166,175,0.06)' : 'var(--white)' }}
-                  >
-                    <ImageIcon size={11} style={{ color: 'var(--mist)', flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--charcoal)', flex: 1 }}>Page {p.page_number}</span>
-                    <span style={{ fontSize: 10, color: '#15803d', fontWeight: 600 }}>
-                      {positions.filter((pos) => pos.page_number === p.page_number).length}Q
-                    </span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDeletePage(p.id, p.page_number); }}
-                      style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloud)', padding: 2, display: 'flex', alignItems: 'center' }}
-                    >
-                      <Trash2 size={11} />
-                    </button>
-                  </div>
-                ))}
-                {pages.length === 0 && <p style={{ fontSize: 11, color: 'var(--cloud)', textAlign: 'center', padding: 8 }}>No pages yet</p>}
-              </div>
-
-              {/* Placement control */}
-              {pages.length > 0 && (
-                <div style={{ padding: 10, borderRadius: 10, border: '1px solid var(--fog)', background: 'var(--white)' }}>
-                  <p style={{ ...sectionHead, marginBottom: 8 }}>Place Question</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <input
-                      type="number"
-                      min={1}
-                      value={placingQuestion ?? ''}
-                      onChange={(e) => setPlacingQuestion(e.target.value ? parseInt(e.target.value) : null)}
-                      placeholder="Q#"
-                      style={{ ...inputStyle, width: 56 }}
-                    />
-                    <span style={{ fontSize: 10, color: placingQuestion !== null ? 'var(--charcoal)' : 'var(--mist)', fontWeight: placingQuestion !== null ? 600 : 400 }}>
-                      {placingQuestion !== null ? `Click page → Q${placingQuestion}` : 'Enter Q#'}
-                    </span>
-                  </div>
-                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 120, overflowY: 'auto' }}>
-                    {positions.sort((a, b) => a.question_number - b.question_number).map((pos) => (
-                      <div key={pos.id} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--slate)' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--charcoal)', minWidth: 24 }}>Q{pos.question_number}</span>
-                        <span style={{ color: 'var(--mist)' }}>p{pos.page_number}</span>
-                        <button
-                          onClick={() => handleDeletePosition(pos.id, pos.question_number)}
-                          style={{ marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloud)', padding: 1, display: 'flex', alignItems: 'center' }}
-                        >
-                          <Trash2 size={10} />
-                        </button>
-                      </div>
-                    ))}
-                    {positions.length === 0 && <p style={{ fontSize: 10, color: 'var(--cloud)', textAlign: 'center' }}>No markers yet</p>}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right: page image — fills all available space */}
-            <div style={{ flex: 1, overflow: 'auto' }}>
-              {activePageData ? (
-                <div>
-                  {placingQuestion !== null && (
-                    <div style={{ padding: '6px 12px', background: 'rgba(224,166,175,0.1)', borderBottom: '1px solid rgba(224,166,175,0.3)', fontSize: 12, fontWeight: 600, color: 'var(--rose-deeper)' }}>
-                      Click anywhere on the page to place Q{placingQuestion}
-                    </div>
-                  )}
-                  <div
-                    onClick={(e) => handleImageClick(e, activePage)}
-                    style={{ position: 'relative', width: '100%', cursor: placingQuestion !== null ? 'crosshair' : 'default', userSelect: 'none' }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={activePageData.image_url} alt={`Page ${activePage}`} style={{ display: 'block', width: '100%' }} />
-                    {positionsOnActivePage.map((pos) => (
-                      <div
-                        key={pos.id}
-                        style={{
-                          position: 'absolute',
-                          left: `${pos.x_percent}%`,
-                          top: `${pos.y_percent}%`,
-                          transform: 'translate(-50%, -50%)',
-                          background: 'rgba(224,166,175,0.9)',
-                          border: '2px solid #fff',
-                          borderRadius: '50%',
-                          width: 28,
-                          height: 28,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: '#1A1D23',
-                          fontFamily: "'Syne', sans-serif",
-                          pointerEvents: 'none',
-                        }}
-                      >
-                        {pos.question_number}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--mist)', fontSize: 13 }}>
-                  {pages.length === 0 ? 'Upload a page image to get started' : 'Select a page from the left'}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── Answer Key tab ── */}
-        {tab === 'answerkey' && (
-          <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={sectionHead}>Answer Key</p>
-              <button
-                onClick={handleSaveAnswerKey}
-                disabled={savingKey}
-                style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
-              >
-                {savingKey ? 'Saving…' : 'Save Answer Key'}
-              </button>
-            </div>
-            {positions.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--mist)', textAlign: 'center', padding: 32 }}>
-                Place question bubbles on the pages first, then set answers here.
-              </p>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
-                {Array.from(new Set(positions.map((p) => p.question_number))).sort((a, b) => a - b).map((qNum) => (
-                  <div key={qNum} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', border: '1px solid var(--fog)', borderRadius: 8, background: 'var(--frost)' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--charcoal)', minWidth: 28 }}>Q{qNum}</span>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {['A', 'B', 'C', 'D'].map((letter) => {
-                        const val = getKeyValue(qNum);
-                        return (
-                          <button
-                            key={letter}
-                            onClick={() => setKeyEdits((prev) => ({ ...prev, [qNum]: val === letter ? '' : letter }))}
-                            style={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: '50%',
-                              border: `1px solid ${val === letter ? 'var(--rose-deeper)' : 'var(--fog)'}`,
-                              background: val === letter ? 'var(--rose)' : 'transparent',
-                              color: val === letter ? 'var(--charcoal)' : 'var(--mist)',
-                              fontSize: 11,
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              fontFamily: "'Syne', sans-serif",
-                            }}
-                          >
-                            {letter}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        <PdfImportTab
+          key={stepId}
+          wsId={wsId}
+          stepId={stepId}
+          problems={problems}
+          positions={positions}
+          onProblemsChange={setProblems}
+          onPositionsChange={setPositions}
+          initialPdfUrl={step.pdf_url ?? null}
+          onPdfUrlSave={async (url) => {
+            const ok = await onSaveField(stepId, { pdfUrl: url });
+            if (ok) onUpdate({ pdf_url: url });
+          }}
+        />
       </div>
     </div>
   );
