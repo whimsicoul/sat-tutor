@@ -373,6 +373,11 @@ function PdfImportTab({
   const [akDragStart, setAkDragStart] = useState<{ x: number; y: number } | null>(null);
   const [savingAk, setSavingAk] = useState<number | null>(null);
 
+  const [pdfZoom, setPdfZoom] = useState(1.0);
+  const ZOOM_MIN = 0.25;
+  const ZOOM_MAX = 3.0;
+  const ZOOM_STEP = 0.25;
+
   useEffect(() => {
     if (!pdfDoc || !canvasRef.current) return;
     const doc = pdfDoc as { getPage: (n: number) => Promise<unknown> };
@@ -573,6 +578,22 @@ function PdfImportTab({
       >
         <ChevronRight size={small ? 12 : 14} />
       </button>
+      <div style={{ width: 1, height: 18, background: 'var(--fog)', marginLeft: 2 }} />
+      <button
+        onClick={() => setPdfZoom((z) => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2)))}
+        disabled={pdfZoom <= ZOOM_MIN}
+        title="Zoom out"
+        style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: small ? '3px 7px' : '4px 9px', cursor: pdfZoom <= ZOOM_MIN ? 'default' : 'pointer', color: 'var(--mist)', fontSize: small ? 14 : 16, fontWeight: 700, lineHeight: 1 }}
+      >−</button>
+      <span style={{ fontSize: small ? 11 : 12, color: 'var(--slate)', fontWeight: 600, minWidth: 38, textAlign: 'center', whiteSpace: 'nowrap' }}>
+        {Math.round(pdfZoom * 100)}%
+      </span>
+      <button
+        onClick={() => setPdfZoom((z) => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2)))}
+        disabled={pdfZoom >= ZOOM_MAX}
+        title="Zoom in"
+        style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: small ? '3px 7px' : '4px 9px', cursor: pdfZoom >= ZOOM_MAX ? 'default' : 'pointer', color: 'var(--mist)', fontSize: small ? 14 : 16, fontWeight: 700, lineHeight: 1 }}
+      >+</button>
     </div>
   );
 
@@ -662,28 +683,30 @@ function PdfImportTab({
 
                 {/* Canvas — fills remaining height, scrollable */}
                 <div style={{ flex: 1, overflow: 'auto', padding: 0 }}>
-                  <div style={{ position: 'relative', display: 'inline-block', width: '100%', userSelect: 'none' }}>
-                    <canvas
-                      ref={canvasRef}
-                      style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
-                      onMouseDown={onCropMouseDown}
-                      onMouseMove={onCropMouseMove}
-                      onMouseUp={onCropMouseUp}
-                    />
-                    {cropRect && cropRect.w > 4 && canvasRef.current && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: `${(cropRect.x / canvasRef.current.width) * 100}%`,
-                          top: `${(cropRect.y / canvasRef.current.height) * 100}%`,
-                          width: `${(cropRect.w / canvasRef.current.width) * 100}%`,
-                          height: `${(cropRect.h / canvasRef.current.height) * 100}%`,
-                          border: '2px solid rgba(168,203,222,0.9)',
-                          background: 'rgba(168,203,222,0.18)',
-                          pointerEvents: 'none',
-                        }}
+                  <div style={{ transformOrigin: 'top left', transform: `scale(${pdfZoom})`, width: `${(1 / pdfZoom) * 100}%` }}>
+                    <div style={{ position: 'relative', display: 'inline-block', width: '100%', userSelect: 'none' }}>
+                      <canvas
+                        ref={canvasRef}
+                        style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
+                        onMouseDown={onCropMouseDown}
+                        onMouseMove={onCropMouseMove}
+                        onMouseUp={onCropMouseUp}
                       />
-                    )}
+                      {cropRect && cropRect.w > 4 && canvasRef.current && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            left: `${(cropRect.x / canvasRef.current.width) * 100}%`,
+                            top: `${(cropRect.y / canvasRef.current.height) * 100}%`,
+                            width: `${(cropRect.w / canvasRef.current.width) * 100}%`,
+                            height: `${(cropRect.h / canvasRef.current.height) * 100}%`,
+                            border: '2px solid rgba(168,203,222,0.9)',
+                            background: 'rgba(168,203,222,0.18)',
+                            pointerEvents: 'none',
+                          }}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -945,32 +968,34 @@ function PdfImportTab({
                           </button>
                         </div>
                         <div style={{ flex: 1, overflow: 'auto' }}>
-                          <div style={{ position: 'relative', width: '100%', userSelect: 'none' }}>
-                            <canvas
-                              ref={canvasRef}
-                              style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
-                              onMouseDown={(e) => { const p = getCanvasRelativeRect(e); setAkDragStart(p); setAkCropRect(null); }}
-                              onMouseMove={(e) => {
-                                if (!akDragStart) return;
-                                const pos = getCanvasRelativeRect(e);
-                                setAkCropRect({ x: Math.min(akDragStart.x, pos.x), y: Math.min(akDragStart.y, pos.y), w: Math.abs(pos.x - akDragStart.x), h: Math.abs(pos.y - akDragStart.y) });
-                              }}
-                              onMouseUp={() => setAkDragStart(null)}
-                            />
-                            {akCropRect && akCropRect.w > 4 && canvasRef.current && (
-                              <div
-                                style={{
-                                  position: 'absolute',
-                                  left: `${(akCropRect.x / canvasRef.current.width) * 100}%`,
-                                  top: `${(akCropRect.y / canvasRef.current.height) * 100}%`,
-                                  width: `${(akCropRect.w / canvasRef.current.width) * 100}%`,
-                                  height: `${(akCropRect.h / canvasRef.current.height) * 100}%`,
-                                  border: '2px solid rgba(224,166,175,0.9)',
-                                  background: 'rgba(224,166,175,0.15)',
-                                  pointerEvents: 'none',
+                          <div style={{ transformOrigin: 'top left', transform: `scale(${pdfZoom})`, width: `${(1 / pdfZoom) * 100}%` }}>
+                            <div style={{ position: 'relative', width: '100%', userSelect: 'none' }}>
+                              <canvas
+                                ref={canvasRef}
+                                style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
+                                onMouseDown={(e) => { const p = getCanvasRelativeRect(e); setAkDragStart(p); setAkCropRect(null); }}
+                                onMouseMove={(e) => {
+                                  if (!akDragStart) return;
+                                  const pos = getCanvasRelativeRect(e);
+                                  setAkCropRect({ x: Math.min(akDragStart.x, pos.x), y: Math.min(akDragStart.y, pos.y), w: Math.abs(pos.x - akDragStart.x), h: Math.abs(pos.y - akDragStart.y) });
                                 }}
+                                onMouseUp={() => setAkDragStart(null)}
                               />
-                            )}
+                              {akCropRect && akCropRect.w > 4 && canvasRef.current && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    left: `${(akCropRect.x / canvasRef.current.width) * 100}%`,
+                                    top: `${(akCropRect.y / canvasRef.current.height) * 100}%`,
+                                    width: `${(akCropRect.w / canvasRef.current.width) * 100}%`,
+                                    height: `${(akCropRect.h / canvasRef.current.height) * 100}%`,
+                                    border: '2px solid rgba(224,166,175,0.9)',
+                                    background: 'rgba(224,166,175,0.15)',
+                                    pointerEvents: 'none',
+                                  }}
+                                />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </>
