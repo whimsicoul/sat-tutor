@@ -378,6 +378,14 @@ function PdfImportTab({
   const [akCropRect, setAkCropRect] = useState<CropRect | null>(null);
   const [akDragStart, setAkDragStart] = useState<{ x: number; y: number } | null>(null);
   const [savingAk, setSavingAk] = useState<number | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!lightboxUrl) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightboxUrl(null); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [lightboxUrl]);
 
   const [pdfZoom, setPdfZoom] = useState(1.5);
   const ZOOM_MIN = 0.25;
@@ -579,8 +587,6 @@ function PdfImportTab({
     setAkEdits((prev) => ({ ...prev, [problem.question_number]: { ...prev[problem.question_number], letter: prev[problem.question_number]?.letter ?? '', expUrl: url } }));
     setAkCropRect(null);
     toast.success('Explanation image cropped');
-    const hasAnswer = akEdits[problem.question_number]?.letter ?? problem.correct_answer;
-    if (hasAnswer && akQIdx < problems.length - 1) setAkQIdx((i) => i + 1);
   }
 
   const bubbleProblem = problems[bubbleQIdx] ?? null;
@@ -930,7 +936,7 @@ function PdfImportTab({
                     <div>
                       <p style={sectionHead}>Question {akProblem.question_number}</p>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={akProblem.question_image_url} alt={`Q${akProblem.question_number}`} style={{ display: 'block', width: '100%', borderRadius: 8, border: '1px solid var(--fog)' }} />
+                      <img src={akProblem.question_image_url} alt={`Q${akProblem.question_number}`} onClick={() => setLightboxUrl(akProblem.question_image_url)} style={{ display: 'block', width: '100%', borderRadius: 8, border: '1px solid var(--fog)', cursor: 'zoom-in' }} />
                     </div>
                     <div>
                       <p style={{ ...sectionHead, marginBottom: 10 }}>Correct Answer</p>
@@ -984,7 +990,8 @@ function PdfImportTab({
                         <img
                           src={akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url!}
                           alt="explanation"
-                          style={{ display: 'block', width: '100%', borderRadius: 8, border: '1px solid var(--fog)' }}
+                          onClick={() => setLightboxUrl(akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url!)}
+                          style={{ display: 'block', width: '100%', borderRadius: 8, border: '1px solid var(--fog)', cursor: 'zoom-in' }}
                         />
                       </div>
                     )}
@@ -1059,6 +1066,29 @@ function PdfImportTab({
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          onClick={() => setLightboxUrl(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.78)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <button
+            onClick={() => setLightboxUrl(null)}
+            style={{ position: 'absolute', top: 18, right: 22, background: 'none', border: 'none', color: 'white', fontSize: 28, cursor: 'pointer', lineHeight: 1 }}
+            aria-label="Close"
+          >
+            ✕
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightboxUrl}
+            alt="enlarged"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 10, boxShadow: '0 8px 48px rgba(0,0,0,0.5)', objectFit: 'contain' }}
+          />
         </div>
       )}
     </div>
