@@ -776,7 +776,7 @@ function PdfImportTab({
                         </button>
                       </div>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={prob.question_image_url} alt={`Q${prob.question_number}`} style={{ display: 'block', width: '100%' }} />
+                      <img src={prob.question_image_url} alt={`Q${prob.question_number}`} onClick={() => setLightboxUrl(prob.question_image_url)} style={{ display: 'block', width: '100%', cursor: 'zoom-in' }} />
                     </div>
                   ))}
                   {problems.length === 0 && <p style={{ fontSize: 11, color: 'var(--cloud)', textAlign: 'center', padding: 16 }}>No questions yet</p>}
