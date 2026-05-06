@@ -398,6 +398,11 @@ function PdfImportTab({
     return () => { cancelled = true; };
   }, [pdfDoc, currentPage]);
 
+  useEffect(() => {
+    setCropRect(null);
+    setAkCropRect(null);
+  }, [pdfZoom]);
+
   async function loadPdf(url: string) {
     const pdfjsLib = await import('pdfjs-dist');
     pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
@@ -683,11 +688,11 @@ function PdfImportTab({
 
                 {/* Canvas — fills remaining height, scrollable */}
                 <div style={{ flex: 1, overflow: 'auto', padding: 0 }}>
-                  <div style={{ transformOrigin: 'top left', transform: `scale(${pdfZoom})`, width: `${(1 / pdfZoom) * 100}%` }}>
-                    <div style={{ position: 'relative', display: 'inline-block', width: '100%', userSelect: 'none' }}>
+                  <div style={{ transformOrigin: 'top left', transform: `scale(${pdfZoom})`, display: 'inline-block' }}>
+                    <div style={{ position: 'relative', display: 'inline-block', userSelect: 'none' }}>
                       <canvas
                         ref={canvasRef}
-                        style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
+                        style={{ display: 'block', cursor: 'crosshair' }}
                         onMouseDown={onCropMouseDown}
                         onMouseMove={onCropMouseMove}
                         onMouseUp={onCropMouseUp}
@@ -968,11 +973,11 @@ function PdfImportTab({
                           </button>
                         </div>
                         <div style={{ flex: 1, overflow: 'auto' }}>
-                          <div style={{ transformOrigin: 'top left', transform: `scale(${pdfZoom})`, width: `${(1 / pdfZoom) * 100}%` }}>
-                            <div style={{ position: 'relative', width: '100%', userSelect: 'none' }}>
+                          <div style={{ transformOrigin: 'top left', transform: `scale(${pdfZoom})`, display: 'inline-block' }}>
+                            <div style={{ position: 'relative', display: 'inline-block', userSelect: 'none' }}>
                               <canvas
                                 ref={canvasRef}
-                                style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
+                                style={{ display: 'block', cursor: 'crosshair' }}
                                 onMouseDown={(e) => { const p = getCanvasRelativeRect(e); setAkDragStart(p); setAkCropRect(null); }}
                                 onMouseMove={(e) => {
                                   if (!akDragStart) return;
