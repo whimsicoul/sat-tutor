@@ -579,6 +579,8 @@ function PdfImportTab({
     setAkEdits((prev) => ({ ...prev, [problem.question_number]: { ...prev[problem.question_number], letter: prev[problem.question_number]?.letter ?? '', expUrl: url } }));
     setAkCropRect(null);
     toast.success('Explanation image cropped');
+    const hasAnswer = akEdits[problem.question_number]?.letter ?? problem.correct_answer;
+    if (hasAnswer && akQIdx < problems.length - 1) setAkQIdx((i) => i + 1);
   }
 
   const bubbleProblem = problems[bubbleQIdx] ?? null;
@@ -951,7 +953,6 @@ function PdfImportTab({
                                   if (res.ok) {
                                     const { problem: updated } = await res.json() as { problem: WsProblem };
                                     onProblemsChange(problems.map((p) => p.id === updated.id ? updated : p));
-                                    if (akQIdx < problems.length - 1) setAkQIdx((i) => i + 1);
                                   }
                                 } finally {
                                   setSavingAk(null);
