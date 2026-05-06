@@ -1442,11 +1442,16 @@ export async function deleteWorksheetStepPage(pageId: string) {
 }
 
 export async function getWorksheetStepPositions(stepId: string) {
-  return sql`
+  const rows = await sql`
     SELECT * FROM worksheet_step_positions
     WHERE step_id = ${stepId}
     ORDER BY question_number ASC, page_number ASC
   `;
+  return rows.map((r: Record<string, unknown>) => ({
+    ...r,
+    x_percent: Number(r.x_percent),
+    y_percent: Number(r.y_percent),
+  }));
 }
 
 export async function upsertWorksheetStepPosition(
