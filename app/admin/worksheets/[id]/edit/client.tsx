@@ -8,6 +8,7 @@ import type { OurFileRouter } from '@/lib/uploadthing';
 import {
   ArrowLeft, Plus, Trash2, Image as ImageIcon, ChevronUp, ChevronDown,
   BookOpen, Layers, Lock, Unlock, Key, GripVertical, FileText, ChevronLeft, ChevronRight,
+  PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import type { WsStep, WsPage, WsPosition, WsAnswerKeyEntry, WsProblem } from './page';
 
@@ -61,11 +62,10 @@ export default function WorksheetBuilderClient({
   const [newStepType, setNewStepType] = useState<'instruction' | 'problems'>('problems');
   const [newStepTitle, setNewStepTitle] = useState('');
   const [creatingStep, setCreatingStep] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const selectedStep = steps.find((s) => s.id === selectedStepId) ?? null;
   const wsId = worksheet.id;
-
-  // ── Step management ───────────────────────────────────────────────────────
 
   async function handleAddStep() {
     if (!newStepTitle.trim()) { toast.error('Step title required'); return; }
@@ -120,8 +120,6 @@ export default function WorksheetBuilderClient({
     setSteps((prev) => prev.map((s) => s.id === stepId ? { ...s, ...patch } : s));
   }
 
-  // ── Step field save ───────────────────────────────────────────────────────
-
   async function saveStepField(stepId: string, field: Record<string, unknown>) {
     const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}`, {
       method: 'PATCH',
@@ -132,158 +130,180 @@ export default function WorksheetBuilderClient({
     return res.ok;
   }
 
+  const SIDEBAR_W = 260;
+
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto', fontFamily: "'Syne', sans-serif" }}>
-      {/* Header */}
-      <Link href="/admin/worksheets" style={{ textDecoration: 'none' }}>
-        <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: '1px solid var(--fog)', background: 'var(--frost)', cursor: 'pointer', fontSize: 13, color: 'var(--slate)', marginBottom: 20, fontFamily: "'Syne', sans-serif" }}>
-          <ArrowLeft size={14} /> Back to Worksheets
+    <div style={{ display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', fontFamily: "'Syne', sans-serif", overflow: 'hidden' }}>
+
+      {/* ── Top header bar ─────────────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '0 20px',
+        height: 52,
+        borderBottom: '1px solid var(--fog)',
+        background: 'var(--white)',
+        flexShrink: 0,
+        zIndex: 10,
+      }}>
+        <button
+          onClick={() => setSidebarOpen((v) => !v)}
+          style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center', padding: 4, borderRadius: 6 }}
+          title={sidebarOpen ? 'Hide steps panel' : 'Show steps panel'}
+        >
+          {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
         </button>
-      </Link>
 
-      <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 700, color: 'var(--charcoal)', marginBottom: 4 }}>
-        {worksheet.title}
-      </h1>
-      <p style={{ color: 'var(--mist)', fontSize: 13, marginBottom: 28 }}>
-        {steps.length} {steps.length === 1 ? 'step' : 'steps'} — drag to reorder, click to edit
-      </p>
+        <Link href="/admin/worksheets" style={{ textDecoration: 'none' }}>
+          <button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, border: '1px solid var(--fog)', background: 'var(--frost)', cursor: 'pointer', fontSize: 12, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
+            <ArrowLeft size={13} /> Back
+          </button>
+        </Link>
 
-      {/* Two-panel layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 24, alignItems: 'start' }}>
+        <div style={{ width: 1, height: 20, background: 'var(--fog)' }} />
 
-        {/* ── LEFT: Step sidebar ── */}
-        <div>
-          <p style={sectionHead}>Steps</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {steps.map((step, idx) => (
-              <div
+        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 700, color: 'var(--charcoal)', margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {worksheet.title}
+        </h1>
+
+        {/* Step quick-switcher in header */}
+        {steps.length > 0 && (
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center', overflowX: 'auto', maxWidth: 480 }}>
+            {steps.map((step) => (
+              <button
                 key={step.id}
                 onClick={() => setSelectedStepId(step.id)}
+                title={step.title}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8,
-                  padding: '10px 12px',
-                  borderRadius: 10,
-                  border: `1px solid ${selectedStepId === step.id ? 'rgba(224,166,175,0.5)' : 'var(--fog)'}`,
-                  background: selectedStepId === step.id ? 'rgba(224,166,175,0.08)' : 'var(--white)',
+                  gap: 4,
+                  padding: '4px 10px',
+                  borderRadius: 20,
+                  border: `1px solid ${selectedStepId === step.id ? (step.type === 'instruction' ? 'rgba(168,203,222,0.6)' : 'rgba(224,166,175,0.6)') : 'var(--fog)'}`,
+                  background: selectedStepId === step.id ? (step.type === 'instruction' ? 'rgba(168,203,222,0.14)' : 'rgba(224,166,175,0.14)') : 'transparent',
+                  color: selectedStepId === step.id ? 'var(--charcoal)' : 'var(--mist)',
+                  fontSize: 11,
+                  fontWeight: selectedStepId === step.id ? 700 : 500,
                   cursor: 'pointer',
-                  transition: 'all 0.12s',
+                  fontFamily: "'Syne', sans-serif",
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
-                <GripVertical size={13} style={{ color: 'var(--fog)', flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--mist)' }}>
-                      {step.step_order}.
-                    </span>
-                    {step.type === 'instruction'
-                      ? <BookOpen size={11} style={{ color: 'var(--sky-deeper)' }} />
-                      : <Layers size={11} style={{ color: 'var(--rose-deeper)' }} />}
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {step.title}
-                    </span>
-                  </div>
-                  {step.stage_label && (
-                    <span style={{ fontSize: 10, color: 'var(--mist)' }}>{step.stage_label}</span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); moveStep(step.id, 'up'); }}
-                    disabled={idx === 0}
-                    style={{ border: 'none', background: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? 'var(--fog)' : 'var(--mist)', padding: 1, display: 'flex', alignItems: 'center' }}
-                  >
-                    <ChevronUp size={12} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); moveStep(step.id, 'down'); }}
-                    disabled={idx === steps.length - 1}
-                    style={{ border: 'none', background: 'none', cursor: idx === steps.length - 1 ? 'default' : 'pointer', color: idx === steps.length - 1 ? 'var(--fog)' : 'var(--mist)', padding: 1, display: 'flex', alignItems: 'center' }}
-                  >
-                    <ChevronDown size={12} />
-                  </button>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDeleteStep(step.id); }}
-                  style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloud)', padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0 }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#991B1B'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--cloud)'; }}
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            ))}
-
-            {/* Add step UI */}
-            {addingStep ? (
-              <div style={{ padding: 12, border: '1px dashed rgba(168,203,222,0.5)', borderRadius: 10, background: 'rgba(168,203,222,0.04)' }}>
-                <p style={labelStyle}>Step Type</p>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                  {(['instruction', 'problems'] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setNewStepType(t)}
-                      style={{
-                        flex: 1,
-                        padding: '6px 0',
-                        borderRadius: 7,
-                        border: `1px solid ${newStepType === t ? (t === 'instruction' ? 'rgba(168,203,222,0.5)' : 'rgba(224,166,175,0.5)') : 'var(--fog)'}`,
-                        background: newStepType === t ? (t === 'instruction' ? 'rgba(168,203,222,0.12)' : 'rgba(224,166,175,0.12)') : 'transparent',
-                        color: newStepType === t ? 'var(--charcoal)' : 'var(--mist)',
-                        fontSize: 11,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        fontFamily: "'Syne', sans-serif",
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 4,
-                      }}
-                    >
-                      {t === 'instruction' ? <BookOpen size={11} /> : <Layers size={11} />}
-                      {t === 'instruction' ? 'Instruction' : 'Problems'}
-                    </button>
-                  ))}
-                </div>
-                <p style={labelStyle}>Title</p>
-                <input
-                  value={newStepTitle}
-                  onChange={(e) => setNewStepTitle(e.target.value)}
-                  placeholder={newStepType === 'instruction' ? 'e.g. Intro Reading' : 'e.g. Warm-Up Problems'}
-                  style={{ ...inputStyle, marginBottom: 10 }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddStep(); }}
-                  autoFocus
-                />
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button
-                    onClick={() => { setAddingStep(false); setNewStepTitle(''); }}
-                    style={{ flex: 1, padding: '6px 0', borderRadius: 7, border: '1px solid var(--fog)', background: 'transparent', color: 'var(--slate)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAddStep}
-                    disabled={creatingStep}
-                    style={{ flex: 1, padding: '6px 0', borderRadius: 7, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
-                  >
-                    {creatingStep ? '…' : 'Add'}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setAddingStep(true)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 0', borderRadius: 10, border: '1px dashed rgba(168,203,222,0.4)', background: 'rgba(168,203,222,0.04)', color: 'var(--sky-deeper)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif' " }}
-              >
-                <Plus size={13} /> Add Step
+                {step.type === 'instruction' ? <BookOpen size={10} /> : <Layers size={10} />}
+                {step.step_order}. {step.title}
               </button>
-            )}
+            ))}
           </div>
-        </div>
+        )}
+
+        <button
+          onClick={() => setAddingStep(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 7, border: '1px dashed rgba(168,203,222,0.5)', background: 'rgba(168,203,222,0.06)', color: 'var(--sky-deeper)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif", flexShrink: 0 }}
+        >
+          <Plus size={13} /> Add Step
+        </button>
+      </div>
+
+      {/* ── Body: sidebar + editor ──────────────────────────────────────────── */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+
+        {/* ── LEFT: Steps sidebar ── */}
+        {sidebarOpen && (
+          <div style={{
+            width: SIDEBAR_W,
+            flexShrink: 0,
+            borderRight: '1px solid var(--fog)',
+            background: 'var(--white)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto',
+            padding: '16px 12px',
+          }}>
+            <p style={sectionHead}>Steps ({steps.length})</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {steps.map((step, idx) => (
+                <div
+                  key={step.id}
+                  onClick={() => setSelectedStepId(step.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    padding: '9px 10px',
+                    borderRadius: 10,
+                    border: `1px solid ${selectedStepId === step.id ? (step.type === 'instruction' ? 'rgba(168,203,222,0.5)' : 'rgba(224,166,175,0.5)') : 'var(--fog)'}`,
+                    background: selectedStepId === step.id ? (step.type === 'instruction' ? 'rgba(168,203,222,0.08)' : 'rgba(224,166,175,0.08)') : 'var(--white)',
+                    cursor: 'pointer',
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  <GripVertical size={12} style={{ color: 'var(--fog)', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 1 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--mist)' }}>{step.step_order}.</span>
+                      {step.type === 'instruction'
+                        ? <BookOpen size={10} style={{ color: 'var(--sky-deeper)', flexShrink: 0 }} />
+                        : <Layers size={10} style={{ color: 'var(--rose-deeper)', flexShrink: 0 }} />}
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {step.title}
+                      </span>
+                    </div>
+                    {step.stage_label && (
+                      <span style={{ fontSize: 10, color: 'var(--mist)' }}>{step.stage_label}</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
+                    <button onClick={(e) => { e.stopPropagation(); moveStep(step.id, 'up'); }} disabled={idx === 0} style={{ border: 'none', background: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? 'var(--fog)' : 'var(--mist)', padding: 1, display: 'flex', alignItems: 'center' }}>
+                      <ChevronUp size={11} />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); moveStep(step.id, 'down'); }} disabled={idx === steps.length - 1} style={{ border: 'none', background: 'none', cursor: idx === steps.length - 1 ? 'default' : 'pointer', color: idx === steps.length - 1 ? 'var(--fog)' : 'var(--mist)', padding: 1, display: 'flex', alignItems: 'center' }}>
+                      <ChevronDown size={11} />
+                    </button>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeleteStep(step.id); }}
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloud)', padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#991B1B'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--cloud)'; }}
+                  >
+                    <Trash2 size={11} />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add step inline form */}
+              {addingStep ? (
+                <div style={{ padding: 12, border: '1px dashed rgba(168,203,222,0.5)', borderRadius: 10, background: 'rgba(168,203,222,0.04)', marginTop: 4 }}>
+                  <p style={labelStyle}>Step Type</p>
+                  <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
+                    {(['instruction', 'problems'] as const).map((t) => (
+                      <button key={t} onClick={() => setNewStepType(t)} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: `1px solid ${newStepType === t ? (t === 'instruction' ? 'rgba(168,203,222,0.5)' : 'rgba(224,166,175,0.5)') : 'var(--fog)'}`, background: newStepType === t ? (t === 'instruction' ? 'rgba(168,203,222,0.12)' : 'rgba(224,166,175,0.12)') : 'transparent', color: newStepType === t ? 'var(--charcoal)' : 'var(--mist)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: "'Syne', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                        {t === 'instruction' ? <BookOpen size={10} /> : <Layers size={10} />}
+                        {t === 'instruction' ? 'Read' : 'Problems'}
+                      </button>
+                    ))}
+                  </div>
+                  <p style={labelStyle}>Title</p>
+                  <input value={newStepTitle} onChange={(e) => setNewStepTitle(e.target.value)} placeholder={newStepType === 'instruction' ? 'e.g. Intro Reading' : 'e.g. Warm-Up'} style={{ ...inputStyle, marginBottom: 10 }} onKeyDown={(e) => { if (e.key === 'Enter') handleAddStep(); }} autoFocus />
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    <button onClick={() => { setAddingStep(false); setNewStepTitle(''); }} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: '1px solid var(--fog)', background: 'transparent', color: 'var(--slate)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}>Cancel</button>
+                    <button onClick={handleAddStep} disabled={creatingStep} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}>{creatingStep ? '…' : 'Add'}</button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setAddingStep(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '8px 0', borderRadius: 10, border: '1px dashed rgba(168,203,222,0.4)', background: 'rgba(168,203,222,0.04)', color: 'var(--sky-deeper)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif", marginTop: 4 }}>
+                  <Plus size={12} /> Add Step
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── RIGHT: Step editor ── */}
-        <div>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {selectedStep ? (
             selectedStep.type === 'instruction'
               ? (
@@ -302,7 +322,7 @@ export default function WorksheetBuilderClient({
                 />
               )
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, border: '1px dashed var(--fog)', borderRadius: 14, color: 'var(--mist)', fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--mist)', fontSize: 13 }}>
               Select a step to edit it, or add your first step.
             </div>
           )}
@@ -339,24 +359,20 @@ function PdfImportTab({
   const [currentPage, setCurrentPage] = useState(1);
   const [phase, setPhase] = useState<PdfPhase>('crop');
 
-  // Crop state
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [cropRect, setCropRect] = useState<CropRect | null>(null);
   const [croppingProblem, setCroppingProblem] = useState(false);
 
-  // Bubble placement state
   const [bubbleQIdx, setBubbleQIdx] = useState(0);
   const [placingBubbleLetter, setPlacingBubbleLetter] = useState<string | null>(null);
 
-  // Answer key state
   const [akQIdx, setAkQIdx] = useState(0);
   const [akEdits, setAkEdits] = useState<Record<number, { letter: string; expUrl: string | null }>>({});
   const [akCropRect, setAkCropRect] = useState<CropRect | null>(null);
   const [akDragStart, setAkDragStart] = useState<{ x: number; y: number } | null>(null);
   const [savingAk, setSavingAk] = useState<number | null>(null);
 
-  // Load pdf.js and render current page whenever pdfDoc or currentPage changes
   useEffect(() => {
     if (!pdfDoc || !canvasRef.current) return;
     const doc = pdfDoc as { getPage: (n: number) => Promise<unknown> };
@@ -367,7 +383,7 @@ function PdfImportTab({
         render: (ctx: unknown) => { promise: Promise<void> };
       };
       if (cancelled) return;
-      const viewport = page.getViewport({ scale: 1.5 });
+      const viewport = page.getViewport({ scale: 2.0 });
       const canvas = canvasRef.current!;
       canvas.width = viewport.width;
       canvas.height = viewport.height;
@@ -471,7 +487,6 @@ function PdfImportTab({
     toast.success(`Question ${qNum} deleted`);
   }
 
-  // Bubble placement on cropped question image
   async function handleBubbleImageClick(e: React.MouseEvent<HTMLDivElement>) {
     if (!placingBubbleLetter) return;
     const problem = problems[bubbleQIdx];
@@ -538,10 +553,33 @@ function PdfImportTab({
     return letterMap[encoded % 10] ?? '?';
   };
 
+  // Shared page navigation bar
+  const PageNav = ({ small }: { small?: boolean }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <button
+        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+        disabled={currentPage === 1}
+        style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: small ? '3px 8px' : '5px 12px', cursor: currentPage === 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
+      >
+        <ChevronLeft size={small ? 12 : 14} />
+      </button>
+      <span style={{ fontSize: small ? 11 : 13, color: 'var(--slate)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+        Page {currentPage} / {totalPages}
+      </span>
+      <button
+        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+        disabled={currentPage === totalPages}
+        style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: small ? '3px 8px' : '5px 12px', cursor: currentPage === totalPages ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
+      >
+        <ChevronRight size={small ? 12 : 14} />
+      </button>
+    </div>
+  );
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Phase selector */}
-      <div style={{ display: 'flex', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Phase tabs */}
+      <div style={{ display: 'flex', gap: 6, padding: '10px 20px', borderBottom: '1px solid var(--fog)', background: 'var(--white)', flexShrink: 0 }}>
         {(['crop', 'bubbles', 'answerkey'] as PdfPhase[]).map((p) => {
           const labels: Record<PdfPhase, string> = { crop: '1. Crop Questions', bubbles: '2. Place Bubbles', answerkey: '3. Answer Key' };
           return (
@@ -549,7 +587,7 @@ function PdfImportTab({
               key={p}
               onClick={() => setPhase(p)}
               style={{
-                padding: '6px 14px',
+                padding: '6px 16px',
                 borderRadius: 8,
                 fontSize: 12,
                 fontWeight: 600,
@@ -568,11 +606,11 @@ function PdfImportTab({
 
       {/* ── Phase 1: Crop Questions ── */}
       {phase === 'crop' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
           {!pdfUrl ? (
-            <div style={{ border: '2px dashed rgba(168,203,222,0.4)', borderRadius: 10, padding: 24, background: 'rgba(168,203,222,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-              <FileText size={28} style={{ color: 'var(--sky-deeper)', opacity: 0.6 }} />
-              <p style={{ fontSize: 13, color: 'var(--mist)', textAlign: 'center' }}>Upload the PDF to start cropping questions</p>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+              <FileText size={40} style={{ color: 'var(--sky-deeper)', opacity: 0.5 }} />
+              <p style={{ fontSize: 14, color: 'var(--mist)' }}>Upload the PDF to start cropping questions</p>
               <UploadButton<OurFileRouter, 'pdfUploader'>
                 endpoint="pdfUploader"
                 onClientUploadComplete={async (files) => {
@@ -583,93 +621,80 @@ function PdfImportTab({
                   toast.success('PDF loaded');
                 }}
                 onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
-                appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-xs font-semibold py-2 px-4 rounded-lg font-[Syne]' }}
+                appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-sm font-semibold py-2.5 px-6 rounded-lg font-[Syne]' }}
               />
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 20, alignItems: 'start' }}>
-              {/* PDF canvas */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+              {/* PDF canvas — takes maximum width */}
+              <div style={{ flex: '1 1 0', overflow: 'auto', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--fog)' }}>
+                {/* Toolbar above canvas */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: 'var(--white)', borderBottom: '1px solid var(--fog)', flexShrink: 0 }}>
+                  <PageNav />
+                  <span style={{ fontSize: 11, color: 'var(--mist)', flex: 1 }}>
+                    Click and drag to select a question region
+                  </span>
                   <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: currentPage === 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
+                    onClick={handleAddQuestion}
+                    disabled={croppingProblem || !cropRect}
+                    style={{
+                      padding: '6px 18px',
+                      borderRadius: 8,
+                      border: 'none',
+                      background: cropRect ? 'var(--rose)' : 'var(--fog)',
+                      color: 'var(--charcoal)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: cropRect ? 'pointer' : 'default',
+                      fontFamily: "'Syne', sans-serif",
+                      whiteSpace: 'nowrap',
+                    }}
                   >
-                    <ChevronLeft size={14} />
-                  </button>
-                  <span style={{ fontSize: 12, color: 'var(--slate)', fontWeight: 600 }}>Page {currentPage} / {totalPages}</span>
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: currentPage === totalPages ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
-                  >
-                    <ChevronRight size={14} />
+                    {croppingProblem ? 'Adding…' : '+ Add Question'}
                   </button>
                   <button
                     onClick={() => { setPdfUrl(null); setPdfDoc(null); setTotalPages(0); setCropRect(null); }}
-                    style={{ marginLeft: 'auto', fontSize: 11, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+                    style={{ fontSize: 11, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Syne', sans-serif", whiteSpace: 'nowrap' }}
                   >
                     Change PDF
                   </button>
                 </div>
 
-                <p style={{ fontSize: 11, color: 'var(--mist)', margin: 0 }}>
-                  Click and drag on the PDF to select a question region, then click <strong>Add Question</strong>.
-                </p>
-
-                {/* Canvas with selection overlay */}
-                <div style={{ position: 'relative', width: '100%', border: '1px solid var(--fog)', borderRadius: 10, overflow: 'hidden', userSelect: 'none' }}>
-                  <canvas
-                    ref={canvasRef}
-                    style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
-                    onMouseDown={onCropMouseDown}
-                    onMouseMove={onCropMouseMove}
-                    onMouseUp={onCropMouseUp}
-                  />
-                  {cropRect && cropRect.w > 4 && canvasRef.current && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: `${(cropRect.x / canvasRef.current.width) * 100}%`,
-                        top: `${(cropRect.y / canvasRef.current.height) * 100}%`,
-                        width: `${(cropRect.w / canvasRef.current.width) * 100}%`,
-                        height: `${(cropRect.h / canvasRef.current.height) * 100}%`,
-                        border: '2px solid rgba(168,203,222,0.9)',
-                        background: 'rgba(168,203,222,0.15)',
-                        pointerEvents: 'none',
-                      }}
+                {/* Canvas — fills remaining height, scrollable */}
+                <div style={{ flex: 1, overflow: 'auto', padding: 0 }}>
+                  <div style={{ position: 'relative', display: 'inline-block', width: '100%', userSelect: 'none' }}>
+                    <canvas
+                      ref={canvasRef}
+                      style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
+                      onMouseDown={onCropMouseDown}
+                      onMouseMove={onCropMouseMove}
+                      onMouseUp={onCropMouseUp}
                     />
-                  )}
+                    {cropRect && cropRect.w > 4 && canvasRef.current && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: `${(cropRect.x / canvasRef.current.width) * 100}%`,
+                          top: `${(cropRect.y / canvasRef.current.height) * 100}%`,
+                          width: `${(cropRect.w / canvasRef.current.width) * 100}%`,
+                          height: `${(cropRect.h / canvasRef.current.height) * 100}%`,
+                          border: '2px solid rgba(168,203,222,0.9)',
+                          background: 'rgba(168,203,222,0.18)',
+                          pointerEvents: 'none',
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
-
-                <button
-                  onClick={handleAddQuestion}
-                  disabled={croppingProblem || !cropRect}
-                  style={{
-                    alignSelf: 'flex-start',
-                    padding: '8px 20px',
-                    borderRadius: 8,
-                    border: 'none',
-                    background: cropRect ? 'var(--rose)' : 'var(--fog)',
-                    color: 'var(--charcoal)',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: cropRect ? 'pointer' : 'default',
-                    fontFamily: "'Syne', sans-serif",
-                  }}
-                >
-                  {croppingProblem ? 'Adding…' : '+ Add Question'}
-                </button>
               </div>
 
-              {/* Questions list */}
-              <div>
-                <p style={sectionHead}>Cropped Questions ({problems.length})</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 600, overflowY: 'auto' }}>
+              {/* Questions list — fixed right panel */}
+              <div style={{ width: 240, flexShrink: 0, overflowY: 'auto', padding: '12px', background: 'var(--frost)' }}>
+                <p style={sectionHead}>Cropped ({problems.length})</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {problems.sort((a, b) => a.question_number - b.question_number).map((prob) => (
-                    <div key={prob.id} style={{ border: '1px solid var(--fog)', borderRadius: 8, overflow: 'hidden', background: 'var(--frost)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px' }}>
+                    <div key={prob.id} style={{ border: '1px solid var(--fog)', borderRadius: 8, overflow: 'hidden', background: 'var(--white)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 8px' }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--charcoal)' }}>Q{prob.question_number}</span>
                         <button
                           onClick={() => handleDeleteProblem(prob.id, prob.question_number)}
@@ -682,7 +707,7 @@ function PdfImportTab({
                       <img src={prob.question_image_url} alt={`Q${prob.question_number}`} style={{ display: 'block', width: '100%' }} />
                     </div>
                   ))}
-                  {problems.length === 0 && <p style={{ fontSize: 11, color: 'var(--cloud)', textAlign: 'center', padding: 16 }}>No questions yet — crop from the PDF</p>}
+                  {problems.length === 0 && <p style={{ fontSize: 11, color: 'var(--cloud)', textAlign: 'center', padding: 16 }}>No questions yet</p>}
                 </div>
               </div>
             </div>
@@ -692,40 +717,34 @@ function PdfImportTab({
 
       {/* ── Phase 2: Place Bubbles ── */}
       {phase === 'bubbles' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {problems.length === 0 ? (
-            <p style={{ fontSize: 13, color: 'var(--mist)', textAlign: 'center', padding: 32 }}>Crop questions first in the &quot;Crop Questions&quot; phase.</p>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <p style={{ fontSize: 13, color: 'var(--mist)' }}>Crop questions first in the &quot;Crop Questions&quot; phase.</p>
+            </div>
           ) : (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button
-                  onClick={() => setBubbleQIdx((i) => Math.max(0, i - 1))}
-                  disabled={bubbleQIdx === 0}
-                  style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === 0 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
-                >
+              {/* Bubble nav bar */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: 'var(--white)', borderBottom: '1px solid var(--fog)', flexShrink: 0 }}>
+                <button onClick={() => setBubbleQIdx((i) => Math.max(0, i - 1))} disabled={bubbleQIdx === 0} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === 0 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronLeft size={14} />
                 </button>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--charcoal)' }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--charcoal)' }}>
                   Q{bubbleProblem?.question_number} ({bubbleQIdx + 1} / {problems.length})
                 </span>
-                <button
-                  onClick={() => setBubbleQIdx((i) => Math.min(problems.length - 1, i + 1))}
-                  disabled={bubbleQIdx === problems.length - 1}
-                  style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
-                >
+                <button onClick={() => setBubbleQIdx((i) => Math.min(problems.length - 1, i + 1))} disabled={bubbleQIdx === problems.length - 1} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronRight size={14} />
                 </button>
+                <span style={{ fontSize: 11, color: 'var(--mist)', flex: 1 }}>Select a letter, then click on the question image to position it</span>
               </div>
 
               {bubbleProblem && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: 16, alignItems: 'start' }}>
-                  <div>
-                    <p style={{ fontSize: 11, color: 'var(--mist)', marginBottom: 8 }}>
-                      Select a letter to place, then click on the question image to position it.
-                    </p>
+                <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+                  {/* Question image — fills space */}
+                  <div style={{ flex: 1, overflow: 'auto' }}>
                     <div
                       onClick={handleBubbleImageClick}
-                      style={{ position: 'relative', width: '100%', cursor: placingBubbleLetter ? 'crosshair' : 'default', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--fog)' }}
+                      style={{ position: 'relative', width: '100%', cursor: placingBubbleLetter ? 'crosshair' : 'default', userSelect: 'none' }}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={bubbleProblem.question_image_url} alt={`Q${bubbleProblem.question_number}`} style={{ display: 'block', width: '100%' }} />
@@ -740,12 +759,12 @@ function PdfImportTab({
                             background: 'rgba(224,166,175,0.9)',
                             border: '2px solid #fff',
                             borderRadius: '50%',
-                            width: 24,
-                            height: 24,
+                            width: 28,
+                            height: 28,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: 700,
                             color: '#1A1D23',
                             fontFamily: "'Syne', sans-serif",
@@ -758,8 +777,9 @@ function PdfImportTab({
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <p style={sectionHead}>Select letter to place</p>
+                  {/* Letter controls — right panel */}
+                  <div style={{ width: 160, flexShrink: 0, padding: '16px 12px', background: 'var(--frost)', borderLeft: '1px solid var(--fog)', display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
+                    <p style={sectionHead}>Place Letter</p>
                     {['A', 'B', 'C', 'D'].map((letter) => {
                       const placed = getPositionsForProblem(bubbleProblem.question_number)
                         .some((p) => letterFromEncoded(p.question_number) === letter);
@@ -768,12 +788,12 @@ function PdfImportTab({
                           key={letter}
                           onClick={() => setPlacingBubbleLetter((l) => l === letter ? null : letter)}
                           style={{
-                            padding: '8px 0',
+                            padding: '10px 0',
                             borderRadius: 8,
                             border: `1px solid ${placingBubbleLetter === letter ? 'rgba(224,166,175,0.5)' : placed ? 'rgba(21,128,61,0.4)' : 'var(--fog)'}`,
-                            background: placingBubbleLetter === letter ? 'rgba(224,166,175,0.15)' : placed ? 'rgba(21,128,61,0.08)' : 'var(--frost)',
+                            background: placingBubbleLetter === letter ? 'rgba(224,166,175,0.15)' : placed ? 'rgba(21,128,61,0.08)' : 'var(--white)',
                             color: placed ? '#15803d' : 'var(--charcoal)',
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: 700,
                             cursor: 'pointer',
                             fontFamily: "'Syne', sans-serif",
@@ -783,25 +803,27 @@ function PdfImportTab({
                         </button>
                       );
                     })}
-                    {getPositionsForProblem(bubbleProblem.question_number).map((pos) => (
-                      <div key={pos.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--slate)' }}>
-                        <span style={{ fontWeight: 600 }}>{letterFromEncoded(pos.question_number)}</span>
-                        <span style={{ color: 'var(--mist)' }}>({pos.x_percent.toFixed(0)}%, {pos.y_percent.toFixed(0)}%)</span>
-                        <button
-                          onClick={async () => {
-                            const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/positions`, {
-                              method: 'DELETE',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ positionId: pos.id }),
-                            });
-                            if (res.ok) onPositionsChange(positions.filter((p) => p.id !== pos.id));
-                          }}
-                          style={{ marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloud)', padding: 1, display: 'flex', alignItems: 'center' }}
-                        >
-                          <Trash2 size={10} />
-                        </button>
-                      </div>
-                    ))}
+                    <div style={{ borderTop: '1px solid var(--fog)', paddingTop: 8, marginTop: 4 }}>
+                      {getPositionsForProblem(bubbleProblem.question_number).map((pos) => (
+                        <div key={pos.id} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--slate)', marginBottom: 4 }}>
+                          <span style={{ fontWeight: 600 }}>{letterFromEncoded(pos.question_number)}</span>
+                          <span style={{ color: 'var(--mist)', fontSize: 10 }}>({pos.x_percent.toFixed(0)}%,{pos.y_percent.toFixed(0)}%)</span>
+                          <button
+                            onClick={async () => {
+                              const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/positions`, {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ positionId: pos.id }),
+                              });
+                              if (res.ok) onPositionsChange(positions.filter((p) => p.id !== pos.id));
+                            }}
+                            style={{ marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloud)', padding: 1, display: 'flex', alignItems: 'center' }}
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -812,42 +834,47 @@ function PdfImportTab({
 
       {/* ── Phase 3: Answer Key ── */}
       {phase === 'answerkey' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {problems.length === 0 ? (
-            <p style={{ fontSize: 13, color: 'var(--mist)', textAlign: 'center', padding: 32 }}>Crop questions first.</p>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <p style={{ fontSize: 13, color: 'var(--mist)' }}>Crop questions first.</p>
+            </div>
           ) : (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button
-                  onClick={() => setAkQIdx((i) => Math.max(0, i - 1))}
-                  disabled={akQIdx === 0}
-                  style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: akQIdx === 0 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
-                >
+              {/* Answer key nav bar */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: 'var(--white)', borderBottom: '1px solid var(--fog)', flexShrink: 0 }}>
+                <button onClick={() => setAkQIdx((i) => Math.max(0, i - 1))} disabled={akQIdx === 0} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: akQIdx === 0 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronLeft size={14} />
                 </button>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--charcoal)' }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--charcoal)' }}>
                   Q{akProblem?.question_number} ({akQIdx + 1} / {problems.length})
                 </span>
-                <button
-                  onClick={() => setAkQIdx((i) => Math.min(problems.length - 1, i + 1))}
-                  disabled={akQIdx === problems.length - 1}
-                  style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: akQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
-                >
+                <button onClick={() => setAkQIdx((i) => Math.min(problems.length - 1, i + 1))} disabled={akQIdx === problems.length - 1} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: akQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronRight size={14} />
                 </button>
+                {akProblem && (
+                  <button
+                    onClick={() => handleSaveAnswerKey(akProblem)}
+                    disabled={savingAk === akProblem.question_number}
+                    style={{ marginLeft: 'auto', padding: '6px 18px', borderRadius: 8, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+                  >
+                    {savingAk === akProblem.question_number ? 'Saving…' : 'Save Answer Key'}
+                  </button>
+                )}
               </div>
 
               {akProblem && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
-                  {/* Left: question image + letter selector */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <p style={sectionHead}>Question {akProblem.question_number}</p>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={akProblem.question_image_url} alt={`Q${akProblem.question_number}`} style={{ display: 'block', width: '100%', borderRadius: 8, border: '1px solid var(--fog)' }} />
-
+                <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+                  {/* Left: question image + answer selector */}
+                  <div style={{ width: 320, flexShrink: 0, overflowY: 'auto', padding: 16, borderRight: '1px solid var(--fog)', display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div>
-                      <p style={{ ...sectionHead, marginBottom: 8 }}>Correct Answer</p>
-                      <div style={{ display: 'flex', gap: 8 }}>
+                      <p style={sectionHead}>Question {akProblem.question_number}</p>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={akProblem.question_image_url} alt={`Q${akProblem.question_number}`} style={{ display: 'block', width: '100%', borderRadius: 8, border: '1px solid var(--fog)' }} />
+                    </div>
+                    <div>
+                      <p style={{ ...sectionHead, marginBottom: 10 }}>Correct Answer</p>
+                      <div style={{ display: 'flex', gap: 10 }}>
                         {['A', 'B', 'C', 'D'].map((letter) => {
                           const current = akEdits[akProblem.question_number]?.letter ?? akProblem.correct_answer ?? '';
                           return (
@@ -855,13 +882,13 @@ function PdfImportTab({
                               key={letter}
                               onClick={() => setAkEdits((prev) => ({ ...prev, [akProblem.question_number]: { ...prev[akProblem.question_number], letter, expUrl: prev[akProblem.question_number]?.expUrl ?? null } }))}
                               style={{
-                                width: 36,
-                                height: 36,
+                                width: 44,
+                                height: 44,
                                 borderRadius: '50%',
-                                border: `1px solid ${current === letter ? 'var(--rose-deeper)' : 'var(--fog)'}`,
+                                border: `2px solid ${current === letter ? 'var(--rose-deeper)' : 'var(--fog)'}`,
                                 background: current === letter ? 'var(--rose)' : 'var(--frost)',
                                 color: 'var(--charcoal)',
-                                fontSize: 13,
+                                fontSize: 15,
                                 fontWeight: 700,
                                 cursor: 'pointer',
                                 fontFamily: "'Syne', sans-serif",
@@ -873,8 +900,6 @@ function PdfImportTab({
                         })}
                       </div>
                     </div>
-
-                    {/* Existing explanation */}
                     {(akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url) && (
                       <div>
                         <p style={{ ...sectionHead, marginBottom: 6 }}>Explanation Image</p>
@@ -886,22 +911,13 @@ function PdfImportTab({
                         />
                       </div>
                     )}
-
-                    <button
-                      onClick={() => handleSaveAnswerKey(akProblem)}
-                      disabled={savingAk === akProblem.question_number}
-                      style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif", alignSelf: 'flex-start' }}
-                    >
-                      {savingAk === akProblem.question_number ? 'Saving…' : 'Save Answer Key'}
-                    </button>
                   </div>
 
                   {/* Right: PDF to crop explanation */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <p style={sectionHead}>Crop Explanation from PDF</p>
+                  <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     {!pdfUrl ? (
-                      <div style={{ border: '2px dashed rgba(168,203,222,0.4)', borderRadius: 10, padding: 16, background: 'rgba(168,203,222,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                        <p style={{ fontSize: 11, color: 'var(--mist)', textAlign: 'center' }}>Upload or re-load the PDF to crop the explanation</p>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                        <p style={{ fontSize: 13, color: 'var(--mist)' }}>Upload or re-load the PDF to crop the explanation</p>
                         <UploadButton<OurFileRouter, 'pdfUploader'>
                           endpoint="pdfUploader"
                           onClientUploadComplete={async (files) => {
@@ -912,76 +928,51 @@ function PdfImportTab({
                             toast.success('PDF loaded');
                           }}
                           onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
-                          appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-xs font-semibold py-1.5 px-3 rounded-lg font-[Syne]' }}
+                          appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-sm font-semibold py-2.5 px-6 rounded-lg font-[Syne]' }}
                         />
                       </div>
                     ) : (
                       <>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: 'var(--white)', borderBottom: '1px solid var(--fog)', flexShrink: 0 }}>
+                          <PageNav small />
+                          <span style={{ fontSize: 11, color: 'var(--mist)', flex: 1 }}>Drag to select the explanation region</span>
                           <button
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                            style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '3px 8px', cursor: currentPage === 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
+                            onClick={() => handleCropExplanation(akProblem)}
+                            disabled={!akCropRect}
+                            style={{ padding: '5px 14px', borderRadius: 7, border: 'none', background: akCropRect ? 'var(--rose)' : 'var(--fog)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: akCropRect ? 'pointer' : 'default', fontFamily: "'Syne', sans-serif", whiteSpace: 'nowrap' }}
                           >
-                            <ChevronLeft size={12} />
-                          </button>
-                          <span style={{ fontSize: 11, color: 'var(--slate)', fontWeight: 600 }}>Page {currentPage} / {totalPages}</span>
-                          <button
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
-                            style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '3px 8px', cursor: currentPage === totalPages ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}
-                          >
-                            <ChevronRight size={12} />
+                            Crop Explanation
                           </button>
                         </div>
-                        <p style={{ fontSize: 11, color: 'var(--mist)', margin: 0 }}>
-                          Drag to select the explanation region, then click <strong>Crop Explanation</strong>.
-                        </p>
-                        <div style={{ position: 'relative', width: '100%', border: '1px solid var(--fog)', borderRadius: 8, overflow: 'hidden', userSelect: 'none' }}>
-                          <canvas
-                            ref={canvasRef}
-                            style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
-                            onMouseDown={(e) => { const p = getCanvasRelativeRect(e); setAkDragStart(p); setAkCropRect(null); }}
-                            onMouseMove={(e) => {
-                              if (!akDragStart) return;
-                              const pos = getCanvasRelativeRect(e);
-                              setAkCropRect({ x: Math.min(akDragStart.x, pos.x), y: Math.min(akDragStart.y, pos.y), w: Math.abs(pos.x - akDragStart.x), h: Math.abs(pos.y - akDragStart.y) });
-                            }}
-                            onMouseUp={() => setAkDragStart(null)}
-                          />
-                          {akCropRect && akCropRect.w > 4 && canvasRef.current && (
-                            <div
-                              style={{
-                                position: 'absolute',
-                                left: `${(akCropRect.x / canvasRef.current.width) * 100}%`,
-                                top: `${(akCropRect.y / canvasRef.current.height) * 100}%`,
-                                width: `${(akCropRect.w / canvasRef.current.width) * 100}%`,
-                                height: `${(akCropRect.h / canvasRef.current.height) * 100}%`,
-                                border: '2px solid rgba(224,166,175,0.9)',
-                                background: 'rgba(224,166,175,0.15)',
-                                pointerEvents: 'none',
+                        <div style={{ flex: 1, overflow: 'auto' }}>
+                          <div style={{ position: 'relative', width: '100%', userSelect: 'none' }}>
+                            <canvas
+                              ref={canvasRef}
+                              style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
+                              onMouseDown={(e) => { const p = getCanvasRelativeRect(e); setAkDragStart(p); setAkCropRect(null); }}
+                              onMouseMove={(e) => {
+                                if (!akDragStart) return;
+                                const pos = getCanvasRelativeRect(e);
+                                setAkCropRect({ x: Math.min(akDragStart.x, pos.x), y: Math.min(akDragStart.y, pos.y), w: Math.abs(pos.x - akDragStart.x), h: Math.abs(pos.y - akDragStart.y) });
                               }}
+                              onMouseUp={() => setAkDragStart(null)}
                             />
-                          )}
+                            {akCropRect && akCropRect.w > 4 && canvasRef.current && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  left: `${(akCropRect.x / canvasRef.current.width) * 100}%`,
+                                  top: `${(akCropRect.y / canvasRef.current.height) * 100}%`,
+                                  width: `${(akCropRect.w / canvasRef.current.width) * 100}%`,
+                                  height: `${(akCropRect.h / canvasRef.current.height) * 100}%`,
+                                  border: '2px solid rgba(224,166,175,0.9)',
+                                  background: 'rgba(224,166,175,0.15)',
+                                  pointerEvents: 'none',
+                                }}
+                              />
+                            )}
+                          </div>
                         </div>
-                        <button
-                          onClick={() => handleCropExplanation(akProblem)}
-                          disabled={!akCropRect}
-                          style={{
-                            alignSelf: 'flex-start',
-                            padding: '7px 16px',
-                            borderRadius: 8,
-                            border: 'none',
-                            background: akCropRect ? 'var(--rose)' : 'var(--fog)',
-                            color: 'var(--charcoal)',
-                            fontSize: 12,
-                            fontWeight: 600,
-                            cursor: akCropRect ? 'pointer' : 'default',
-                            fontFamily: "'Syne', sans-serif",
-                          }}
-                        >
-                          Crop Explanation
-                        </button>
                       </>
                     )}
                   </div>
@@ -1021,55 +1012,37 @@ function InstructionStepEditor({
   }
 
   return (
-    <div style={{ background: 'var(--white)', borderRadius: 14, border: '1px solid var(--fog)', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Type badge */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Compact settings bar at top */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', borderBottom: '1px solid var(--fog)', background: 'var(--white)', flexShrink: 0, flexWrap: 'wrap' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--sky-deeper)', background: 'rgba(168,203,222,0.14)', border: '1px solid rgba(168,203,222,0.3)', padding: '3px 10px', borderRadius: 20 }}>
           <BookOpen size={11} /> Instruction Step
         </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <label style={{ ...labelStyle, marginBottom: 0, whiteSpace: 'nowrap' }}>Title</label>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} style={{ ...inputStyle, width: 200 }} placeholder="Step title" />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <label style={{ ...labelStyle, marginBottom: 0, whiteSpace: 'nowrap' }}>Stage</label>
+          <input value={stageLabel} onChange={(e) => setStageLabel(e.target.value)} style={{ ...inputStyle, width: 160 }} placeholder="e.g. Review Together" />
+        </div>
+        <button
+          onClick={saveMeta}
+          disabled={savingMeta}
+          style={{ padding: '6px 16px', borderRadius: 8, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif", whiteSpace: 'nowrap' }}
+        >
+          {savingMeta ? 'Saving…' : 'Save'}
+        </button>
       </div>
 
-      {/* Title + stage label */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-        <div>
-          <label style={labelStyle}>Step Title</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            style={inputStyle}
-            placeholder="e.g. Introduction to Quadratics"
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>Stage Label</label>
-          <input
-            value={stageLabel}
-            onChange={(e) => setStageLabel(e.target.value)}
-            style={inputStyle}
-            placeholder="e.g. Review Together"
-          />
-        </div>
-      </div>
-
-      <button
-        onClick={saveMeta}
-        disabled={savingMeta}
-        style={{ alignSelf: 'flex-start', padding: '7px 18px', borderRadius: 8, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
-      >
-        {savingMeta ? 'Saving…' : 'Save Title & Label'}
-      </button>
-
-      {/* PDF upload */}
-      <div>
-        <label style={labelStyle}>Instruction PDF</label>
+      {/* PDF — fills remaining height */}
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {step.pdf_url ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(168,203,222,0.08)', border: '1px solid rgba(168,203,222,0.3)', borderRadius: 8, fontSize: 13 }}>
-              <BookOpen size={14} style={{ color: 'var(--sky-deeper)' }} />
-              <span style={{ flex: 1, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>PDF uploaded</span>
-              <a href={step.pdf_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--sky-deeper)', textDecoration: 'none', fontWeight: 600 }}>
-                View ↗
-              </a>
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'rgba(168,203,222,0.06)', borderBottom: '1px solid rgba(168,203,222,0.2)', flexShrink: 0 }}>
+              <BookOpen size={13} style={{ color: 'var(--sky-deeper)' }} />
+              <span style={{ fontSize: 12, color: 'var(--charcoal)', flex: 1 }}>PDF uploaded</span>
+              <a href={step.pdf_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--sky-deeper)', textDecoration: 'none', fontWeight: 600 }}>View ↗</a>
               <button
                 onClick={async () => {
                   const ok = await onSaveField(step.id, { pdfUrl: null });
@@ -1080,18 +1053,16 @@ function InstructionStepEditor({
                 Remove
               </button>
             </div>
-            {/* Embedded preview */}
             <iframe
               src={step.pdf_url}
-              style={{ width: '100%', height: 520, borderRadius: 10, border: '1px solid var(--fog)' }}
+              style={{ flex: 1, width: '100%', border: 'none' }}
               title="Instruction PDF preview"
             />
-          </div>
+          </>
         ) : (
-          <div style={{ border: '2px dashed rgba(168,203,222,0.4)', borderRadius: 10, padding: 20, background: 'rgba(168,203,222,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <p style={{ fontSize: 12, color: 'var(--mist)', textAlign: 'center' }}>
-              Upload the instruction PDF that students will read for this step
-            </p>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+            <FileText size={40} style={{ color: 'var(--sky-deeper)', opacity: 0.4 }} />
+            <p style={{ fontSize: 13, color: 'var(--mist)' }}>Upload the instruction PDF that students will read for this step</p>
             <UploadButton<OurFileRouter, 'pdfUploader'>
               endpoint="pdfUploader"
               onClientUploadComplete={async (files) => {
@@ -1104,7 +1075,7 @@ function InstructionStepEditor({
                 }
               }}
               onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
-              appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-xs font-semibold py-2 px-4 rounded-lg font-[Syne]' }}
+              appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-sm font-semibold py-2.5 px-6 rounded-lg font-[Syne]' }}
             />
           </div>
         )}
@@ -1230,283 +1201,278 @@ function ProblemsStepEditor({
   const activePageData = pages.find((p) => p.page_number === activePage);
   const positionsOnActivePage = positions.filter((p) => p.page_number === activePage);
 
-  const tabStyle = (active: boolean): React.CSSProperties => ({
-    padding: '7px 16px',
+  const tabBtnStyle = (active: boolean): React.CSSProperties => ({
+    padding: '6px 14px',
     borderRadius: 8,
     fontSize: 12,
     fontWeight: 600,
     fontFamily: "'Syne', sans-serif",
-    border: 'none',
+    border: `1px solid ${active ? 'rgba(224,166,175,0.5)' : 'var(--fog)'}`,
     cursor: 'pointer',
-    background: active ? 'var(--rose)' : 'var(--frost)',
+    background: active ? 'rgba(224,166,175,0.12)' : 'transparent',
     color: active ? 'var(--charcoal)' : 'var(--mist)',
     transition: 'all 0.15s',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 5,
   });
 
   return (
-    <div style={{ background: 'var(--white)', borderRadius: 14, border: '1px solid var(--fog)', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Type badge */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--rose-deeper)', background: 'rgba(224,166,175,0.14)', border: '1px solid rgba(224,166,175,0.3)', padding: '3px 10px', borderRadius: 20 }}>
-          <Layers size={11} /> Problems Step
-        </span>
-      </div>
-
-      {/* Meta fields */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-        <div>
-          <label style={labelStyle}>Step Title</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle} placeholder="e.g. Warm-Up Problems" />
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Compact settings + tab bar */}
+      <div style={{ borderBottom: '1px solid var(--fog)', background: 'var(--white)', flexShrink: 0 }}>
+        {/* Settings row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', flexWrap: 'wrap' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--rose-deeper)', background: 'rgba(224,166,175,0.14)', border: '1px solid rgba(224,166,175,0.3)', padding: '3px 10px', borderRadius: 20, flexShrink: 0 }}>
+            <Layers size={11} /> Problems Step
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ ...labelStyle, marginBottom: 0, whiteSpace: 'nowrap' }}>Title</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} style={{ ...inputStyle, width: 180 }} placeholder="Step title" />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ ...labelStyle, marginBottom: 0, whiteSpace: 'nowrap' }}>Stage</label>
+            <input value={stageLabel} onChange={(e) => setStageLabel(e.target.value)} style={{ ...inputStyle, width: 140 }} placeholder="e.g. Student Work" />
+          </div>
+          <button
+            onClick={() => setLockedNav((v) => !v)}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 8, border: `1px solid ${lockedNav ? 'rgba(224,166,175,0.5)' : 'var(--fog)'}`, background: lockedNav ? 'rgba(224,166,175,0.1)' : 'transparent', color: lockedNav ? 'var(--rose-deeper)' : 'var(--mist)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif", flexShrink: 0 }}
+            title={lockedNav ? 'Locked: student must answer all before advancing' : 'Unlocked: free navigation'}
+          >
+            {lockedNav ? <Lock size={11} /> : <Unlock size={11} />}
+            {lockedNav ? 'Locked' : 'Unlocked'}
+          </button>
+          <button
+            onClick={saveMeta}
+            disabled={savingMeta}
+            style={{ padding: '6px 16px', borderRadius: 8, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif", whiteSpace: 'nowrap' }}
+          >
+            {savingMeta ? 'Saving…' : 'Save'}
+          </button>
         </div>
-        <div>
-          <label style={labelStyle}>Stage Label</label>
-          <input value={stageLabel} onChange={(e) => setStageLabel(e.target.value)} style={inputStyle} placeholder="e.g. Student Work" />
+        {/* Tab row */}
+        <div style={{ display: 'flex', gap: 6, padding: '0 20px 10px' }}>
+          <button style={tabBtnStyle(tab === 'pdfimport')} onClick={() => setTab('pdfimport')}>
+            <FileText size={12} />PDF Import
+          </button>
+          <button style={tabBtnStyle(tab === 'pages')} onClick={() => setTab('pages')}>
+            <ImageIcon size={12} />Pages & Bubbles
+          </button>
+          <button style={tabBtnStyle(tab === 'answerkey')} onClick={() => setTab('answerkey')}>
+            <Key size={12} />Answer Key
+          </button>
         </div>
       </div>
 
-      {/* Locked nav toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button
-          onClick={() => setLockedNav((v) => !v)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, border: `1px solid ${lockedNav ? 'rgba(224,166,175,0.5)' : 'var(--fog)'}`, background: lockedNav ? 'rgba(224,166,175,0.1)' : 'transparent', color: lockedNav ? 'var(--rose-deeper)' : 'var(--mist)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
-        >
-          {lockedNav ? <Lock size={12} /> : <Unlock size={12} />}
-          {lockedNav ? 'Locked navigation' : 'Free navigation'}
-        </button>
-        <span style={{ fontSize: 11, color: 'var(--mist)' }}>
-          {lockedNav ? 'Student must answer all questions on a page before advancing' : 'Student can freely move between pages'}
-        </span>
-      </div>
+      {/* Tab content — fills remaining space */}
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
-      <button
-        onClick={saveMeta}
-        disabled={savingMeta}
-        style={{ alignSelf: 'flex-start', padding: '7px 18px', borderRadius: 8, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
-      >
-        {savingMeta ? 'Saving…' : 'Save Settings'}
-      </button>
+        {/* ── PDF Import tab ── */}
+        {tab === 'pdfimport' && (
+          <PdfImportTab
+            wsId={wsId}
+            stepId={stepId}
+            problems={problems}
+            positions={positions}
+            onProblemsChange={setProblems}
+            onPositionsChange={setPositions}
+          />
+        )}
 
-      {/* Sub-tabs */}
-      <div style={{ display: 'flex', gap: 8, borderTop: '1px solid var(--fog)', paddingTop: 16 }}>
-        <button style={tabStyle(tab === 'pages')} onClick={() => setTab('pages')}>
-          <ImageIcon size={12} style={{ display: 'inline', marginRight: 4 }} />Pages & Bubbles
-        </button>
-        <button style={tabStyle(tab === 'answerkey')} onClick={() => setTab('answerkey')}>
-          <Key size={12} style={{ display: 'inline', marginRight: 4 }} />Answer Key
-        </button>
-        <button style={tabStyle(tab === 'pdfimport')} onClick={() => setTab('pdfimport')}>
-          <FileText size={12} style={{ display: 'inline', marginRight: 4 }} />PDF Import
-        </button>
-      </div>
-
-      {/* ── Pages & Bubbles tab ── */}
-      {tab === 'pages' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 20 }}>
-          {/* Left: page list + upload */}
-          <div>
-            <p style={sectionHead}>Pages ({pages.length})</p>
-            <div style={{ border: '2px dashed rgba(168,203,222,0.4)', borderRadius: 10, padding: 12, background: 'rgba(168,203,222,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <p style={{ fontSize: 11, color: 'var(--mist)', textAlign: 'center' }}>Upload a page image</p>
-              <UploadButton<OurFileRouter, 'imageUploader'>
-                endpoint="imageUploader"
-                onClientUploadComplete={async (res) => {
-                  if (!res[0]) return;
-                  const pageNum = parseInt(prompt('Page number?') ?? '0', 10);
-                  if (!pageNum || pageNum < 1) { toast.error('Invalid page number'); return; }
-                  const r = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/pages`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pageNumber: pageNum, imageUrl: res[0].ufsUrl }),
-                  });
-                  if (!r.ok) { toast.error('Failed to save page'); return; }
-                  const { page } = await r.json() as { page: WsPage };
-                  setPages((prev) => [...prev.filter((p) => p.page_number !== page.page_number), page].sort((a, b) => a.page_number - b.page_number));
-                  setActivePage(page.page_number);
-                  toast.success(`Page ${page.page_number} uploaded`);
-                }}
-                onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
-                appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-xs font-semibold py-1.5 px-3 rounded-lg font-[Syne]' }}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {pages.map((p) => (
-                <div
-                  key={p.id}
-                  onClick={() => setActivePage(p.page_number)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${activePage === p.page_number ? 'rgba(224,166,175,0.5)' : 'var(--fog)'}`, background: activePage === p.page_number ? 'rgba(224,166,175,0.06)' : 'var(--white)' }}
-                >
-                  <ImageIcon size={12} style={{ color: 'var(--mist)', flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--charcoal)', flex: 1 }}>Page {p.page_number}</span>
-                  <span style={{ fontSize: 10, color: '#15803d', fontWeight: 600 }}>
-                    {positions.filter((pos) => pos.page_number === p.page_number).length}Q
-                  </span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDeletePage(p.id, p.page_number); }}
-                    style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloud)', padding: 2, display: 'flex', alignItems: 'center' }}
+        {/* ── Pages & Bubbles tab ── */}
+        {tab === 'pages' && (
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+            {/* Left: page list + controls */}
+            <div style={{ width: 220, flexShrink: 0, borderRight: '1px solid var(--fog)', overflowY: 'auto', padding: '12px', background: 'var(--frost)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={sectionHead}>Pages ({pages.length})</p>
+              <div style={{ border: '2px dashed rgba(168,203,222,0.4)', borderRadius: 10, padding: '10px 8px', background: 'rgba(168,203,222,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <p style={{ fontSize: 11, color: 'var(--mist)', textAlign: 'center', margin: 0 }}>Upload page image</p>
+                <UploadButton<OurFileRouter, 'imageUploader'>
+                  endpoint="imageUploader"
+                  onClientUploadComplete={async (res) => {
+                    if (!res[0]) return;
+                    const pageNum = parseInt(prompt('Page number?') ?? '0', 10);
+                    if (!pageNum || pageNum < 1) { toast.error('Invalid page number'); return; }
+                    const r = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/pages`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ pageNumber: pageNum, imageUrl: res[0].ufsUrl }),
+                    });
+                    if (!r.ok) { toast.error('Failed to save page'); return; }
+                    const { page } = await r.json() as { page: WsPage };
+                    setPages((prev) => [...prev.filter((p) => p.page_number !== page.page_number), page].sort((a, b) => a.page_number - b.page_number));
+                    setActivePage(page.page_number);
+                    toast.success(`Page ${page.page_number} uploaded`);
+                  }}
+                  onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
+                  appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-xs font-semibold py-1.5 px-3 rounded-lg font-[Syne]' }}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {pages.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => setActivePage(p.page_number)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${activePage === p.page_number ? 'rgba(224,166,175,0.5)' : 'var(--fog)'}`, background: activePage === p.page_number ? 'rgba(224,166,175,0.06)' : 'var(--white)' }}
                   >
-                    <Trash2 size={11} />
-                  </button>
-                </div>
-              ))}
-              {pages.length === 0 && <p style={{ fontSize: 11, color: 'var(--cloud)', textAlign: 'center', padding: 10 }}>No pages yet</p>}
-            </div>
-
-            {/* Placement control */}
-            {pages.length > 0 && (
-              <div style={{ marginTop: 16, padding: 12, borderRadius: 10, border: '1px solid var(--fog)', background: 'var(--frost)' }}>
-                <p style={{ ...sectionHead, marginBottom: 8 }}>Place Question</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input
-                    type="number"
-                    min={1}
-                    value={placingQuestion ?? ''}
-                    onChange={(e) => setPlacingQuestion(e.target.value ? parseInt(e.target.value) : null)}
-                    placeholder="Q#"
-                    style={{ ...inputStyle, width: 60 }}
-                  />
-                  {placingQuestion !== null ? (
-                    <span style={{ fontSize: 11, color: 'var(--charcoal)', fontWeight: 600 }}>
-                      Click on page to place Q{placingQuestion}
+                    <ImageIcon size={11} style={{ color: 'var(--mist)', flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--charcoal)', flex: 1 }}>Page {p.page_number}</span>
+                    <span style={{ fontSize: 10, color: '#15803d', fontWeight: 600 }}>
+                      {positions.filter((pos) => pos.page_number === p.page_number).length}Q
                     </span>
-                  ) : (
-                    <span style={{ fontSize: 11, color: 'var(--mist)' }}>Enter a question number</span>
-                  )}
-                </div>
-                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 140, overflowY: 'auto' }}>
-                  {positions.sort((a, b) => a.question_number - b.question_number).map((pos) => (
-                    <div key={pos.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--slate)' }}>
-                      <span style={{ fontWeight: 600, color: 'var(--charcoal)', minWidth: 28 }}>Q{pos.question_number}</span>
-                      <span style={{ color: 'var(--mist)' }}>p{pos.page_number} ({pos.x_percent.toFixed(0)}%,{pos.y_percent.toFixed(0)}%)</span>
-                      <button
-                        onClick={() => handleDeletePosition(pos.id, pos.question_number)}
-                        style={{ marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloud)', padding: 1, display: 'flex', alignItems: 'center' }}
-                      >
-                        <Trash2 size={10} />
-                      </button>
-                    </div>
-                  ))}
-                  {positions.length === 0 && <p style={{ fontSize: 11, color: 'var(--cloud)', textAlign: 'center' }}>No markers yet</p>}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right: page image with bubble overlay */}
-          <div>
-            {activePageData ? (
-              <div>
-                <p style={{ ...sectionHead, marginBottom: 8 }}>
-                  Page {activePage} {placingQuestion !== null ? `— click to place Q${placingQuestion}` : ''}
-                </p>
-                <div
-                  onClick={(e) => handleImageClick(e, activePage)}
-                  style={{ position: 'relative', width: '100%', cursor: placingQuestion !== null ? 'crosshair' : 'default', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--fog)' }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={activePageData.image_url} alt={`Page ${activePage}`} style={{ display: 'block', width: '100%' }} />
-                  {positionsOnActivePage.map((pos) => (
-                    <div
-                      key={pos.id}
-                      style={{
-                        position: 'absolute',
-                        left: `${pos.x_percent}%`,
-                        top: `${pos.y_percent}%`,
-                        transform: 'translate(-50%, -50%)',
-                        background: 'rgba(224,166,175,0.9)',
-                        border: '2px solid #fff',
-                        borderRadius: '50%',
-                        width: 24,
-                        height: 24,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: '#1A1D23',
-                        fontFamily: "'Syne', sans-serif",
-                        pointerEvents: 'none',
-                      }}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeletePage(p.id, p.page_number); }}
+                      style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloud)', padding: 2, display: 'flex', alignItems: 'center' }}
                     >
-                      {pos.question_number}
-                    </div>
-                  ))}
-                </div>
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                ))}
+                {pages.length === 0 && <p style={{ fontSize: 11, color: 'var(--cloud)', textAlign: 'center', padding: 8 }}>No pages yet</p>}
               </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, border: '1px dashed var(--fog)', borderRadius: 10, color: 'var(--mist)', fontSize: 13 }}>
-                {pages.length === 0 ? 'Upload a page image to get started' : 'Select a page from the left'}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
-      {/* ── PDF Import tab ── */}
-      {tab === 'pdfimport' && (
-        <PdfImportTab
-          wsId={wsId}
-          stepId={stepId}
-          problems={problems}
-          positions={positions}
-          onProblemsChange={setProblems}
-          onPositionsChange={setPositions}
-        />
-      )}
-
-      {/* ── Answer Key tab ── */}
-      {tab === 'answerkey' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <p style={sectionHead}>Answer Key</p>
-            <button
-              onClick={handleSaveAnswerKey}
-              disabled={savingKey}
-              style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
-            >
-              {savingKey ? 'Saving…' : 'Save Answer Key'}
-            </button>
-          </div>
-
-          {positions.length === 0 ? (
-            <p style={{ fontSize: 13, color: 'var(--mist)', textAlign: 'center', padding: 32 }}>
-              Place question bubbles on the pages first, then set answers here.
-            </p>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
-              {Array.from(new Set(positions.map((p) => p.question_number))).sort((a, b) => a - b).map((qNum) => (
-                <div key={qNum} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', border: '1px solid var(--fog)', borderRadius: 8, background: 'var(--frost)' }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--charcoal)', minWidth: 28 }}>Q{qNum}</span>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {['A', 'B', 'C', 'D'].map((letter) => {
-                      const val = getKeyValue(qNum);
-                      return (
+              {/* Placement control */}
+              {pages.length > 0 && (
+                <div style={{ padding: 10, borderRadius: 10, border: '1px solid var(--fog)', background: 'var(--white)' }}>
+                  <p style={{ ...sectionHead, marginBottom: 8 }}>Place Question</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <input
+                      type="number"
+                      min={1}
+                      value={placingQuestion ?? ''}
+                      onChange={(e) => setPlacingQuestion(e.target.value ? parseInt(e.target.value) : null)}
+                      placeholder="Q#"
+                      style={{ ...inputStyle, width: 56 }}
+                    />
+                    <span style={{ fontSize: 10, color: placingQuestion !== null ? 'var(--charcoal)' : 'var(--mist)', fontWeight: placingQuestion !== null ? 600 : 400 }}>
+                      {placingQuestion !== null ? `Click page → Q${placingQuestion}` : 'Enter Q#'}
+                    </span>
+                  </div>
+                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 120, overflowY: 'auto' }}>
+                    {positions.sort((a, b) => a.question_number - b.question_number).map((pos) => (
+                      <div key={pos.id} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--slate)' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--charcoal)', minWidth: 24 }}>Q{pos.question_number}</span>
+                        <span style={{ color: 'var(--mist)' }}>p{pos.page_number}</span>
                         <button
-                          key={letter}
-                          onClick={() => setKeyEdits((prev) => ({ ...prev, [qNum]: val === letter ? '' : letter }))}
-                          style={{
-                            width: 26,
-                            height: 26,
-                            borderRadius: '50%',
-                            border: `1px solid ${val === letter ? 'var(--rose-deeper)' : 'var(--fog)'}`,
-                            background: val === letter ? 'var(--rose)' : 'transparent',
-                            color: val === letter ? 'var(--charcoal)' : 'var(--mist)',
-                            fontSize: 11,
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            fontFamily: "'Syne', sans-serif",
-                          }}
+                          onClick={() => handleDeletePosition(pos.id, pos.question_number)}
+                          style={{ marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--cloud)', padding: 1, display: 'flex', alignItems: 'center' }}
                         >
-                          {letter}
+                          <Trash2 size={10} />
                         </button>
-                      );
-                    })}
+                      </div>
+                    ))}
+                    {positions.length === 0 && <p style={{ fontSize: 10, color: 'var(--cloud)', textAlign: 'center' }}>No markers yet</p>}
                   </div>
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Right: page image — fills all available space */}
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              {activePageData ? (
+                <div>
+                  {placingQuestion !== null && (
+                    <div style={{ padding: '6px 12px', background: 'rgba(224,166,175,0.1)', borderBottom: '1px solid rgba(224,166,175,0.3)', fontSize: 12, fontWeight: 600, color: 'var(--rose-deeper)' }}>
+                      Click anywhere on the page to place Q{placingQuestion}
+                    </div>
+                  )}
+                  <div
+                    onClick={(e) => handleImageClick(e, activePage)}
+                    style={{ position: 'relative', width: '100%', cursor: placingQuestion !== null ? 'crosshair' : 'default', userSelect: 'none' }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={activePageData.image_url} alt={`Page ${activePage}`} style={{ display: 'block', width: '100%' }} />
+                    {positionsOnActivePage.map((pos) => (
+                      <div
+                        key={pos.id}
+                        style={{
+                          position: 'absolute',
+                          left: `${pos.x_percent}%`,
+                          top: `${pos.y_percent}%`,
+                          transform: 'translate(-50%, -50%)',
+                          background: 'rgba(224,166,175,0.9)',
+                          border: '2px solid #fff',
+                          borderRadius: '50%',
+                          width: 28,
+                          height: 28,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: '#1A1D23',
+                          fontFamily: "'Syne', sans-serif",
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        {pos.question_number}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--mist)', fontSize: 13 }}>
+                  {pages.length === 0 ? 'Upload a page image to get started' : 'Select a page from the left'}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Answer Key tab ── */}
+        {tab === 'answerkey' && (
+          <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={sectionHead}>Answer Key</p>
+              <button
+                onClick={handleSaveAnswerKey}
+                disabled={savingKey}
+                style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: 'var(--rose)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+              >
+                {savingKey ? 'Saving…' : 'Save Answer Key'}
+              </button>
+            </div>
+            {positions.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--mist)', textAlign: 'center', padding: 32 }}>
+                Place question bubbles on the pages first, then set answers here.
+              </p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+                {Array.from(new Set(positions.map((p) => p.question_number))).sort((a, b) => a - b).map((qNum) => (
+                  <div key={qNum} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', border: '1px solid var(--fog)', borderRadius: 8, background: 'var(--frost)' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--charcoal)', minWidth: 28 }}>Q{qNum}</span>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {['A', 'B', 'C', 'D'].map((letter) => {
+                        const val = getKeyValue(qNum);
+                        return (
+                          <button
+                            key={letter}
+                            onClick={() => setKeyEdits((prev) => ({ ...prev, [qNum]: val === letter ? '' : letter }))}
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: '50%',
+                              border: `1px solid ${val === letter ? 'var(--rose-deeper)' : 'var(--fog)'}`,
+                              background: val === letter ? 'var(--rose)' : 'transparent',
+                              color: val === letter ? 'var(--charcoal)' : 'var(--mist)',
+                              fontSize: 11,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              fontFamily: "'Syne', sans-serif",
+                            }}
+                          >
+                            {letter}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
