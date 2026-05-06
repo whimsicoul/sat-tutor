@@ -514,8 +514,16 @@ function PdfImportTab({
     });
     if (!res.ok) { toast.error('Failed to place bubble'); return; }
     const { position } = await res.json() as { position: WsPosition };
-    onPositionsChange([...positions.filter((p) => p.question_number !== encodedQNum), position]);
+    const newPositions = [...positions.filter((p) => p.question_number !== encodedQNum), position];
+    onPositionsChange(newPositions);
     toast.success(`Placed ${placingBubbleLetter} on Q${questionNumber}`);
+    const letters = ['A', 'B', 'C', 'D'];
+    const currentIdx = letters.indexOf(placingBubbleLetter);
+    const nextLetter = letters.slice(currentIdx + 1).find((l) => {
+      const enc = questionNumber * 10 + (letterMap[l] ?? 0);
+      return !newPositions.some((p) => p.question_number === enc);
+    }) ?? null;
+    setPlacingBubbleLetter(nextLetter);
   }
 
   async function handleSaveAnswerKey(problem: WsProblem) {
