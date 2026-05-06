@@ -308,6 +308,7 @@ export default function WorksheetBuilderClient({
             selectedStep.type === 'instruction'
               ? (
                 <InstructionStepEditor
+                  key={selectedStep.id}
                   step={selectedStep}
                   onUpdate={(patch) => updateStepLocal(selectedStep.id, patch)}
                   onSaveField={saveStepField}
@@ -315,6 +316,7 @@ export default function WorksheetBuilderClient({
               )
               : (
                 <ProblemsStepEditor
+                  key={selectedStep.id}
                   step={selectedStep}
                   wsId={wsId}
                   onUpdate={(patch) => updateStepLocal(selectedStep.id, patch)}
@@ -345,6 +347,8 @@ function PdfImportTab({
   positions,
   onProblemsChange,
   onPositionsChange,
+  initialPdfUrl,
+  onPdfUrlSave,
 }: {
   wsId: string;
   stepId: string;
@@ -352,6 +356,8 @@ function PdfImportTab({
   positions: WsPosition[];
   onProblemsChange: (p: WsProblem[]) => void;
   onPositionsChange: (p: WsPosition[]) => void;
+  initialPdfUrl: string | null;
+  onPdfUrlSave: (url: string) => void;
 }) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfDoc, setPdfDoc] = useState<unknown>(null);
@@ -402,6 +408,14 @@ function PdfImportTab({
     setCropRect(null);
     setAkCropRect(null);
   }, [pdfZoom]);
+
+  useEffect(() => {
+    if (initialPdfUrl && !pdfDoc) {
+      setPdfUrl(initialPdfUrl);
+      loadPdf(initialPdfUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function loadPdf(url: string) {
     const pdfjsLib = await import('pdfjs-dist');
@@ -659,6 +673,7 @@ function PdfImportTab({
                   const url = files[0].ufsUrl ?? files[0].url;
                   setPdfUrl(url);
                   await loadPdf(url);
+                  onPdfUrlSave(url);
                   toast.success('PDF loaded');
                 }}
                 onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
@@ -1333,12 +1348,18 @@ function ProblemsStepEditor({
         {/* ── PDF Import tab ── */}
         {tab === 'pdfimport' && (
           <PdfImportTab
+            key={stepId}
             wsId={wsId}
             stepId={stepId}
             problems={problems}
             positions={positions}
             onProblemsChange={setProblems}
             onPositionsChange={setPositions}
+            initialPdfUrl={step.pdf_url ?? null}
+            onPdfUrlSave={async (url) => {
+              const ok = await onSaveField(stepId, { pdfUrl: url });
+              if (ok) onUpdate({ pdf_url: url });
+            }}
           />
         )}
 
