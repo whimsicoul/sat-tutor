@@ -523,7 +523,14 @@ function PdfImportTab({
       const enc = questionNumber * 10 + (letterMap[l] ?? 0);
       return !newPositions.some((p) => p.question_number === enc);
     }) ?? null;
-    setPlacingBubbleLetter(nextLetter);
+    if (nextLetter) {
+      setPlacingBubbleLetter(nextLetter);
+    } else if (bubbleQIdx < problems.length - 1) {
+      setBubbleQIdx((i) => i + 1);
+      setPlacingBubbleLetter('A');
+    } else {
+      setPlacingBubbleLetter(null);
+    }
   }
 
   async function handleSaveAnswerKey(problem: WsProblem) {
