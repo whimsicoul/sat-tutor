@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { getSessionById, setSessionWorksheet, getWorksheetsByStudent } from '@/lib/db';
+import { getSessionById, setSessionWorksheet, getAllWorksheets } from '@/lib/db';
 import sql from '@/lib/db';
 
 async function requireAdmin() {
@@ -29,7 +29,7 @@ export async function GET(
       WHERE s.id = ${id}
       LIMIT 1
     `,
-    getWorksheetsByStudent(sessionRow.student_id as string),
+    getAllWorksheets(),
   ]);
 
   return NextResponse.json({

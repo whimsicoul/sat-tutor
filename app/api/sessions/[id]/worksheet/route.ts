@@ -32,9 +32,7 @@ export async function GET(
 
   return NextResponse.json({
     attached: (attached[0] as { id: string; title: string } | undefined) ?? null,
-    available: (available as { id: string; title: string; student_id: string }[]).filter(
-      (w) => w.student_id === sessionRow.student_id
-    ),
+    available: available as { id: string; title: string }[],
   });
 }
 

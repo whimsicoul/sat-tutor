@@ -11,27 +11,25 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { AdminWorksheet, UserOption } from './page';
+import type { AdminWorksheet } from './page';
 
 export default function WorksheetsClient({
   worksheets: initial,
-  students,
 }: {
   worksheets: AdminWorksheet[];
-  students: UserOption[];
 }) {
   const [worksheets, setWorksheets] = useState<AdminWorksheet[]>(initial);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ title: '', studentId: '' });
+  const [form, setForm] = useState({ title: '' });
 
   function resetForm() {
-    setForm({ title: '', studentId: '' });
+    setForm({ title: '' });
   }
 
   async function handleCreate() {
-    if (!form.title || !form.studentId) {
-      toast.error('Please fill in all required fields');
+    if (!form.title) {
+      toast.error('Please enter a title');
       return;
     }
     setSaving(true);
@@ -39,15 +37,13 @@ export default function WorksheetsClient({
       const res = await fetch('/api/admin/worksheets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: form.title, studentId: form.studentId }),
+        body: JSON.stringify({ title: form.title }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
       const { worksheet } = await res.json() as { worksheet: { id: string; title: string; created_at: string } };
-      const student = students.find((s) => s.id === form.studentId)!;
       const created: AdminWorksheet = {
         id: worksheet.id,
         title: worksheet.title,
-        student_name: student.name,
         created_by_name: 'You',
         step_count: 0,
         created_at: worksheet.created_at,
@@ -89,7 +85,7 @@ export default function WorksheetsClient({
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--fog)', background: 'var(--frost)' }}>
-              {['Title', 'Student', 'Steps', 'Created', ''].map((h) => (
+              {['Title', 'Steps', 'Created', ''].map((h) => (
                 <th key={h} style={{ textAlign: 'left', padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   {h}
                 </th>
@@ -99,7 +95,7 @@ export default function WorksheetsClient({
           <tbody>
             {worksheets.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: 48, color: 'var(--mist)', fontSize: 14 }}>
+                <td colSpan={4} style={{ textAlign: 'center', padding: 48, color: 'var(--mist)', fontSize: 14 }}>
                   No worksheets yet — create one to get started
                 </td>
               </tr>
@@ -112,7 +108,6 @@ export default function WorksheetsClient({
                   onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
                 >
                   <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>{w.title}</td>
-                  <td style={{ padding: '14px 20px', fontSize: 14, color: 'var(--slate)' }}>{w.student_name}</td>
                   <td style={{ padding: '14px 20px' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--sky-deeper)', background: 'rgba(168,203,222,0.14)', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(168,203,222,0.3)' }}>
                       <Layers size={12} /> {w.step_count} {Number(w.step_count) === 1 ? 'step' : 'steps'}
@@ -154,17 +149,6 @@ export default function WorksheetsClient({
                 placeholder="e.g. Linear Equations — Week 4"
                 className="mt-1"
               />
-            </div>
-            <div>
-              <Label>Student</Label>
-              <select
-                value={form.studentId}
-                onChange={(e) => setForm((f) => ({ ...f, studentId: e.target.value }))}
-                style={{ display: 'block', width: '100%', marginTop: 4, height: 36, padding: '0 8px', borderRadius: 8, border: '1px solid var(--fog)', background: 'transparent', fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
-              >
-                <option value="">Select student…</option>
-                {students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
             </div>
           </div>
           <DialogFooter className="mt-4">

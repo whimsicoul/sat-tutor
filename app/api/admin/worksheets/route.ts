@@ -19,8 +19,8 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { title, studentId } = await req.json() as { title: string; studentId: string };
-  if (!title || !studentId) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
-  const worksheet = await createWorksheet(title, studentId, user.id);
+  const { title } = await req.json() as { title: string };
+  if (!title) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+  const worksheet = await createWorksheet(title, user.id);
   return NextResponse.json({ worksheet }, { status: 201 });
 }

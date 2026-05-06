@@ -445,7 +445,7 @@ export async function setSessionWorksheet(sessionId: string, worksheetId: string
 
 export async function getWorksheetsByTutor(tutorId: string) {
   return sql`
-    SELECT id, title, student_id
+    SELECT id, title
     FROM worksheets
     WHERE created_by = ${tutorId}
     ORDER BY created_at DESC
@@ -1355,20 +1355,18 @@ export async function getProblemSetResponsesForReview(problemSetId: string, stud
 export async function getAllWorksheets() {
   return sql`
     SELECT w.id, w.title, w.created_at,
-           s.name AS student_name,
            a.name AS created_by_name,
            (SELECT COUNT(*) FROM worksheet_steps ws WHERE ws.worksheet_id = w.id) AS step_count
     FROM worksheets w
-    JOIN users s ON s.id = w.student_id
     JOIN users a ON a.id = w.created_by
     ORDER BY w.created_at DESC
   `;
 }
 
-export async function createWorksheet(title: string, studentId: string, createdBy: string) {
+export async function createWorksheet(title: string, createdBy: string) {
   const rows = await sql`
-    INSERT INTO worksheets (title, student_id, created_by)
-    VALUES (${title}, ${studentId}, ${createdBy})
+    INSERT INTO worksheets (title, created_by)
+    VALUES (${title}, ${createdBy})
     RETURNING *
   `;
   return rows[0];
@@ -1520,13 +1518,15 @@ export async function saveWorksheetStepAnswerKey(
 
 export async function getWorksheetsByStudent(studentId: string) {
   return sql`
-    SELECT w.id, w.title, w.created_at,
+    SELECT DISTINCT w.id, w.title, w.created_at,
            a.name AS created_by_name,
            (SELECT COUNT(*) FROM worksheet_steps ws WHERE ws.worksheet_id = w.id) AS step_count,
            (SELECT s.proposed_time FROM sessions s WHERE s.worksheet_id = w.id AND s.student_id = ${studentId} ORDER BY s.proposed_time ASC LIMIT 1) AS session_date
     FROM worksheets w
     JOIN users a ON a.id = w.created_by
-    WHERE w.student_id = ${studentId}
+    WHERE EXISTS (
+      SELECT 1 FROM sessions s WHERE s.worksheet_id = w.id AND s.student_id = ${studentId}
+    )
     ORDER BY w.created_at DESC
   `;
 }
