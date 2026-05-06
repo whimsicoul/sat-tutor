@@ -197,15 +197,10 @@ function ProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: stri
 function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: string }) {
   const problems = step.problems.slice().sort((a, b) => a.question_number - b.question_number);
   const [currentQIdx, setCurrentQIdx] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  const [revealing, setRevealing] = useState(false);
 
   const currentProblem = problems[currentQIdx] as FlowProblem | undefined;
 
-  // For PDF-import problems we use a per-question response keyed by question_number
-  // and letter positions are encoded as questionNumber*10 + letterIndex (A=1..D=4)
   const letterMap: Record<number, Choice> = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
-  const letterToIndex: Record<string, number> = { A: 1, B: 2, C: 3, D: 4 };
 
   // Responses keyed by question_number
   const [responses, setResponses] = useState<Record<number, ResponseState>>(() => {
@@ -215,6 +210,15 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
         selectedAnswer: (r.selected_answer as Choice) ?? null,
         eliminatedChoices: (r.eliminated_choices ?? []) as Choice[],
       };
+    }
+    return map;
+  });
+
+  // Track which questions have been submitted (answer locked + result shown)
+  const [submitted, setSubmitted] = useState<Record<number, boolean>>(() => {
+    const map: Record<number, boolean> = {};
+    for (const r of step.initialResponses) {
+      if (r.selected_answer) map[r.question_number] = true;
     }
     return map;
   });
@@ -236,7 +240,7 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
   }, [worksheetId, step.id]);
 
   function selectAnswer(questionNumber: number, choice: Choice) {
-    if (revealed) return;
+    if (submitted[questionNumber]) return;
     setResponses((prev) => {
       const existing = prev[questionNumber] ?? { selectedAnswer: null, eliminatedChoices: [] };
       const next = { ...existing, selectedAnswer: existing.selectedAnswer === choice ? null : choice };
@@ -245,19 +249,10 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
     });
   }
 
-  async function revealAnswers() {
-    if (revealing || revealed) return;
-    setRevealing(true);
-    try {
-      // For PDF-import problems the answer is stored in the problem itself (correct_answer field)
-      // We don't need a separate reveal API call — it's already in the problems data
-      setRevealed(true);
-    } finally {
-      setRevealing(false);
-    }
+  function submitAnswer(questionNumber: number) {
+    if (submitted[questionNumber]) return;
+    setSubmitted((prev) => ({ ...prev, [questionNumber]: true }));
   }
-
-  const hasAnyAnswerKey = problems.some((p) => p.correct_answer);
 
   if (!currentProblem) {
     return (
@@ -267,19 +262,21 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
     );
   }
 
-  // Get A/B/C/D positions for this question from positions array
-  // Encoded as: questionNumber * 10 + letterIndex (A=1, B=2, C=3, D=4)
   const questionPositions = step.positions.filter(
     (p) => Math.floor(p.question_number / 10) === currentProblem.question_number,
   );
 
   const state = responses[currentProblem.question_number] ?? { selectedAnswer: null, eliminatedChoices: [] };
-  const allAnswered = problems.every((p) => responses[p.question_number]?.selectedAnswer != null);
-  const canAdvance = !step.locked_nav || (responses[currentProblem.question_number]?.selectedAnswer != null);
+  const isSubmitted = !!submitted[currentProblem.question_number];
+  const hasSelected = state.selectedAnswer != null;
+  const allSubmitted = problems.every((p) => submitted[p.question_number]);
+  const canAdvance = !step.locked_nav || isSubmitted;
+
+  const isCorrectAnswer = isSubmitted && currentProblem.correct_answer && state.selectedAnswer === currentProblem.correct_answer;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Question image with positioned A/B/C/D bubbles */}
+      {/* Question image with positioned bubbles */}
       <div style={{ position: 'relative', width: '100%', borderRadius: 14, overflow: 'hidden', border: '1px solid var(--fog)' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={currentProblem.question_image_url} alt={`Question ${currentProblem.question_number}`} style={{ display: 'block', width: '100%' }} />
@@ -288,14 +285,15 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
           const letter = letterMap[pos.question_number % 10];
           if (!letter) return null;
           const isSelected = state.selectedAnswer === letter;
-          const isCorrect = revealed && currentProblem.correct_answer === letter;
-          const isWrong = revealed && isSelected && currentProblem.correct_answer !== letter;
+          const isCorrect = isSubmitted && currentProblem.correct_answer === letter;
+          const isWrong = isSubmitted && isSelected && currentProblem.correct_answer !== letter;
+
+          let border = '2px solid rgba(0,0,0,0.18)';
           let bg = 'transparent';
-          let border = '1px solid var(--fog)';
-          let color = 'var(--mist)';
-          if (isCorrect) { bg = 'rgba(22,163,74,0.18)'; border = '1.5px solid #16a34a'; color = '#15803d'; }
-          else if (isWrong) { bg = 'rgba(239,68,68,0.18)'; border = '1.5px solid #ef4444'; color = '#b91c1c'; }
-          else if (isSelected) { bg = 'var(--rose)'; border = '1.5px solid var(--rose-deeper)'; color = 'var(--charcoal)'; }
+          if (isCorrect) { border = '2.5px solid #16a34a'; bg = 'rgba(22,163,74,0.15)'; }
+          else if (isWrong) { border = '2.5px solid #ef4444'; bg = 'rgba(239,68,68,0.15)'; }
+          else if (isSelected) { border = '2.5px solid var(--rose-deeper)'; bg = 'rgba(224,166,175,0.22)'; }
+
           return (
             <div
               key={pos.id}
@@ -310,20 +308,10 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
                 borderRadius: '50%',
                 border,
                 background: bg,
-                color,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: revealed ? 'default' : 'pointer',
-                fontFamily: "'Syne', sans-serif",
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                cursor: isSubmitted ? 'default' : 'pointer',
                 transition: 'all 0.1s',
               }}
-            >
-              {letter}
-            </div>
+            />
           );
         })}
 
@@ -332,28 +320,67 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
           <div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6, background: 'rgba(255,255,255,0.92)', padding: '4px 10px', borderRadius: 20, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
             {CHOICES.map((c) => {
               const isSelected = state.selectedAnswer === c;
-              const isCorrect = revealed && currentProblem.correct_answer === c;
-              const isWrong = revealed && isSelected && currentProblem.correct_answer !== c;
-              let bg = 'transparent'; let border = '1px solid var(--fog)'; let color = 'var(--mist)';
-              if (isCorrect) { bg = 'rgba(22,163,74,0.18)'; border = '1.5px solid #16a34a'; color = '#15803d'; }
-              else if (isWrong) { bg = 'rgba(239,68,68,0.18)'; border = '1.5px solid #ef4444'; color = '#b91c1c'; }
-              else if (isSelected) { bg = 'var(--rose)'; border = '1.5px solid var(--rose-deeper)'; color = 'var(--charcoal)'; }
+              const isCorrect = isSubmitted && currentProblem.correct_answer === c;
+              const isWrong = isSubmitted && isSelected && currentProblem.correct_answer !== c;
+              let border = '2px solid rgba(0,0,0,0.18)'; let bg = 'transparent';
+              if (isCorrect) { border = '2.5px solid #16a34a'; bg = 'rgba(22,163,74,0.15)'; }
+              else if (isWrong) { border = '2.5px solid #ef4444'; bg = 'rgba(239,68,68,0.15)'; }
+              else if (isSelected) { border = '2.5px solid var(--rose-deeper)'; bg = 'rgba(224,166,175,0.22)'; }
               return (
-                <button key={c} onClick={() => selectAnswer(currentProblem.question_number, c)} style={{ width: 28, height: 28, borderRadius: '50%', border, background: bg, color, fontSize: 12, fontWeight: 700, cursor: revealed ? 'default' : 'pointer', fontFamily: "'Syne', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {c}
-                </button>
+                <button key={c} onClick={() => selectAnswer(currentProblem.question_number, c)} style={{ width: 28, height: 28, borderRadius: '50%', border, background: bg, cursor: isSubmitted ? 'default' : 'pointer', transition: 'all 0.1s' }} />
               );
             })}
           </div>
         )}
       </div>
 
-      {/* Explanation image (revealed) */}
-      {revealed && currentProblem.explanation_image_url && (
+      {/* Result feedback after submit */}
+      {isSubmitted && currentProblem.correct_answer && (
+        <div style={{
+          borderRadius: 10,
+          padding: '10px 14px',
+          border: `1px solid ${isCorrectAnswer ? 'rgba(22,163,74,0.3)' : 'rgba(239,68,68,0.3)'}`,
+          background: isCorrectAnswer ? 'rgba(22,163,74,0.06)' : 'rgba(239,68,68,0.06)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: isCorrectAnswer ? '#15803d' : '#b91c1c' }}>
+            {isCorrectAnswer ? 'Correct!' : `Incorrect — correct answer is ${currentProblem.correct_answer}`}
+          </span>
+        </div>
+      )}
+
+      {/* Explanation image (after submit) */}
+      {isSubmitted && currentProblem.explanation_image_url && (
         <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(22,163,74,0.3)', background: 'rgba(22,163,74,0.04)' }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: '#15803d', padding: '8px 12px 0', margin: 0 }}>Explanation</p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={currentProblem.explanation_image_url} alt="Explanation" style={{ display: 'block', width: '100%' }} />
+        </div>
+      )}
+
+      {/* Submit button */}
+      {!isSubmitted && (
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <button
+            onClick={() => submitAnswer(currentProblem.question_number)}
+            disabled={!hasSelected}
+            style={{
+              padding: '9px 28px',
+              borderRadius: 9,
+              border: 'none',
+              background: hasSelected ? 'var(--rose)' : 'var(--fog)',
+              color: hasSelected ? 'var(--charcoal)' : 'var(--mist)',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: hasSelected ? 'pointer' : 'not-allowed',
+              fontFamily: "'Syne', sans-serif",
+              transition: 'all 0.12s',
+            }}
+          >
+            Submit Answer
+          </button>
         </div>
       )}
 
@@ -367,41 +394,27 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
           <ChevronLeft size={14} /> Prev
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--mist)', fontWeight: 500 }}>
-            Q{currentProblem.question_number} ({currentQIdx + 1} / {problems.length})
-          </span>
-          {hasAnyAnswerKey && (
-            <button
-              onClick={revealAnswers}
-              disabled={revealing}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 8, border: '1px solid rgba(224,166,175,0.4)', background: revealed ? 'rgba(224,166,175,0.14)' : 'transparent', color: 'var(--rose-deeper)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
-            >
-              {revealed ? <Eye size={11} /> : <EyeOff size={11} />}
-              {revealing ? 'Loading…' : revealed ? 'Answers shown' : 'Reveal Answers'}
-            </button>
-          )}
-        </div>
+        <span style={{ fontSize: 12, color: 'var(--mist)', fontWeight: 500 }}>
+          Q{currentProblem.question_number} ({currentQIdx + 1} / {problems.length})
+        </span>
 
         <button
           onClick={() => { if (canAdvance) setCurrentQIdx((i) => Math.min(problems.length - 1, i + 1)); }}
           disabled={currentQIdx === problems.length - 1}
-          title={!canAdvance ? 'Answer this question first' : undefined}
+          title={!canAdvance ? 'Submit your answer first' : undefined}
           style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, border: 'none', background: currentQIdx === problems.length - 1 ? 'var(--fog)' : (!canAdvance ? 'var(--fog)' : 'var(--rose)'), color: (currentQIdx === problems.length - 1 || !canAdvance) ? 'var(--mist)' : 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: (currentQIdx === problems.length - 1 || !canAdvance) ? 'not-allowed' : 'pointer', fontFamily: "'Syne', sans-serif", opacity: !canAdvance && currentQIdx < problems.length - 1 ? 0.6 : 1 }}
         >
           Next <ChevronRight size={14} />
         </button>
       </div>
 
-      {step.locked_nav && !allAnswered && (
+      {step.locked_nav && !allSubmitted && (
         <p style={{ fontSize: 11, color: 'var(--mist)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-          <Lock size={10} /> Answer all questions to continue
+          <Lock size={10} /> Submit all questions to continue
         </p>
       )}
     </div>
   );
-
-  void letterToIndex;
 }
 
 // ── Legacy (image-upload) problems step ──────────────────────────────────────
