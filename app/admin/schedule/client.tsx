@@ -6,7 +6,7 @@ import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { toast } from 'sonner';
-import { Plus, FileText, ExternalLink, Trash2 } from 'lucide-react';
+import { Plus, FileText, ExternalLink, Trash2, BookOpen } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -184,6 +184,11 @@ export default function ScheduleClient({
   const [detailDeleting, setDetailDeleting] = useState(false);
   const [seriesDeleting, setSeriesDeleting] = useState(false);
 
+  // Worksheet picker state
+  const [availableWorksheets, setAvailableWorksheets] = useState<{ id: string; title: string }[]>([]);
+  const [selectedWorksheetId, setSelectedWorksheetId] = useState<string>('');
+  const [worksheetSaving, setWorksheetSaving] = useState(false);
+
   // SAT date detail dialog
   const [satDetailOpen, setSatDetailOpen] = useState(false);
   const [satDetailDate, setSatDetailDate] = useState<AdminSatDate | null>(null);
@@ -240,16 +245,27 @@ export default function ScheduleClient({
     setDetailOpen(true);
     setDetailLoading(true);
     try {
-      const res = await fetch(`/api/admin/sessions/${event.resource.id}/problem-sets`);
-      if (!res.ok) throw new Error('Failed to load problem sets');
-      const { availableProblemSets, attachedProblemSetIds } = await res.json() as {
+      const [psRes, wsRes] = await Promise.all([
+        fetch(`/api/admin/sessions/${event.resource.id}/problem-sets`),
+        fetch(`/api/admin/sessions/${event.resource.id}/worksheet`),
+      ]);
+      if (!psRes.ok) throw new Error('Failed to load problem sets');
+      const { availableProblemSets, attachedProblemSetIds } = await psRes.json() as {
         availableProblemSets: AttachedProblemSet[];
         attachedProblemSetIds: string[];
       };
       setAvailablePs(availableProblemSets);
       setSelectedPsIds(new Set(attachedProblemSetIds));
+      if (wsRes.ok) {
+        const { attached, available } = await wsRes.json() as {
+          attached: { id: string; title: string } | null;
+          available: { id: string; title: string }[];
+        };
+        setAvailableWorksheets(available);
+        setSelectedWorksheetId(attached?.id ?? '');
+      }
     } catch {
-      toast.error('Failed to load problem sets for this session');
+      toast.error('Failed to load session details');
     } finally {
       setDetailLoading(false);
     }
@@ -354,6 +370,24 @@ export default function ScheduleClient({
       toast.error('Failed to save problem sheets');
     } finally {
       setDetailSaving(false);
+    }
+  }
+
+  async function handleSaveWorksheet() {
+    if (!detailSession) return;
+    setWorksheetSaving(true);
+    try {
+      const res = await fetch(`/api/admin/sessions/${detailSession.id}/worksheet`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ worksheetId: selectedWorksheetId || null }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      toast.success(selectedWorksheetId ? 'Worksheet assigned.' : 'Worksheet removed.');
+    } catch {
+      toast.error('Failed to update worksheet.');
+    } finally {
+      setWorksheetSaving(false);
     }
   }
 
@@ -577,6 +611,37 @@ export default function ScheduleClient({
                         </a>
                       </label>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Worksheet */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', fontFamily: "'Syne', sans-serif", marginBottom: 10 }}>
+                  Worksheet
+                </div>
+                {detailLoading ? (
+                  <div style={{ fontSize: 13, color: 'var(--mist)', fontFamily: "'Syne', sans-serif", padding: '8px 0' }}>Loading…</div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <BookOpen size={14} style={{ color: 'var(--slate)', flexShrink: 0 }} />
+                    <select
+                      value={selectedWorksheetId}
+                      onChange={(e) => setSelectedWorksheetId(e.target.value)}
+                      style={{ flex: 1, padding: '0.4rem 0.6rem', borderRadius: '0.5rem', fontSize: '0.8rem', border: '1px solid var(--fog)', background: 'var(--white)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif" }}
+                    >
+                      <option value="">None</option>
+                      {availableWorksheets.map((w) => (
+                        <option key={w.id} value={w.id}>{w.title}</option>
+                      ))}
+                    </select>
+                    <Button
+                      onClick={handleSaveWorksheet}
+                      disabled={worksheetSaving || detailLoading}
+                      style={{ background: 'var(--sky)', color: 'var(--charcoal)', border: 'none', fontFamily: "'Syne', sans-serif", fontSize: 12, padding: '6px 14px', height: 'auto' }}
+                    >
+                      {worksheetSaving ? 'Saving…' : 'Save'}
+                    </Button>
                   </div>
                 )}
               </div>

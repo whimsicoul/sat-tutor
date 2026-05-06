@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   startOfWeek, endOfWeek, isSameMonth, isSameDay,
@@ -8,11 +8,11 @@ import {
 } from 'date-fns';
 import {
   ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock,
-  Download, ExternalLink, Send, FileText, X, Edit2, Save, Plus, GraduationCap, Trash2,
+  Download, ExternalLink, Send, FileText, X, Edit2, Save, Plus, GraduationCap, Trash2, BookOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
-import type { TutorSessionRow, TutorProblemSet, StudentOption, TutorAllProblemSet } from './page';
+import type { TutorSessionRow, TutorProblemSet, StudentOption, TutorAllProblemSet, TutorWorksheet } from './page';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -130,11 +130,13 @@ export default function TutorScheduleClient({
   sessions: initial,
   students,
   allProblemSets,
+  allWorksheets,
   satDates,
 }: {
   sessions: TutorSessionRow[];
   students: StudentOption[];
   allProblemSets: TutorAllProblemSet[];
+  allWorksheets: TutorWorksheet[];
   satDates: TutorSatDate[];
 }) {
   const [sessions, setSessions] = useState(
@@ -193,6 +195,14 @@ export default function TutorScheduleClient({
   const [psSelection, setPsSelection] = useState<string[]>([]);
   const [savingPs, setSavingPs] = useState(false);
   const [deletingSession, setDeletingSession] = useState(false);
+
+  // Worksheet assignment
+  const [worksheetPickerId, setWorksheetPickerId] = useState<string>('');
+  const [savingWorksheet, setSavingWorksheet] = useState(false);
+
+  useEffect(() => {
+    setWorksheetPickerId(selectedSession?.worksheet?.id ?? '');
+  }, [selectedSession?.id]);
 
   // ── Calendar grid ──────────────────────────────────────────────────────
 
@@ -291,6 +301,32 @@ export default function TutorScheduleClient({
     }
   }
 
+  // ── Worksheet assignment ───────────────────────────────────────────────
+
+  async function saveWorksheet() {
+    if (!selectedSession) return;
+    setSavingWorksheet(true);
+    try {
+      const res = await fetch(`/api/sessions/${selectedSession.id}/worksheet`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ worksheetId: worksheetPickerId || null }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const ws = worksheetPickerId
+        ? allWorksheets.find((w) => w.id === worksheetPickerId) ?? null
+        : null;
+      const updated = ws ? { id: ws.id, title: ws.title } : null;
+      setSessions((prev) => prev.map((s) => s.id === selectedSession.id ? { ...s, worksheet: updated } : s));
+      setSelectedSession((prev) => prev ? { ...prev, worksheet: updated } : prev);
+      toast.success(updated ? 'Worksheet assigned.' : 'Worksheet removed.');
+    } catch {
+      toast.error('Failed to update worksheet.');
+    } finally {
+      setSavingWorksheet(false);
+    }
+  }
+
   // ── Propose session ────────────────────────────────────────────────────
 
   async function handlePropose(e: React.FormEvent) {
@@ -368,6 +404,11 @@ export default function TutorScheduleClient({
   // ── Relevant problem sets for selected session (same student) ──────────
   const relevantPs = selectedSession
     ? allProblemSets.filter((p) => p.student_id === selectedSession.student_id)
+    : [];
+
+  // ── Relevant worksheets for selected session (same student) ────────────
+  const relevantWorksheets = selectedSession
+    ? allWorksheets.filter((w) => w.student_id === selectedSession.student_id)
     : [];
 
   // ── Render ─────────────────────────────────────────────────────────────
@@ -698,6 +739,42 @@ export default function TutorScheduleClient({
                   </div>
                 </div>
               )}
+
+              {/* Worksheet section */}
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--fog)' }}>
+                <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', marginBottom: 8 }}>
+                  Worksheet
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <select
+                    value={worksheetPickerId}
+                    onChange={(e) => setWorksheetPickerId(e.target.value)}
+                    style={{ flex: '1 1 160px', padding: '0.4rem 0.6rem', borderRadius: '0.5rem', fontSize: '0.8rem', border: '1px solid var(--fog)', background: 'var(--white)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif" }}
+                  >
+                    <option value="">None</option>
+                    {relevantWorksheets.map((w) => (
+                      <option key={w.id} value={w.id}>{w.title}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={saveWorksheet}
+                    disabled={savingWorksheet}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                    style={{ background: 'var(--sky)', color: 'var(--charcoal)', border: 'none', cursor: savingWorksheet ? 'not-allowed' : 'pointer', opacity: savingWorksheet ? 0.6 : 1 }}
+                  >
+                    <Save size={12} /> {savingWorksheet ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+                {selectedSession.worksheet && (
+                  <a
+                    href={`/tutor/worksheets/${selectedSession.worksheet.id}/session/${selectedSession.id}`}
+                    className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold"
+                    style={{ color: 'var(--sky-deeper)', textDecoration: 'none' }}
+                  >
+                    <BookOpen size={13} /> View Worksheet
+                  </a>
+                )}
+              </div>
             </div>
           )}
         </div>

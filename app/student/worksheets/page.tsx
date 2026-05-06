@@ -42,7 +42,7 @@ export default async function StudentWorksheetsPage() {
           <div className="text-xs font-medium mb-4" style={{ color: 'var(--mist)' }}>
             {(worksheets as unknown[]).length} {(worksheets as unknown[]).length === 1 ? 'worksheet' : 'worksheets'} assigned
           </div>
-          {(worksheets as { id: string; title: string; student_name: string; created_by_name: string; step_count: number | string; created_at: string }[]).map((w, idx) => (
+          {(worksheets as { id: string; title: string; student_name: string; created_by_name: string; step_count: number | string; created_at: string; session_date?: string | null }[]).map((w, idx) => (
             <div
               key={w.id}
               className="portal-card hover-rose-border flex items-center gap-5 p-5 transition-all"
@@ -58,7 +58,10 @@ export default async function StudentWorksheetsPage() {
                   {w.title}
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--mist)' }}>
-                  {w.step_count} {Number(w.step_count) === 1 ? 'step' : 'steps'} · assigned {format(new Date(w.created_at), 'MMM d, yyyy')}
+                  {w.step_count} {Number(w.step_count) === 1 ? 'step' : 'steps'}
+                  {w.session_date
+                    ? ` · Session: ${format(new Date(w.session_date), 'MMM d, yyyy')}`
+                    : ` · assigned ${format(new Date(w.created_at), 'MMM d, yyyy')}`}
                 </p>
               </div>
               <Link

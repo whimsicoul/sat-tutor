@@ -8,7 +8,7 @@ import {
 } from 'date-fns';
 import {
   ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock,
-  Download, ExternalLink, Calendar, FileText, X, GraduationCap, Plus, Trash2,
+  Download, ExternalLink, Calendar, FileText, X, GraduationCap, Plus, Trash2, BookOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
@@ -271,6 +271,29 @@ function ProblemSetsBlock({ problemSets }: { problemSets: SessionProblemSet[] })
           </a>
         ))}
       </div>
+    </div>
+  );
+}
+
+function WorksheetBlock({ worksheet }: { worksheet: { id: string; title: string } | null | undefined }) {
+  if (!worksheet) return null;
+  return (
+    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--fog)' }}>
+      <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', marginBottom: 6 }}>
+        Worksheet
+      </p>
+      <a
+        href={`/student/worksheets/${worksheet.id}`}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12,
+          color: 'var(--rose-deeper)', textDecoration: 'none',
+          background: 'rgba(224,166,175,0.10)', border: '1px solid rgba(224,166,175,0.25)',
+          borderRadius: 6, padding: '3px 10px',
+        }}
+      >
+        <BookOpen size={12} />
+        {worksheet.title}
+      </a>
     </div>
   );
 }
@@ -672,6 +695,7 @@ export default function StudentScheduleClient({
               </div>
 
               <ProblemSetsBlock problemSets={selectedSession.problem_sets} />
+              <WorksheetBlock worksheet={selectedSession.worksheet} />
               <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => handleDeleteSession(selectedSession.id)}

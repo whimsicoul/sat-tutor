@@ -428,6 +428,30 @@ export async function setSessionProblemSets(sessionId: string, problemSetIds: st
 
 
 
+export async function getWorksheetBySession(sessionId: string) {
+  const rows = await sql`
+    SELECT w.id, w.title
+    FROM worksheets w
+    JOIN sessions s ON s.worksheet_id = w.id
+    WHERE s.id = ${sessionId}
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
+export async function setSessionWorksheet(sessionId: string, worksheetId: string | null) {
+  await sql`UPDATE sessions SET worksheet_id = ${worksheetId} WHERE id = ${sessionId}`;
+}
+
+export async function getWorksheetsByTutor(tutorId: string) {
+  return sql`
+    SELECT id, title, student_id
+    FROM worksheets
+    WHERE created_by = ${tutorId}
+    ORDER BY created_at DESC
+  `;
+}
+
 // ─── Breakfast Problems: Admin ────────────────────────────────────────────────
 
 export async function getAllBreakfastProblems() {
@@ -1498,7 +1522,8 @@ export async function getWorksheetsByStudent(studentId: string) {
   return sql`
     SELECT w.id, w.title, w.created_at,
            a.name AS created_by_name,
-           (SELECT COUNT(*) FROM worksheet_steps ws WHERE ws.worksheet_id = w.id) AS step_count
+           (SELECT COUNT(*) FROM worksheet_steps ws WHERE ws.worksheet_id = w.id) AS step_count,
+           (SELECT s.proposed_time FROM sessions s WHERE s.worksheet_id = w.id AND s.student_id = ${studentId} ORDER BY s.proposed_time ASC LIMIT 1) AS session_date
     FROM worksheets w
     JOIN users a ON a.id = w.created_by
     WHERE w.student_id = ${studentId}
