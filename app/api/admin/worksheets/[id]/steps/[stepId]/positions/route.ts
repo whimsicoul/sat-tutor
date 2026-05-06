@@ -19,7 +19,8 @@ export async function POST(
     xPercent: number;
     yPercent: number;
   };
-  const position = await upsertWorksheetStepPosition(stepId, questionNumber, pageNumber, xPercent, yPercent);
+  const raw = await upsertWorksheetStepPosition(stepId, questionNumber, pageNumber, xPercent, yPercent);
+  const position = { ...raw, x_percent: Number(raw.x_percent), y_percent: Number(raw.y_percent) };
   return NextResponse.json({ position }, { status: 201 });
 }
 
