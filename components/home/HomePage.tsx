@@ -255,6 +255,33 @@ export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRo
               </p>
             </div>
 
+            {/* Juliette Warga card */}
+            <div
+              className="p-7 rounded-2xl flex flex-col items-center text-center"
+              style={{
+                background: 'linear-gradient(145deg, var(--rose-pale) 0%, var(--sky-pale) 100%)',
+                border: '1px solid rgba(224,166,175,0.3)',
+                boxShadow: '0 4px 24px rgba(26,29,35,0.07)',
+              }}
+            >
+              <div className="w-24 h-24 rounded-full overflow-hidden mb-4 ring-2 ring-[color:var(--rose)] ring-offset-2">
+                <Image
+                  src="/jules-headshot.jpeg"
+                  alt="Juliette Warga"
+                  width={96}
+                  height={96}
+                  className="object-cover w-full h-full"
+                />
+              </div>
+              <p className="text-base font-semibold mb-0.5" style={{ color: 'var(--charcoal)' }}>
+                Juliette Warga
+              </p>
+              <p className="text-xs mb-4" style={{ color: 'var(--rose-deeper)' }}>SAT Tutor</p>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--slate)' }}>
+                I&apos;m a soon-to-be Georgetown University graduate with a major in History and minors in Arabic and Education Policy. Next year I will be teaching Upper School History at Washington Latin PCS. Outside of school, I play ultimate frisbee on 1–3 teams at once!
+              </p>
+            </div>
+
             {tutors.map((tutor, i) => (
               <div
                 key={tutor.id}
