@@ -19,13 +19,6 @@ export interface UserOption {
   name: string;
 }
 
-export interface AttachedProblemSet {
-  id: string;
-  title: string;
-  problem_pdf_url: string;
-  answer_pdf_url?: string;
-}
-
 export interface AdminSatDate {
   id: string;
   test_date: string;

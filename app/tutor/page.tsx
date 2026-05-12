@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import sql from '@/lib/db';
 import Link from 'next/link';
-import { Users, CalendarDays, BookOpen, ArrowRight } from 'lucide-react';
+import { Users, CalendarDays, Layers, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import TodayDate from '@/components/shared/TodayDate';
 
@@ -15,10 +15,10 @@ export default async function TutorDashboardPage() {
   const now = new Date().toISOString();
   const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [assignedStudents, problemSetsCount, upcomingThisWeek, upcomingFive] =
+  const [assignedStudents, worksheetsCount, upcomingThisWeek, upcomingFive] =
     await Promise.all([
       sql`SELECT COUNT(*) AS count FROM tutor_student_assignments WHERE tutor_id = ${tutorId}`,
-      sql`SELECT COUNT(*) AS count FROM problem_sets WHERE tutor_id = ${tutorId}`,
+      sql`SELECT COUNT(*) AS count FROM worksheets WHERE created_by = ${tutorId}`,
       sql`SELECT COUNT(*) AS count FROM sessions WHERE tutor_id = ${tutorId} AND proposed_time >= ${now} AND proposed_time <= ${weekEnd}`,
       sql`
         SELECT s.id, s.proposed_time, s.status, u.name AS student_name
@@ -31,19 +31,19 @@ export default async function TutorDashboardPage() {
     ]);
 
   const [assignedRow] = assignedStudents as Record<string, number>[];
-  const [problemSetsRow] = problemSetsCount as Record<string, number>[];
+  const [worksheetsRow] = worksheetsCount as Record<string, number>[];
   const [upcomingRow] = upcomingThisWeek as Record<string, number>[];
   const sessions = upcomingFive as Record<string, unknown>[];
 
   const stats = [
     { label: 'Assigned Students', value: assignedRow.count, icon: Users, accent: 'sky', href: '/tutor/schedule' },
-    { label: 'Problem Sets Created', value: problemSetsRow.count, icon: BookOpen, accent: 'sky', href: '/tutor/problem-sets' },
+    { label: 'Worksheets Created', value: worksheetsRow.count, icon: Layers, accent: 'sky', href: '/tutor/worksheets' },
     { label: 'Sessions This Week', value: upcomingRow.count, icon: CalendarDays, accent: 'rose', href: '/tutor/schedule' },
   ];
 
   const quickActions = [
     { label: 'Schedule Session', href: '/tutor/schedule', description: 'Propose a new session time' },
-    { label: 'Assign Problem Set', href: '/tutor/problem-sets', description: 'Upload and assign PDF work' },
+    { label: 'Worksheets', href: '/tutor/worksheets', description: 'View and manage worksheets' },
     { label: 'Breakfast Problems', href: '/tutor/breakfast-problems', description: "Review students' daily practice" },
     { label: 'Test Results', href: '/tutor/test-results', description: 'View student test scores' },
   ];

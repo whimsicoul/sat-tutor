@@ -5,7 +5,7 @@ import SessionProvider from '@/components/shared/SessionProvider';
 
 export const metadata: Metadata = {
   title: 'DC SAT Tutor',
-  description: 'Personalized SAT tutoring — problem sets, scheduling, and results.',
+  description: 'Personalized SAT tutoring — worksheets, scheduling, and results.',
 };
 
 export const viewport = {

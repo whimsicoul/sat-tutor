@@ -138,7 +138,7 @@ export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRo
                 each student&apos;s unique strengths, weaknesses, and goals.
               </p>
               <p className="text-base leading-relaxed mb-10" style={{ color: 'var(--slate)' }}>
-                From targeted problem sets to flexible scheduling, every tool in our program is
+                From structured worksheets to flexible scheduling, every tool in our program is
                 designed to build genuine understanding — not just test-taking tricks. Students
                 leave our program not just better prepared for the SAT, but better equipped for
                 college coursework.
@@ -305,7 +305,7 @@ export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRo
             Ready to reach your best score?
           </h2>
           <p className="text-base mb-10 max-w-md mx-auto" style={{ color: 'var(--slate)' }}>
-            Log in to access your problem sets, review your schedule, or manage your students.
+            Log in to access your worksheets, review your schedule, or manage your students.
           </p>
           <Link
             href="/login"

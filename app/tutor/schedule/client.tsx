@@ -8,11 +8,11 @@ import {
 } from 'date-fns';
 import {
   ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock,
-  Download, ExternalLink, Send, FileText, X, Edit2, Save, Plus, GraduationCap, Trash2, BookOpen,
+  Download, ExternalLink, Send, X, Save, Plus, GraduationCap, Trash2, BookOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
-import type { TutorSessionRow, TutorProblemSet, StudentOption, TutorAllProblemSet, TutorWorksheet } from './page';
+import type { TutorSessionRow, StudentOption, TutorWorksheet } from './page';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -70,53 +70,6 @@ const TIME_SLOTS: { label: string; value: string }[] = (() => {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY_ABBR = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
-// ── ProblemSetsBlock ────────────────────────────────────────────────────────
-
-function ProblemSetsBlock({ problemSets }: { problemSets: TutorProblemSet[] }) {
-  if (problemSets.length === 0) return null;
-  return (
-    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--fog)' }}>
-      <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', marginBottom: 6 }}>
-        Problem Sheets
-      </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {problemSets.map((ps) => (
-          <div key={ps.id} style={{ display: 'flex', gap: 4 }}>
-            <a
-              href={ps.problem_pdf_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12,
-                color: 'var(--sky-deeper)', textDecoration: 'none',
-                background: 'rgba(168,203,222,0.10)', border: '1px solid rgba(168,203,222,0.25)',
-                borderRadius: 6, padding: '3px 10px',
-              }}
-            >
-              <FileText size={12} /> {ps.title} <ExternalLink size={10} />
-            </a>
-            {ps.answer_pdf_url && (
-              <a
-                href={ps.answer_pdf_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12,
-                  color: 'var(--rose-deeper)', textDecoration: 'none',
-                  background: 'rgba(224,166,175,0.10)', border: '1px solid rgba(224,166,175,0.25)',
-                  borderRadius: 6, padding: '3px 10px',
-                }}
-              >
-                Answers <ExternalLink size={10} />
-              </a>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Main component ──────────────────────────────────────────────────────────
 
 interface TutorSatDate {
@@ -129,13 +82,11 @@ interface TutorSatDate {
 export default function TutorScheduleClient({
   sessions: initial,
   students,
-  allProblemSets,
   allWorksheets,
   satDates,
 }: {
   sessions: TutorSessionRow[];
   students: StudentOption[];
-  allProblemSets: TutorAllProblemSet[];
   allWorksheets: TutorWorksheet[];
   satDates: TutorSatDate[];
 }) {
@@ -190,10 +141,6 @@ export default function TutorScheduleClient({
   const [customDays, setCustomDays] = useState<number[]>([]);
   const [endDate, setEndDate] = useState('');
 
-  // Problem set editing
-  const [editingPs, setEditingPs] = useState(false);
-  const [psSelection, setPsSelection] = useState<string[]>([]);
-  const [savingPs, setSavingPs] = useState(false);
   const [deletingSession, setDeletingSession] = useState(false);
 
   // Worksheet assignment
@@ -236,54 +183,15 @@ export default function TutorScheduleClient({
     if (daySessions.length === 0) return;
     setSelectedDay(day);
     setSelectedSession(daySessions[0]);
-    setEditingPs(false);
   }
 
   function selectSession(s: TutorSessionRow) {
     setSelectedSession(s);
-    setEditingPs(false);
   }
 
   function closePanel() {
     setSelectedDay(null);
     setSelectedSession(null);
-    setEditingPs(false);
-  }
-
-  // ── Problem set editing ────────────────────────────────────────────────
-
-  function startEditingPs(s: TutorSessionRow) {
-    setPsSelection(s.problem_sets.map((p) => p.id));
-    setEditingPs(true);
-  }
-
-  async function savePs() {
-    if (!selectedSession) return;
-    setSavingPs(true);
-    try {
-      const res = await fetch(`/api/sessions/${selectedSession.id}/problem-sets`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ problemSetIds: psSelection }),
-      });
-      if (!res.ok) throw new Error('Failed');
-
-      // Update local state
-      const updatedPs = allProblemSets
-        .filter((p) => psSelection.includes(p.id))
-        .map((p) => ({ id: p.id, title: p.title, problem_pdf_url: p.problem_pdf_url, answer_pdf_url: p.answer_pdf_url }));
-
-      setSessions((prev) =>
-        prev.map((s) => s.id === selectedSession.id ? { ...s, problem_sets: updatedPs } : s)
-      );
-      setSelectedSession((prev) => prev ? { ...prev, problem_sets: updatedPs } : prev);
-      setEditingPs(false);
-      toast.success('Problem sets updated.');
-    } catch {
-      toast.error('Failed to update problem sets.');
-    } finally {
-      setSavingPs(false);
-    }
   }
 
   async function handleDeleteSession(id: string) {
@@ -356,7 +264,7 @@ export default function TutorScheduleClient({
         const newSessions = await res.json();
         const student = students.find((s) => s.id === studentId);
         setSessions((prev) => [
-          ...newSessions.map((s: TutorSessionRow) => ({ ...s, student_name: student?.name ?? '', problem_sets: [] })),
+          ...newSessions.map((s: TutorSessionRow) => ({ ...s, student_name: student?.name ?? '' })),
           ...prev,
         ]);
         toast.success(`${newSessions.length} recurring sessions added!`);
@@ -369,7 +277,7 @@ export default function TutorScheduleClient({
         if (!res.ok) throw new Error('Failed');
         const newSession = await res.json();
         const student = students.find((s) => s.id === studentId);
-        setSessions((prev) => [{ ...newSession, proposed_time: proposedTime, student_name: student?.name ?? '', problem_sets: [] }, ...prev]);
+        setSessions((prev) => [{ ...newSession, proposed_time: proposedTime, student_name: student?.name ?? '' }, ...prev]);
         toast.success('Session added!');
       }
 
@@ -401,11 +309,6 @@ export default function TutorScheduleClient({
     ? (sessionsByDay[format(selectedDay, 'yyyy-MM-dd')] ?? [])
     : [];
 
-  // ── Relevant problem sets for selected session (same student) ──────────
-  const relevantPs = selectedSession
-    ? allProblemSets.filter((p) => p.student_id === selectedSession.student_id)
-    : [];
-
   // ── Relevant worksheets for selected session (same student) ────────────
   const relevantWorksheets = selectedSession
     ? allWorksheets.filter((w) => w.student_id === selectedSession.student_id)
@@ -421,7 +324,7 @@ export default function TutorScheduleClient({
           <div className="eyebrow-sky mb-3">Tutor Portal</div>
           <h1 className="portal-section-title">Schedule</h1>
           <p className="text-sm mt-2" style={{ color: 'var(--slate)' }}>
-            View your sessions and manage problem set assignments.
+            View your sessions and manage worksheet assignments.
           </p>
         </div>
         <button
@@ -668,77 +571,18 @@ export default function TutorScheduleClient({
                 )}
               </div>
 
-              {/* Problem sets section */}
-              {!editingPs ? (
-                <div>
-                  <ProblemSetsBlock problemSets={selectedSession.problem_sets} />
-                  <div className="flex items-center justify-between mt-3">
-                    <button
-                      onClick={() => startEditingPs(selectedSession)}
-                      className="flex items-center gap-1.5 text-xs font-semibold"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sky-deeper)' }}
-                    >
-                      <Edit2 size={12} />
-                      {selectedSession.problem_sets.length === 0 ? 'Assign problem sets' : 'Edit problem sets'}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteSession(selectedSession.id)}
-                      disabled={deletingSession}
-                      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
-                      style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', cursor: deletingSession ? 'not-allowed' : 'pointer', opacity: deletingSession ? 0.6 : 1 }}
-                    >
-                      <Trash2 size={12} />
-                      {deletingSession ? 'Deleting…' : 'Delete session'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ marginTop: 12 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', marginBottom: 8 }}>
-                    Assign Problem Sets
-                  </p>
-                  {relevantPs.length === 0 ? (
-                    <p className="text-xs" style={{ color: 'var(--mist)' }}>No problem sets found for this student.</p>
-                  ) : (
-                    <div className="space-y-2" style={{ maxHeight: 200, overflowY: 'auto' }}>
-                      {relevantPs.map((ps) => (
-                        <label
-                          key={ps.id}
-                          style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={psSelection.includes(ps.id)}
-                            onChange={(e) => {
-                              setPsSelection((prev) =>
-                                e.target.checked ? [...prev, ps.id] : prev.filter((id) => id !== ps.id)
-                              );
-                            }}
-                          />
-                          <span style={{ color: 'var(--charcoal)' }}>{ps.title}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={savePs}
-                      disabled={savingPs}
-                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold"
-                      style={{ background: 'var(--sky)', color: 'var(--charcoal)', border: 'none', cursor: savingPs ? 'not-allowed' : 'pointer' }}
-                    >
-                      <Save size={12} /> {savingPs ? 'Saving…' : 'Save'}
-                    </button>
-                    <button
-                      onClick={() => setEditingPs(false)}
-                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium"
-                      style={{ background: 'var(--frost)', color: 'var(--slate)', border: '1px solid var(--fog)', cursor: 'pointer' }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
+              {/* Delete session */}
+              <div className="flex justify-end mt-2">
+                <button
+                  onClick={() => handleDeleteSession(selectedSession.id)}
+                  disabled={deletingSession}
+                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
+                  style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', cursor: deletingSession ? 'not-allowed' : 'pointer', opacity: deletingSession ? 0.6 : 1 }}
+                >
+                  <Trash2 size={12} />
+                  {deletingSession ? 'Deleting…' : 'Delete session'}
+                </button>
+              </div>
 
               {/* Worksheet section */}
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--fog)' }}>

@@ -31,20 +31,20 @@ export default auth((req) => {
   // Non-admin trying to access /admin
   if (pathname.startsWith('/admin')) {
     if (role === 'student') {
-      return NextResponse.redirect(new URL('/student/problem-sets', req.url));
+      return NextResponse.redirect(new URL('/student', req.url));
     }
     if (role === 'tutor') {
-      return NextResponse.redirect(new URL('/tutor/problem-sets', req.url));
+      return NextResponse.redirect(new URL('/tutor', req.url));
     }
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
   if (role === 'student' && pathname.startsWith('/tutor')) {
-    return NextResponse.redirect(new URL('/student/problem-sets', req.url));
+    return NextResponse.redirect(new URL('/student', req.url));
   }
 
   if (role === 'tutor' && pathname.startsWith('/student')) {
-    return NextResponse.redirect(new URL('/tutor/problem-sets', req.url));
+    return NextResponse.redirect(new URL('/tutor', req.url));
   }
 
   return NextResponse.next();

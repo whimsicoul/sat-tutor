@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import sql from '@/lib/db';
 import Link from 'next/link';
-import { CalendarDays, BookOpen, BarChart2, ArrowRight } from 'lucide-react';
+import { CalendarDays, Layers, BarChart2, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import TodayDate from '@/components/shared/TodayDate';
 
@@ -14,10 +14,10 @@ export default async function StudentDashboardPage() {
   const userId = session!.user.id;
   const now = new Date().toISOString();
 
-  const [upcomingCount, problemSetsCount, testResultsCount, nextSessionRaw] =
+  const [upcomingCount, worksheetsCount, testResultsCount, nextSessionRaw] =
     await Promise.all([
       sql`SELECT COUNT(*) AS count FROM sessions WHERE student_id = ${userId} AND proposed_time >= ${now}`,
-      sql`SELECT COUNT(*) AS count FROM problem_sets WHERE student_id = ${userId}`,
+      sql`SELECT COUNT(DISTINCT w.id) AS count FROM worksheets w JOIN sessions s ON s.worksheet_id = w.id WHERE s.student_id = ${userId}`,
       sql`SELECT COUNT(*) AS count FROM test_results WHERE student_id = ${userId}`,
       sql`
         SELECT s.id, s.proposed_time, s.status, u.name AS tutor_name
@@ -30,20 +30,20 @@ export default async function StudentDashboardPage() {
     ]);
 
   const [upcomingRow] = upcomingCount as Record<string, number>[];
-  const [problemSetsRow] = problemSetsCount as Record<string, number>[];
+  const [worksheetsRow] = worksheetsCount as Record<string, number>[];
   const [testResultsRow] = testResultsCount as Record<string, number>[];
   const nextSession = (nextSessionRaw as Record<string, unknown>[])[0] ?? null;
 
   const stats = [
     { label: 'Upcoming Sessions', value: upcomingRow.count, icon: CalendarDays, accent: 'sky', href: '/student/schedule' },
-    { label: 'Problem Sets', value: problemSetsRow.count, icon: BookOpen, accent: 'sky', href: '/student/problem-sets' },
+    { label: 'Worksheets', value: worksheetsRow.count, icon: Layers, accent: 'sky', href: '/student/worksheets' },
     { label: 'Test Results', value: testResultsRow.count, icon: BarChart2, accent: 'rose', href: '/student/test-results' },
   ];
 
   const quickActions = [
     { label: 'View Schedule', href: '/student/schedule', description: 'Check your upcoming sessions' },
     { label: 'Breakfast Problems', href: '/student/breakfast-problems', description: 'Complete your daily practice' },
-    { label: 'Problem Sets', href: '/student/problem-sets', description: 'Access your assigned materials' },
+    { label: 'Worksheets', href: '/student/worksheets', description: 'Access your assigned worksheets' },
     { label: 'Test Results', href: '/student/test-results', description: 'Review your practice test scores' },
   ];
 

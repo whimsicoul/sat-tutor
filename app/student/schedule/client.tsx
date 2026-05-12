@@ -8,11 +8,11 @@ import {
 } from 'date-fns';
 import {
   ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock,
-  Download, ExternalLink, Calendar, FileText, X, GraduationCap, Plus, Trash2, BookOpen,
+  Download, ExternalLink, Calendar, X, GraduationCap, Plus, Trash2, BookOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
-import type { SessionRow, SessionProblemSet, BreakfastDay } from './page';
+import type { SessionRow, BreakfastDay } from './page';
 
 interface SatDate {
   id: string;
@@ -48,7 +48,6 @@ function MeetingRequestForm({ onRequested }: { onRequested: (session: SessionRow
         status: newSession.status ?? 'approved',
         created_at: newSession.created_at,
         tutor_name: newSession.tutor_name ?? '',
-        problem_sets: [],
         series_id: null,
         series_end_date: null,
         recurrence_rule: null,
@@ -243,37 +242,6 @@ function rruleLabel(rule: string | null | undefined): string {
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-function ProblemSetsBlock({ problemSets }: { problemSets: SessionProblemSet[] }) {
-  if (problemSets.length === 0) return null;
-  return (
-    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--fog)' }}>
-      <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', marginBottom: 6 }}>
-        Problem Sheets
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {problemSets.map((ps) => (
-          <a
-            key={ps.id}
-            href={ps.problem_pdf_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12,
-              color: 'var(--sky-deeper)', textDecoration: 'none',
-              background: 'rgba(168,203,222,0.10)', border: '1px solid rgba(168,203,222,0.25)',
-              borderRadius: 6, padding: '3px 10px', width: 'fit-content',
-            }}
-          >
-            <FileText size={12} />
-            {ps.title}
-            <ExternalLink size={10} />
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function WorksheetBlock({ worksheet }: { worksheet: { id: string; title: string } | null | undefined }) {
   if (!worksheet) return null;
@@ -694,7 +662,6 @@ export default function StudentScheduleClient({
                 </div>
               </div>
 
-              <ProblemSetsBlock problemSets={selectedSession.problem_sets} />
               <WorksheetBlock worksheet={selectedSession.worksheet} />
               <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
                 <button

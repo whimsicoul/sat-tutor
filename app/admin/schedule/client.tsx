@@ -6,14 +6,14 @@ import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { toast } from 'sonner';
-import { Plus, FileText, ExternalLink, Trash2, BookOpen } from 'lucide-react';
+import { Plus, Trash2, BookOpen } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import type { AdminSession, UserOption, AttachedProblemSet, AdminSatDate } from './page';
+import type { AdminSession, UserOption, AdminSatDate } from './page';
 
 const localizer = dateFnsLocalizer({
   format,
@@ -100,7 +100,7 @@ function EventComponent({ event }: { event: CalEvent }) {
             <div style={{ marginTop: 3, fontSize: 10, color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>Recurring series</div>
           )}
           <div style={{ marginTop: 5, fontSize: 10, color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>
-            Click to manage problem sheets
+            Click to manage worksheet
           </div>
         </div>
       )}
@@ -174,13 +174,10 @@ export default function ScheduleClient({
     }
   }
 
-  // Session detail / problem-sets modal state
+  // Session detail modal state
   const [detailSession, setDetailSession] = useState<AdminSession | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [availablePs, setAvailablePs] = useState<AttachedProblemSet[]>([]);
-  const [selectedPsIds, setSelectedPsIds] = useState<Set<string>>(new Set());
   const [detailLoading, setDetailLoading] = useState(false);
-  const [detailSaving, setDetailSaving] = useState(false);
   const [detailDeleting, setDetailDeleting] = useState(false);
   const [seriesDeleting, setSeriesDeleting] = useState(false);
 
@@ -245,17 +242,7 @@ export default function ScheduleClient({
     setDetailOpen(true);
     setDetailLoading(true);
     try {
-      const [psRes, wsRes] = await Promise.all([
-        fetch(`/api/admin/sessions/${event.resource.id}/problem-sets`),
-        fetch(`/api/admin/sessions/${event.resource.id}/worksheet`),
-      ]);
-      if (!psRes.ok) throw new Error('Failed to load problem sets');
-      const { availableProblemSets, attachedProblemSetIds } = await psRes.json() as {
-        availableProblemSets: AttachedProblemSet[];
-        attachedProblemSetIds: string[];
-      };
-      setAvailablePs(availableProblemSets);
-      setSelectedPsIds(new Set(attachedProblemSetIds));
+      const wsRes = await fetch(`/api/admin/sessions/${event.resource.id}/worksheet`);
       if (wsRes.ok) {
         const { attached, available } = await wsRes.json() as {
           attached: { id: string; title: string } | null;
@@ -269,14 +256,6 @@ export default function ScheduleClient({
     } finally {
       setDetailLoading(false);
     }
-  }
-
-  function togglePsId(id: string) {
-    setSelectedPsIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
   }
 
   async function handleDeleteSeries() {
@@ -351,25 +330,6 @@ export default function ScheduleClient({
       toast.error('Failed to delete session');
     } finally {
       setDetailDeleting(false);
-    }
-  }
-
-  async function handleSaveAttachments() {
-    if (!detailSession) return;
-    setDetailSaving(true);
-    try {
-      const res = await fetch(`/api/admin/sessions/${detailSession.id}/problem-sets`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ problemSetIds: Array.from(selectedPsIds) }),
-      });
-      if (!res.ok) throw new Error('Failed to save');
-      toast.success('Problem sheets updated');
-      setDetailOpen(false);
-    } catch {
-      toast.error('Failed to save problem sheets');
-    } finally {
-      setDetailSaving(false);
     }
   }
 
@@ -558,63 +518,6 @@ export default function ScheduleClient({
                 </span>
               </div>
 
-              {/* Problem sheets */}
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', fontFamily: "'Syne', sans-serif", marginBottom: 10 }}>
-                  Problem Sheets
-                </div>
-
-                {detailLoading ? (
-                  <div style={{ fontSize: 13, color: 'var(--mist)', fontFamily: "'Syne', sans-serif", padding: '8px 0' }}>
-                    Loading…
-                  </div>
-                ) : availablePs.length === 0 ? (
-                  <div style={{ fontSize: 13, color: 'var(--mist)', fontFamily: "'Syne', sans-serif", padding: '8px 0' }}>
-                    No problem sets exist for this tutor-student pair yet.
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {availablePs.map((ps) => (
-                      <label
-                        key={ps.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
-                          padding: '8px 12px',
-                          borderRadius: 8,
-                          border: `1px solid ${selectedPsIds.has(ps.id) ? 'rgba(168,203,222,0.5)' : 'var(--fog)'}`,
-                          background: selectedPsIds.has(ps.id) ? 'rgba(168,203,222,0.08)' : 'transparent',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedPsIds.has(ps.id)}
-                          onChange={() => togglePsId(ps.id)}
-                          style={{ accentColor: 'var(--sky-deeper)', width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }}
-                        />
-                        <FileText size={13} style={{ color: 'var(--slate)', flexShrink: 0 }} />
-                        <span style={{ flex: 1, fontSize: 13, color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", fontWeight: selectedPsIds.has(ps.id) ? 600 : 400 }}>
-                          {ps.title}
-                        </span>
-                        <a
-                          href={ps.problem_pdf_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ color: 'var(--mist)', flexShrink: 0 }}
-                          title="Open PDF"
-                        >
-                          <ExternalLink size={12} />
-                        </a>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               {/* Worksheet */}
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', fontFamily: "'Syne', sans-serif", marginBottom: 10 }}>
@@ -673,13 +576,6 @@ export default function ScheduleClient({
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button variant="outline" onClick={() => setDetailOpen(false)}>Close</Button>
-              <Button
-                onClick={handleSaveAttachments}
-                disabled={detailSaving || detailLoading}
-                style={{ background: 'var(--sky)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", border: 'none' }}
-              >
-                {detailSaving ? 'Saving…' : 'Save'}
-              </Button>
             </div>
           </DialogFooter>
         </DialogContent>
