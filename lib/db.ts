@@ -1176,7 +1176,9 @@ export async function upsertWorksheetStepResponse(
 export async function getWorksheetStepProblems(stepId: string) {
   return sql`
     SELECT id, step_id, question_number, question_image_url, correct_answer, explanation_image_url,
-           question_type, accepted_answers, created_at
+           question_type, accepted_answers,
+           answer_box_x, answer_box_y, answer_box_width, answer_box_height,
+           created_at
     FROM worksheet_step_problems
     WHERE step_id = ${stepId}
     ORDER BY question_number ASC
@@ -1203,13 +1205,21 @@ export async function updateWorksheetStepProblemAnswerKey(
   explanationImageUrl: string | null,
   questionType: 'multiple_choice' | 'open_ended' = 'multiple_choice',
   acceptedAnswers: string[] = [],
+  answerBoxX: number | null = null,
+  answerBoxY: number | null = null,
+  answerBoxWidth: number | null = null,
+  answerBoxHeight: number | null = null,
 ) {
   const rows = await sql`
     UPDATE worksheet_step_problems
     SET correct_answer        = ${correctAnswer},
         explanation_image_url = ${explanationImageUrl},
         question_type         = ${questionType},
-        accepted_answers      = ${acceptedAnswers}
+        accepted_answers      = ${acceptedAnswers},
+        answer_box_x          = ${answerBoxX},
+        answer_box_y          = ${answerBoxY},
+        answer_box_width      = ${answerBoxWidth},
+        answer_box_height     = ${answerBoxHeight}
     WHERE step_id = ${stepId} AND question_number = ${questionNumber}
     RETURNING *
   `;

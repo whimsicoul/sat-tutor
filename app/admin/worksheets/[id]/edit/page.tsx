@@ -19,6 +19,10 @@ export interface WsProblem {
   explanation_image_url: string | null;
   question_type: 'multiple_choice' | 'open_ended';
   accepted_answers: string[];
+  answer_box_x: number | null;
+  answer_box_y: number | null;
+  answer_box_width: number | null;
+  answer_box_height: number | null;
 }
 
 export interface WsStep {

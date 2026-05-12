@@ -382,6 +382,10 @@ function PdfImportTab({
 
   const [bubbleQIdx, setBubbleQIdx] = useState(0);
   const [placingBubbleLetter, setPlacingBubbleLetter] = useState<string | null>(null);
+  const [bubbleMode, setBubbleMode] = useState<'multiple_choice' | 'open_ended' | null>(null);
+  const [boxDragStart, setBoxDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [pendingAnswerBox, setPendingAnswerBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [savingAnswerBox, setSavingAnswerBox] = useState(false);
 
   const [akQIdx, setAkQIdx] = useState(0);
   const [akEdits, setAkEdits] = useState<Record<number, { letter: string; expUrl: string | null; questionType: 'multiple_choice' | 'open_ended'; acceptedAnswers: string }>>({});
@@ -607,6 +611,71 @@ function PdfImportTab({
       setPlacingBubbleLetter('A');
     } else {
       setPlacingBubbleLetter(null);
+    }
+  }
+
+  function effectiveBubbleMode(problem: WsProblem): 'multiple_choice' | 'open_ended' {
+    if (bubbleMode !== null) return bubbleMode;
+    return problem.question_type ?? 'multiple_choice';
+  }
+
+  function handleAnswerBoxMouseDown(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setBoxDragStart({ x: ((e.clientX - rect.left) / rect.width) * 100, y: ((e.clientY - rect.top) / rect.height) * 100 });
+    setPendingAnswerBox(null);
+  }
+
+  function handleAnswerBoxMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    if (!boxDragStart) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x2 = ((e.clientX - rect.left) / rect.width) * 100;
+    const y2 = ((e.clientY - rect.top) / rect.height) * 100;
+    setPendingAnswerBox({
+      x: Math.min(boxDragStart.x, x2),
+      y: Math.min(boxDragStart.y, y2),
+      w: Math.abs(x2 - boxDragStart.x),
+      h: Math.abs(y2 - boxDragStart.y),
+    });
+  }
+
+  function handleAnswerBoxMouseUp() {
+    setBoxDragStart(null);
+  }
+
+  async function handleSaveAnswerBox() {
+    const problem = problems[bubbleQIdx];
+    if (!problem || !pendingAnswerBox || pendingAnswerBox.w < 1 || pendingAnswerBox.h < 1) {
+      toast.error('Draw an answer box first');
+      return;
+    }
+    setSavingAnswerBox(true);
+    try {
+      const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionNumber: problem.question_number,
+          correctAnswer: problem.correct_answer ?? null,
+          explanationImageUrl: problem.explanation_image_url ?? null,
+          questionType: 'open_ended',
+          acceptedAnswers: problem.accepted_answers ?? [],
+          answerBoxX: pendingAnswerBox.x,
+          answerBoxY: pendingAnswerBox.y,
+          answerBoxWidth: pendingAnswerBox.w,
+          answerBoxHeight: pendingAnswerBox.h,
+        }),
+      });
+      if (!res.ok) { toast.error('Failed to save answer box'); return; }
+      const { problem: updated } = await res.json() as { problem: WsProblem };
+      onProblemsChange(problems.map((p) => p.id === updated.id ? updated : p));
+      setPendingAnswerBox(null);
+      setBubbleMode(null);
+      toast.success(`Answer box saved for Q${problem.question_number}`);
+      if (bubbleQIdx < problems.length - 1) {
+        setBubbleQIdx((i) => i + 1);
+      }
+    } finally {
+      setSavingAnswerBox(false);
     }
   }
 
@@ -911,30 +980,107 @@ function PdfImportTab({
           ) : (
             <>
               {/* Bubble nav bar */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: 'var(--white)', borderBottom: '1px solid var(--fog)', flexShrink: 0 }}>
-                <button onClick={() => setBubbleQIdx((i) => Math.max(0, i - 1))} disabled={bubbleQIdx === 0} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === 0 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: 'var(--white)', borderBottom: '1px solid var(--fog)', flexShrink: 0, flexWrap: 'wrap' }}>
+                <button onClick={() => { setBubbleQIdx((i) => Math.max(0, i - 1)); setBubbleMode(null); setPendingAnswerBox(null); setPlacingBubbleLetter(null); }} disabled={bubbleQIdx === 0} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === 0 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronLeft size={14} />
                 </button>
                 <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--charcoal)' }}>
                   Q{bubbleProblem?.question_number} ({bubbleQIdx + 1} / {problems.length})
                 </span>
-                <button onClick={() => setBubbleQIdx((i) => Math.min(problems.length - 1, i + 1))} disabled={bubbleQIdx === problems.length - 1} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
+                <button onClick={() => { setBubbleQIdx((i) => Math.min(problems.length - 1, i + 1)); setBubbleMode(null); setPendingAnswerBox(null); setPlacingBubbleLetter(null); }} disabled={bubbleQIdx === problems.length - 1} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronRight size={14} />
                 </button>
-                <span style={{ fontSize: 11, color: 'var(--mist)', flex: 1 }}>Select a letter, then click on the question image to position it</span>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {(['multiple_choice', 'open_ended'] as const).map((m) => {
+                    const active = bubbleProblem ? effectiveBubbleMode(bubbleProblem) === m : false;
+                    return (
+                      <button
+                        key={m}
+                        onClick={() => { setBubbleMode(m); setPendingAnswerBox(null); if (m === 'open_ended') setPlacingBubbleLetter(null); else setPlacingBubbleLetter('A'); }}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 7,
+                          border: `1px solid ${active ? (m === 'open_ended' ? 'rgba(168,203,222,0.6)' : 'rgba(224,166,175,0.6)') : 'var(--fog)'}`,
+                          background: active ? (m === 'open_ended' ? 'rgba(168,203,222,0.15)' : 'rgba(224,166,175,0.15)') : 'var(--white)',
+                          color: active ? (m === 'open_ended' ? 'var(--sky-deeper)' : 'var(--rose-deeper)') : 'var(--mist)',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          fontFamily: "'Syne', sans-serif",
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        {m === 'multiple_choice' ? 'Multiple Choice' : 'Open Ended'}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--mist)', flex: 1 }}>
+                  {bubbleProblem && effectiveBubbleMode(bubbleProblem) === 'open_ended'
+                    ? 'Click and drag on the question image to draw the student\'s answer box'
+                    : 'Select a letter, then click on the question image to position it'}
+                </span>
               </div>
 
               {bubbleProblem && (
                 <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
                   {/* Question image — fills space */}
                   <div style={{ flex: 1, overflow: 'auto' }}>
-                    {(akEdits[bubbleProblem.question_number]?.questionType ?? bubbleProblem.question_type) === 'open_ended' ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 12 }}>
-                        <div style={{ padding: '8px 16px', borderRadius: 10, background: 'rgba(168,203,222,0.12)', border: '1px solid rgba(168,203,222,0.4)', fontSize: 13, color: 'var(--sky-deeper)', fontWeight: 600 }}>
-                          Open Ended — no bubbles needed
+                    {effectiveBubbleMode(bubbleProblem) === 'open_ended' ? (
+                      <div style={{ position: 'relative', width: '100%' }}>
+                        <div
+                          onMouseDown={handleAnswerBoxMouseDown}
+                          onMouseMove={handleAnswerBoxMouseMove}
+                          onMouseUp={handleAnswerBoxMouseUp}
+                          onMouseLeave={handleAnswerBoxMouseUp}
+                          style={{ position: 'relative', width: '100%', cursor: 'crosshair', userSelect: 'none' }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={bubbleProblem.question_image_url} alt={`Q${bubbleProblem.question_number}`} style={{ display: 'block', width: '100%' }} />
+                          {/* Show saved answer box if it exists and no pending drag */}
+                          {!pendingAnswerBox && bubbleProblem.answer_box_x != null && (
+                            <div style={{
+                              position: 'absolute',
+                              left: `${bubbleProblem.answer_box_x}%`,
+                              top: `${bubbleProblem.answer_box_y}%`,
+                              width: `${bubbleProblem.answer_box_width}%`,
+                              height: `${bubbleProblem.answer_box_height}%`,
+                              border: '2px solid rgba(168,203,222,0.8)',
+                              background: 'rgba(168,203,222,0.12)',
+                              borderRadius: 4,
+                              pointerEvents: 'none',
+                            }} />
+                          )}
+                          {/* Pending drag preview */}
+                          {pendingAnswerBox && (
+                            <div style={{
+                              position: 'absolute',
+                              left: `${pendingAnswerBox.x}%`,
+                              top: `${pendingAnswerBox.y}%`,
+                              width: `${pendingAnswerBox.w}%`,
+                              height: `${pendingAnswerBox.h}%`,
+                              border: '2px dashed rgba(168,203,222,0.9)',
+                              background: 'rgba(168,203,222,0.15)',
+                              borderRadius: 4,
+                              pointerEvents: 'none',
+                            }} />
+                          )}
                         </div>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={bubbleProblem.question_image_url} alt={`Q${bubbleProblem.question_number}`} style={{ maxWidth: '80%', borderRadius: 8, border: '1px solid var(--fog)' }} />
+                        {pendingAnswerBox && (
+                          <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <button
+                              onClick={handleSaveAnswerBox}
+                              disabled={savingAnswerBox}
+                              style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: 'rgba(168,203,222,0.8)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+                            >
+                              {savingAnswerBox ? 'Saving…' : 'Save Answer Box'}
+                            </button>
+                            <button onClick={() => setPendingAnswerBox(null)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--fog)', background: 'var(--white)', color: 'var(--mist)', fontSize: 12, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}>
+                              Cancel
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div
@@ -973,7 +1119,8 @@ function PdfImportTab({
                     )}
                   </div>
 
-                  {/* Letter controls — right panel */}
+                  {/* Letter controls — right panel (MC only) */}
+                  {effectiveBubbleMode(bubbleProblem) === 'multiple_choice' && (
                   <div style={{ width: 160, flexShrink: 0, padding: '16px 12px', background: 'var(--frost)', borderLeft: '1px solid var(--fog)', display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
                     <p style={sectionHead}>Place Letter</p>
                     {['A', 'B', 'C', 'D'].map((letter) => {
@@ -1021,6 +1168,7 @@ function PdfImportTab({
                       ))}
                     </div>
                   </div>
+                  )}
                 </div>
               )}
             </>

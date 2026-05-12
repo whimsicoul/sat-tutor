@@ -467,6 +467,39 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={currentProblem.question_image_url} alt={`Question ${currentProblem.question_number}`} style={{ display: 'block', width: '100%' }} />
 
+        {/* Open-ended: positioned text input over image */}
+        {currentProblem.question_type === 'open_ended' && currentProblem.answer_box_x != null && (
+          <div style={{
+            position: 'absolute',
+            left: `${currentProblem.answer_box_x}%`,
+            top: `${currentProblem.answer_box_y}%`,
+            width: `${currentProblem.answer_box_width}%`,
+            height: `${currentProblem.answer_box_height}%`,
+          }}>
+            <input
+              type="text"
+              maxLength={20}
+              placeholder="Answer…"
+              value={state.selectedAnswer ?? ''}
+              onChange={(e) => setOpenEndedAnswer(currentProblem.question_number, e.target.value)}
+              style={{
+                width: '100%',
+                height: '100%',
+                padding: '2px 6px',
+                border: '1.5px solid rgba(168,203,222,0.7)',
+                borderRadius: 4,
+                background: 'rgba(255,255,255,0.9)',
+                color: 'var(--charcoal)',
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: "'Syne', sans-serif",
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+        )}
+
         {currentProblem.question_type !== 'open_ended' && (
           <>
             {questionPositions.map((pos) => {
@@ -515,8 +548,8 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
         )}
       </div>
 
-      {/* Open-ended text input */}
-      {currentProblem.question_type === 'open_ended' && (
+      {/* Open-ended text input — positioned over image when coordinates exist */}
+      {currentProblem.question_type === 'open_ended' && currentProblem.answer_box_x == null && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <input
             type="text"
