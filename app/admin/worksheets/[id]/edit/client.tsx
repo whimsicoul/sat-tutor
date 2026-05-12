@@ -8,7 +8,7 @@ import type { OurFileRouter } from '@/lib/uploadthing';
 import {
   ArrowLeft, Plus, Trash2, ChevronUp, ChevronDown,
   BookOpen, Layers, Lock, Unlock, GripVertical, FileText, ChevronLeft, ChevronRight,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, Sun,
 } from 'lucide-react';
 import type { WsStep, WsPosition, WsProblem } from './page';
 
@@ -59,7 +59,7 @@ export default function WorksheetBuilderClient({
     initialSteps[0]?.id ?? null,
   );
   const [addingStep, setAddingStep] = useState(false);
-  const [newStepType, setNewStepType] = useState<'instruction' | 'problems'>('problems');
+  const [newStepType, setNewStepType] = useState<'instruction' | 'problems' | 'warm_up'>('problems');
   const [newStepTitle, setNewStepTitle] = useState('');
   const [creatingStep, setCreatingStep] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -78,7 +78,7 @@ export default function WorksheetBuilderClient({
       });
       if (!res.ok) throw new Error('Failed to create step');
       const { step } = await res.json() as { step: Omit<WsStep, 'pages' | 'positions' | 'answerKey'> };
-      const full: WsStep = { ...step, type: step.type as 'instruction' | 'problems', pages: [], positions: [], answerKey: [], problems: [] };
+      const full: WsStep = { ...step, type: step.type as 'instruction' | 'problems' | 'warm_up', pages: [], positions: [], answerKey: [], problems: [] };
       setSteps((prev) => [...prev, full]);
       setSelectedStepId(full.id);
       setAddingStep(false);
@@ -192,7 +192,7 @@ export default function WorksheetBuilderClient({
                   flexShrink: 0,
                 }}
               >
-                {step.type === 'instruction' ? <BookOpen size={10} /> : <Layers size={10} />}
+                {step.type === 'instruction' ? <BookOpen size={10} /> : step.type === 'warm_up' ? <Sun size={10} /> : <Layers size={10} />}
                 {step.step_order}. {step.title}
               </button>
             ))}
@@ -246,6 +246,8 @@ export default function WorksheetBuilderClient({
                       <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--mist)' }}>{step.step_order}.</span>
                       {step.type === 'instruction'
                         ? <BookOpen size={10} style={{ color: 'var(--sky-deeper)', flexShrink: 0 }} />
+                        : step.type === 'warm_up'
+                        ? <Sun size={10} style={{ color: '#f59e0b', flexShrink: 0 }} />
                         : <Layers size={10} style={{ color: 'var(--rose-deeper)', flexShrink: 0 }} />}
                       <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--charcoal)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {step.title}
@@ -279,10 +281,14 @@ export default function WorksheetBuilderClient({
                 <div style={{ padding: 12, border: '1px dashed rgba(168,203,222,0.5)', borderRadius: 10, background: 'rgba(168,203,222,0.04)', marginTop: 4 }}>
                   <p style={labelStyle}>Step Type</p>
                   <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
-                    {(['instruction', 'problems'] as const).map((t) => (
-                      <button key={t} onClick={() => setNewStepType(t)} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: `1px solid ${newStepType === t ? (t === 'instruction' ? 'rgba(168,203,222,0.5)' : 'rgba(224,166,175,0.5)') : 'var(--fog)'}`, background: newStepType === t ? (t === 'instruction' ? 'rgba(168,203,222,0.12)' : 'rgba(224,166,175,0.12)') : 'transparent', color: newStepType === t ? 'var(--charcoal)' : 'var(--mist)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: "'Syne', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-                        {t === 'instruction' ? <BookOpen size={10} /> : <Layers size={10} />}
-                        {t === 'instruction' ? 'Read' : 'Problems'}
+                    {([
+                      { type: 'instruction', label: 'Read', icon: <BookOpen size={10} />, activeBorder: 'rgba(168,203,222,0.5)', activeBg: 'rgba(168,203,222,0.12)' },
+                      { type: 'problems', label: 'Problems', icon: <Layers size={10} />, activeBorder: 'rgba(224,166,175,0.5)', activeBg: 'rgba(224,166,175,0.12)' },
+                      { type: 'warm_up', label: 'Warm-Up', icon: <Sun size={10} />, activeBorder: 'rgba(251,191,36,0.5)', activeBg: 'rgba(251,191,36,0.12)' },
+                    ] as const).map(({ type: t, label, icon, activeBorder, activeBg }) => (
+                      <button key={t} onClick={() => setNewStepType(t)} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: `1px solid ${newStepType === t ? activeBorder : 'var(--fog)'}`, background: newStepType === t ? activeBg : 'transparent', color: newStepType === t ? 'var(--charcoal)' : 'var(--mist)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: "'Syne', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                        {icon}
+                        {label}
                       </button>
                     ))}
                   </div>
@@ -313,6 +319,10 @@ export default function WorksheetBuilderClient({
                   onUpdate={(patch) => updateStepLocal(selectedStep.id, patch)}
                   onSaveField={saveStepField}
                 />
+              )
+              : selectedStep.type === 'warm_up'
+              ? (
+                <WarmUpStepInfo key={selectedStep.id} step={selectedStep} onSaveField={saveStepField} />
               )
               : (
                 <ProblemsStepEditor
@@ -1172,6 +1182,56 @@ function PdfImportTab({
           />
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Warm-Up Step Info ─────────────────────────────────────────────────────────
+
+function WarmUpStepInfo({
+  step,
+  onSaveField,
+}: {
+  step: WsStep;
+  onSaveField: (stepId: string, field: Record<string, unknown>) => Promise<void>;
+}) {
+  const [title, setTitle] = useState(step.title);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
+      {/* Settings bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', borderBottom: '1px solid var(--fog)', background: 'var(--white)', flexShrink: 0, flexWrap: 'wrap' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: '#b45309', background: 'rgba(251,191,36,0.14)', border: '1px solid rgba(251,191,36,0.3)', padding: '3px 10px', borderRadius: 20 }}>
+          <Sun size={11} /> Warm-Up Step
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--mist)' }}>Title</span>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => { if (title.trim() && title !== step.title) onSaveField(step.id, { title: title.trim() }); }}
+            style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid var(--fog)', background: 'var(--frost)', fontSize: 12, fontWeight: 600, color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif", outline: 'none', width: 200 }}
+          />
+        </div>
+      </div>
+
+      {/* Info */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 40, textAlign: 'center' }}>
+        <Sun size={36} style={{ color: '#f59e0b', opacity: 0.7 }} />
+        <div style={{ maxWidth: 440 }}>
+          <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--charcoal)', margin: '0 0 8px' }}>
+            Dynamic Warm-Up Step
+          </h3>
+          <p style={{ fontSize: 13, color: 'var(--mist)', lineHeight: 1.6, margin: 0 }}>
+            When a student opens this worksheet, this step will automatically show all breakfast problems they answered incorrectly since their last worksheet was assigned. No configuration needed — the content is generated dynamically per student.
+          </p>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--mist)', padding: '10px 16px', borderRadius: 10, border: '1px solid var(--fog)', background: 'var(--frost)', maxWidth: 360 }}>
+          <strong style={{ color: 'var(--charcoal)' }}>If no mistakes exist</strong> — the step is skipped automatically.
+          <br />
+          <strong style={{ color: 'var(--charcoal)' }}>If no breakfast history</strong> — students see a prompt to complete breakfast problems first.
+        </div>
+      </div>
     </div>
   );
 }

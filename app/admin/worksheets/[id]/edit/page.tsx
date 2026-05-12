@@ -26,7 +26,7 @@ export interface WsStep {
   worksheet_id: string;
   step_order: number;
   title: string;
-  type: 'instruction' | 'problems';
+  type: 'instruction' | 'problems' | 'warm_up';
   stage_label: string | null;
   locked_nav: boolean;
   pdf_url: string | null;
@@ -82,7 +82,7 @@ export default async function AdminWorksheetEditPage({
       ]);
       return {
         ...step,
-        type: step.type as 'instruction' | 'problems',
+        type: step.type as 'instruction' | 'problems' | 'warm_up',
         pages: pages as unknown as WsPage[],
         positions: positions as unknown as WsPosition[],
         answerKey: answerKey as unknown as WsAnswerKeyEntry[],

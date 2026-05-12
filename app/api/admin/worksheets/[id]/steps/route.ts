@@ -12,7 +12,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id: worksheetId } = await params;
   const { title, type, stageLabel, lockedNav, pdfUrl } = await req.json() as {
     title: string;
-    type: 'instruction' | 'problems';
+    type: 'instruction' | 'problems' | 'warm_up';
     stageLabel?: string;
     lockedNav?: boolean;
     pdfUrl?: string;

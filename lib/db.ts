@@ -1004,7 +1004,7 @@ export async function createWorksheetStep(
   worksheetId: string,
   stepOrder: number,
   title: string,
-  type: 'instruction' | 'problems',
+  type: 'instruction' | 'problems' | 'warm_up',
   stageLabel: string | null,
   lockedNav: boolean,
   pdfUrl: string | null,
@@ -1209,4 +1209,60 @@ export async function updateWorksheetStepProblemAnswerKey(
     RETURNING *
   `;
   return rows[0];
+}
+
+// ─── Warm-Up Step ─────────────────────────────────────────────────────────────
+
+export async function getPreviousWorksheetAssignedDate(
+  studentId: string,
+  currentWorksheetId: string,
+): Promise<Date | null> {
+  const rows = await sql`
+    SELECT s.proposed_time
+    FROM sessions s
+    JOIN worksheets w ON s.worksheet_id = w.id
+    WHERE s.student_id = ${studentId}
+      AND w.id != ${currentWorksheetId}
+    ORDER BY s.proposed_time DESC
+    LIMIT 1
+  `;
+  if (rows.length === 0) return null;
+  return new Date(rows[0].proposed_time);
+}
+
+export async function getMissedBreakfastProblemsSince(studentId: string, sinceDate: Date) {
+  return sql`
+    SELECT
+      bp.id,
+      bp.question,
+      bp.choice_a,
+      bp.choice_b,
+      bp.choice_c,
+      bp.choice_d,
+      bp.correct_answer,
+      bp.category,
+      bp.question_image_url,
+      bp.crop_top_px,
+      bp.crop_bottom_px,
+      bp.image_width_px,
+      bp.image_height_px,
+      sbr.student_answer,
+      sba.assigned_date
+    FROM student_breakfast_responses sbr
+    JOIN student_breakfast_assignments sba ON sba.id = sbr.assignment_id
+    JOIN breakfast_problems bp ON bp.id = sbr.problem_id
+    WHERE sbr.student_id = ${studentId}
+      AND sbr.is_correct = false
+      AND sba.assigned_date >= ${sinceDate.toISOString().split('T')[0]}
+    ORDER BY sba.assigned_date ASC, bp.category ASC
+  `;
+}
+
+export async function hasAnyBreakfastHistory(studentId: string): Promise<boolean> {
+  const rows = await sql`
+    SELECT 1 FROM student_breakfast_responses
+    WHERE student_id = ${studentId}
+    LIMIT 1
+  `;
+  return rows.length > 0;
 }

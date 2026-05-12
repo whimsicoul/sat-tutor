@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronLeft, ChevronRight, BookOpen, Layers,
-  Lock, Eye, EyeOff,
+  Lock, Eye, EyeOff, Sun,
 } from 'lucide-react';
-import type { FlowStep, FlowPage, FlowPosition, FlowAnswerKey, FlowProblem } from './page';
+import type { FlowStep, FlowPage, FlowPosition, FlowAnswerKey, FlowProblem, WarmUpProblem } from './page';
 import PdfReader from '@/components/shared/PdfReader';
 import { checkOpenEndedAnswer } from '@/lib/utils';
 
@@ -26,9 +26,10 @@ export default function WorksheetFlowClient({
   worksheet: { id: string; title: string };
   steps: FlowStep[];
 }) {
+  const visibleSteps = steps.filter((s) => !s.skipStep);
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
 
-  if (steps.length === 0) {
+  if (visibleSteps.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
         <p className="text-sm" style={{ color: 'var(--mist)' }}>This worksheet has no steps yet.</p>
@@ -39,10 +40,11 @@ export default function WorksheetFlowClient({
     );
   }
 
-  const currentStep = steps[currentStepIdx];
-  const totalSteps = steps.length;
+  const currentStep = visibleSteps[currentStepIdx];
+  const totalSteps = visibleSteps.length;
 
   const isInstruction = currentStep.type === 'instruction';
+  const isWarmUp = currentStep.type === 'warm_up';
 
   return (
     <div style={{ width: '100%' }}>
@@ -66,30 +68,37 @@ export default function WorksheetFlowClient({
 
           {/* Step progress indicator */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-            {steps.map((step, idx) => (
-              <button
-                key={step.id}
-                onClick={() => setCurrentStepIdx(idx)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '4px 10px',
-                  borderRadius: 20,
-                  border: `1px solid ${idx === currentStepIdx ? (step.type === 'instruction' ? 'rgba(168,203,222,0.5)' : 'rgba(224,166,175,0.5)') : 'var(--fog)'}`,
-                  background: idx === currentStepIdx ? (step.type === 'instruction' ? 'rgba(168,203,222,0.12)' : 'rgba(224,166,175,0.12)') : 'transparent',
-                  color: idx === currentStepIdx ? 'var(--charcoal)' : 'var(--mist)',
-                  fontSize: 11,
-                  fontWeight: idx === currentStepIdx ? 700 : 500,
-                  cursor: 'pointer',
-                  fontFamily: "'Syne', sans-serif",
-                  transition: 'all 0.12s',
-                }}
-              >
-                {step.type === 'instruction' ? <BookOpen size={10} /> : <Layers size={10} />}
-                {idx + 1}. {step.title}
-              </button>
-            ))}
+            {visibleSteps.map((step, idx) => {
+              const activeColor = step.type === 'instruction'
+                ? { border: 'rgba(168,203,222,0.5)', bg: 'rgba(168,203,222,0.12)' }
+                : step.type === 'warm_up'
+                ? { border: 'rgba(251,191,36,0.5)', bg: 'rgba(251,191,36,0.12)' }
+                : { border: 'rgba(224,166,175,0.5)', bg: 'rgba(224,166,175,0.12)' };
+              return (
+                <button
+                  key={step.id}
+                  onClick={() => setCurrentStepIdx(idx)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '4px 10px',
+                    borderRadius: 20,
+                    border: `1px solid ${idx === currentStepIdx ? activeColor.border : 'var(--fog)'}`,
+                    background: idx === currentStepIdx ? activeColor.bg : 'transparent',
+                    color: idx === currentStepIdx ? 'var(--charcoal)' : 'var(--mist)',
+                    fontSize: 11,
+                    fontWeight: idx === currentStepIdx ? 700 : 500,
+                    cursor: 'pointer',
+                    fontFamily: "'Syne', sans-serif",
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  {step.type === 'instruction' ? <BookOpen size={10} /> : step.type === 'warm_up' ? <Sun size={10} /> : <Layers size={10} />}
+                  {idx + 1}. {step.title}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -107,9 +116,9 @@ export default function WorksheetFlowClient({
                   fontWeight: 700,
                   padding: '2px 8px',
                   borderRadius: 12,
-                  background: currentStep.type === 'instruction' ? 'rgba(168,203,222,0.14)' : 'rgba(224,166,175,0.14)',
-                  color: currentStep.type === 'instruction' ? 'var(--sky-deeper)' : 'var(--rose-deeper)',
-                  border: `1px solid ${currentStep.type === 'instruction' ? 'rgba(168,203,222,0.3)' : 'rgba(224,166,175,0.3)'}`,
+                  background: currentStep.type === 'instruction' ? 'rgba(168,203,222,0.14)' : currentStep.type === 'warm_up' ? 'rgba(251,191,36,0.14)' : 'rgba(224,166,175,0.14)',
+                  color: currentStep.type === 'instruction' ? 'var(--sky-deeper)' : currentStep.type === 'warm_up' ? '#b45309' : 'var(--rose-deeper)',
+                  border: `1px solid ${currentStep.type === 'instruction' ? 'rgba(168,203,222,0.3)' : currentStep.type === 'warm_up' ? 'rgba(251,191,36,0.3)' : 'rgba(224,166,175,0.3)'}`,
                 }}>
                   {currentStep.stage_label}
                 </span>
@@ -124,10 +133,12 @@ export default function WorksheetFlowClient({
         </div>
       </div>
 
-      {/* Step content — full-width for instructions, constrained for problems */}
+      {/* Step content — full-width for instructions, constrained otherwise */}
       <div className={isInstruction ? '' : 'max-w-3xl mx-auto'}>
         {isInstruction ? (
           <InstructionStep step={currentStep} />
+        ) : isWarmUp ? (
+          <WarmUpStep step={currentStep} onNext={() => setCurrentStepIdx((i) => Math.min(totalSteps - 1, i + 1))} />
         ) : (
           <ProblemsStep step={currentStep} worksheetId={worksheet.id} />
         )}
@@ -184,6 +195,169 @@ function InstructionStep({ step }: { step: FlowStep }) {
   return (
     <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid var(--fog)', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
       <PdfReader url={step.pdf_url} title={step.title} />
+    </div>
+  );
+}
+
+// ── Warm-up step ──────────────────────────────────────────────────────────────
+
+function WarmUpStep({ step, onNext }: { step: FlowStep; onNext: () => void }) {
+  const problems = (step.warmUpProblems ?? []) as WarmUpProblem[];
+  const [reattempts, setReattempts] = useState<Record<string, string>>({});
+
+  if (!step.hasBreakfastHistory) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '40px 24px', border: '1px dashed var(--fog)', borderRadius: 14, textAlign: 'center' }}>
+        <Sun size={28} style={{ color: '#f59e0b', opacity: 0.7 }} />
+        <p style={{ fontSize: 14, color: 'var(--mist)', margin: 0, maxWidth: 380 }}>
+          Students should complete daily breakfast problems, then review will be available here as a warm-up.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <Sun size={15} style={{ color: '#f59e0b' }} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif" }}>
+          {problems.length} missed breakfast problem{problems.length !== 1 ? 's' : ''} to review
+        </span>
+      </div>
+
+      {problems.map((p) => {
+        const reattempt = reattempts[p.id] ?? null;
+        const isCorrectReattempt = reattempt === p.correct_answer;
+
+        return (
+          <div key={p.id} style={{ borderRadius: 12, border: '1px solid var(--fog)', overflow: 'hidden', background: 'var(--frost)' }}>
+            {/* Problem header */}
+            <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--fog)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {p.category && (
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: 'rgba(168,203,222,0.15)', color: 'var(--sky-deeper)', border: '1px solid rgba(168,203,222,0.3)' }}>
+                  {p.category}
+                </span>
+              )}
+              <span style={{ fontSize: 10, color: 'var(--mist)' }}>{p.assigned_date}</span>
+            </div>
+
+            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Question image or text */}
+              {p.question_image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={p.question_image_url}
+                  alt="Question"
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    borderRadius: 8,
+                    objectFit: 'cover',
+                    objectPosition: p.crop_top_px != null ? `0 -${p.crop_top_px}px` : 'top',
+                  }}
+                />
+              ) : (
+                <p style={{ fontSize: 14, color: 'var(--charcoal)', margin: 0, lineHeight: 1.5 }}>{p.question}</p>
+              )}
+
+              {/* Answer choices */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {(['A', 'B', 'C', 'D'] as const).map((letter) => {
+                  const choiceText = p[`choice_${letter.toLowerCase()}` as keyof WarmUpProblem] as string;
+                  const isOriginalWrong = p.student_answer === letter;
+                  const isCorrectAnswer = p.correct_answer === letter;
+                  const isReattempted = reattempt === letter;
+
+                  let bg = 'var(--white)';
+                  let border = '1px solid var(--fog)';
+                  let labelColor = 'var(--slate)';
+                  let letterBg = 'var(--fog)';
+                  let letterColor = 'var(--mist)';
+
+                  if (isCorrectAnswer) {
+                    bg = 'rgba(22,163,74,0.07)';
+                    border = '1px solid rgba(22,163,74,0.3)';
+                    labelColor = '#15803d';
+                    letterBg = 'rgba(22,163,74,0.15)';
+                    letterColor = '#15803d';
+                  } else if (isOriginalWrong && !reattempt) {
+                    bg = 'rgba(239,68,68,0.06)';
+                    border = '1px solid rgba(239,68,68,0.25)';
+                    labelColor = '#b91c1c';
+                    letterBg = 'rgba(239,68,68,0.12)';
+                    letterColor = '#b91c1c';
+                  } else if (isReattempted && !isCorrectAnswer) {
+                    bg = 'rgba(239,68,68,0.06)';
+                    border = '1px solid rgba(239,68,68,0.25)';
+                    labelColor = '#b91c1c';
+                    letterBg = 'rgba(239,68,68,0.12)';
+                    letterColor = '#b91c1c';
+                  }
+
+                  return (
+                    <button
+                      key={letter}
+                      onClick={() => {
+                        if (!reattempt) setReattempts((prev) => ({ ...prev, [p.id]: letter }));
+                      }}
+                      disabled={!!reattempt}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 12px', borderRadius: 8,
+                        border, background: bg, cursor: reattempt ? 'default' : 'pointer',
+                        textAlign: 'left', fontFamily: "'Syne', sans-serif",
+                        transition: 'all 0.1s',
+                      }}
+                    >
+                      <span style={{ width: 22, height: 22, borderRadius: '50%', background: letterBg, color: letterColor, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {letter}
+                      </span>
+                      <span style={{ fontSize: 13, color: labelColor, fontWeight: isCorrectAnswer ? 600 : 400 }}>{choiceText}</span>
+                      {isCorrectAnswer && (
+                        <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#15803d', flexShrink: 0 }}>correct</span>
+                      )}
+                      {isOriginalWrong && !reattempt && !isCorrectAnswer && (
+                        <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#b91c1c', flexShrink: 0 }}>your answer</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Reattempt feedback */}
+              {reattempt && (
+                <div style={{
+                  padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  background: isCorrectReattempt ? 'rgba(22,163,74,0.08)' : 'rgba(239,68,68,0.06)',
+                  border: `1px solid ${isCorrectReattempt ? 'rgba(22,163,74,0.25)' : 'rgba(239,68,68,0.2)'}`,
+                  color: isCorrectReattempt ? '#15803d' : '#b91c1c',
+                }}>
+                  {isCorrectReattempt ? 'Correct!' : `Not quite — the correct answer is ${p.correct_answer}.`}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      <button
+        onClick={onNext}
+        style={{
+          marginTop: 4,
+          padding: '10px 32px',
+          borderRadius: 9,
+          border: 'none',
+          background: 'var(--rose)',
+          color: 'var(--charcoal)',
+          fontSize: 13,
+          fontWeight: 700,
+          cursor: 'pointer',
+          fontFamily: "'Syne', sans-serif",
+          alignSelf: 'flex-end',
+        }}
+      >
+        Continue <ChevronRight size={14} style={{ display: 'inline', verticalAlign: 'middle' }} />
+      </button>
     </div>
   );
 }

@@ -8,6 +8,9 @@ import {
   getWorksheetStepAnswerKey,
   getWorksheetStepResponses,
   getWorksheetStepProblems,
+  getPreviousWorksheetAssignedDate,
+  getMissedBreakfastProblemsSince,
+  hasAnyBreakfastHistory,
 } from '@/lib/db';
 import WorksheetFlowClient from './client';
 
@@ -21,11 +24,29 @@ export interface FlowProblem {
   accepted_answers: string[];
 }
 
+export interface WarmUpProblem {
+  id: string;
+  question: string;
+  choice_a: string;
+  choice_b: string;
+  choice_c: string;
+  choice_d: string;
+  correct_answer: string;
+  student_answer: string;
+  assigned_date: string;
+  question_image_url: string | null;
+  crop_top_px: number | null;
+  crop_bottom_px: number | null;
+  image_width_px: number | null;
+  image_height_px: number | null;
+  category: string | null;
+}
+
 export interface FlowStep {
   id: string;
   step_order: number;
   title: string;
-  type: 'instruction' | 'problems';
+  type: 'instruction' | 'problems' | 'warm_up';
   stage_label: string | null;
   locked_nav: boolean;
   pdf_url: string | null;
@@ -34,6 +55,9 @@ export interface FlowStep {
   answerKey: FlowAnswerKey[];
   initialResponses: FlowResponse[];
   problems: FlowProblem[];
+  warmUpProblems?: WarmUpProblem[];
+  hasBreakfastHistory?: boolean;
+  skipStep?: boolean;
 }
 
 export interface FlowPage {
@@ -80,6 +104,28 @@ export default async function StudentWorksheetPage({
       id: string; step_order: number; title: string; type: string;
       stage_label: string | null; locked_nav: boolean; pdf_url: string | null;
     }[]).map(async (step) => {
+      if (step.type === 'warm_up') {
+        const prevDate = await getPreviousWorksheetAssignedDate(user.id!, id);
+        const sinceDate = prevDate ?? new Date(0);
+        const [missedProblems, hasHistory] = await Promise.all([
+          getMissedBreakfastProblemsSince(user.id!, sinceDate),
+          hasAnyBreakfastHistory(user.id!),
+        ]);
+        const warmUpProblems = missedProblems as unknown as WarmUpProblem[];
+        return {
+          ...step,
+          type: 'warm_up' as const,
+          pages: [],
+          positions: [],
+          answerKey: [],
+          initialResponses: [],
+          problems: [],
+          warmUpProblems,
+          hasBreakfastHistory: hasHistory,
+          skipStep: hasHistory && warmUpProblems.length === 0,
+        } as FlowStep;
+      }
+
       const [pages, positions, answerKey, responses, problems] = await Promise.all([
         getWorksheetStepPages(step.id),
         getWorksheetStepPositions(step.id),
