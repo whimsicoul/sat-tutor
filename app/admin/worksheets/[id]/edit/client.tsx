@@ -374,7 +374,7 @@ function PdfImportTab({
   const [placingBubbleLetter, setPlacingBubbleLetter] = useState<string | null>(null);
 
   const [akQIdx, setAkQIdx] = useState(0);
-  const [akEdits, setAkEdits] = useState<Record<number, { letter: string; expUrl: string | null }>>({});
+  const [akEdits, setAkEdits] = useState<Record<number, { letter: string; expUrl: string | null; questionType: 'multiple_choice' | 'open_ended'; acceptedAnswers: string }>>({});
   const [akCropRect, setAkCropRect] = useState<CropRect | null>(null);
   const [akDragStart, setAkDragStart] = useState<{ x: number; y: number } | null>(null);
   const [savingAk, setSavingAk] = useState<number | null>(null);
@@ -555,22 +555,27 @@ function PdfImportTab({
     }
   }
 
+  function parseAcceptedAnswers(raw: string): string[] {
+    return raw.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+  }
+
   async function handleSaveAllAnswers() {
-    const answeredProblems = problems.filter((p) => {
-      const letter = akEdits[p.question_number]?.letter ?? p.correct_answer;
-      return letter && /^[A-D]$/i.test(letter);
-    });
-    if (answeredProblems.length === 0) { toast.error('No answers to save'); return; }
+    if (problems.length === 0) { toast.error('No questions to save'); return; }
     setSavingAk(-1);
     try {
       const results = await Promise.all(
-        answeredProblems.map(async (p) => {
-          const letter = (akEdits[p.question_number]?.letter ?? p.correct_answer ?? '').toUpperCase();
+        problems.map(async (p) => {
+          const qType = akEdits[p.question_number]?.questionType ?? p.question_type ?? 'multiple_choice';
           const expUrl = akEdits[p.question_number]?.expUrl ?? p.explanation_image_url ?? null;
+          const letter = qType === 'multiple_choice'
+            ? (akEdits[p.question_number]?.letter ?? p.correct_answer ?? '').toUpperCase() || null
+            : null;
+          const rawAccepted = akEdits[p.question_number]?.acceptedAnswers ?? (p.accepted_answers ?? []).join('\n');
+          const acceptedAnswers = qType === 'open_ended' ? parseAcceptedAnswers(rawAccepted) : [];
           const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ questionNumber: p.question_number, correctAnswer: letter, explanationImageUrl: expUrl }),
+            body: JSON.stringify({ questionNumber: p.question_number, correctAnswer: letter, explanationImageUrl: expUrl, questionType: qType, acceptedAnswers }),
           });
           if (!res.ok) throw new Error(`Q${p.question_number} failed`);
           const { problem: updated } = await res.json() as { problem: WsProblem };
@@ -814,39 +819,49 @@ function PdfImportTab({
                 <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
                   {/* Question image — fills space */}
                   <div style={{ flex: 1, overflow: 'auto' }}>
-                    <div
-                      onClick={handleBubbleImageClick}
-                      style={{ position: 'relative', width: '100%', cursor: placingBubbleLetter ? 'crosshair' : 'default', userSelect: 'none' }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={bubbleProblem.question_image_url} alt={`Q${bubbleProblem.question_number}`} style={{ display: 'block', width: '100%' }} />
-                      {getPositionsForProblem(bubbleProblem.question_number).map((pos) => (
-                        <div
-                          key={pos.id}
-                          style={{
-                            position: 'absolute',
-                            left: `${pos.x_percent}%`,
-                            top: `${pos.y_percent}%`,
-                            transform: 'translate(-50%, -50%)',
-                            background: 'rgba(224,166,175,0.9)',
-                            border: '2px solid #fff',
-                            borderRadius: '50%',
-                            width: 28,
-                            height: 28,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 11,
-                            fontWeight: 700,
-                            color: '#1A1D23',
-                            fontFamily: "'Syne', sans-serif",
-                            pointerEvents: 'none',
-                          }}
-                        >
-                          {letterFromEncoded(pos.question_number)}
+                    {(akEdits[bubbleProblem.question_number]?.questionType ?? bubbleProblem.question_type) === 'open_ended' ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ padding: '8px 16px', borderRadius: 10, background: 'rgba(168,203,222,0.12)', border: '1px solid rgba(168,203,222,0.4)', fontSize: 13, color: 'var(--sky-deeper)', fontWeight: 600 }}>
+                          Open Ended — no bubbles needed
                         </div>
-                      ))}
-                    </div>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={bubbleProblem.question_image_url} alt={`Q${bubbleProblem.question_number}`} style={{ maxWidth: '80%', borderRadius: 8, border: '1px solid var(--fog)' }} />
+                      </div>
+                    ) : (
+                      <div
+                        onClick={handleBubbleImageClick}
+                        style={{ position: 'relative', width: '100%', cursor: placingBubbleLetter ? 'crosshair' : 'default', userSelect: 'none' }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={bubbleProblem.question_image_url} alt={`Q${bubbleProblem.question_number}`} style={{ display: 'block', width: '100%' }} />
+                        {getPositionsForProblem(bubbleProblem.question_number).map((pos) => (
+                          <div
+                            key={pos.id}
+                            style={{
+                              position: 'absolute',
+                              left: `${pos.x_percent}%`,
+                              top: `${pos.y_percent}%`,
+                              transform: 'translate(-50%, -50%)',
+                              background: 'rgba(224,166,175,0.9)',
+                              border: '2px solid #fff',
+                              borderRadius: '50%',
+                              width: 28,
+                              height: 28,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: '#1A1D23',
+                              fontFamily: "'Syne', sans-serif",
+                              pointerEvents: 'none',
+                            }}
+                          >
+                            {letterFromEncoded(pos.question_number)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Letter controls — right panel */}
@@ -944,49 +959,110 @@ function PdfImportTab({
                       <img src={akProblem.question_image_url} alt={`Q${akProblem.question_number}`} onClick={() => setLightboxUrl(akProblem.question_image_url)} style={{ display: 'block', width: '100%', borderRadius: 8, border: '1px solid var(--fog)', cursor: 'zoom-in' }} />
                     </div>
                     <div>
-                      <p style={{ ...sectionHead, marginBottom: 10 }}>Correct Answer</p>
-                      <div style={{ display: 'flex', gap: 10 }}>
-                        {['A', 'B', 'C', 'D'].map((letter) => {
-                          const current = akEdits[akProblem.question_number]?.letter ?? akProblem.correct_answer ?? '';
+                      <p style={{ ...sectionHead, marginBottom: 8 }}>Question Type</p>
+                      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+                        {(['multiple_choice', 'open_ended'] as const).map((qt) => {
+                          const currentType = akEdits[akProblem.question_number]?.questionType ?? akProblem.question_type ?? 'multiple_choice';
                           return (
                             <button
-                              key={letter}
-                              onClick={async () => {
-                                const expUrl = akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url ?? null;
-                                setAkEdits((prev) => ({ ...prev, [akProblem.question_number]: { letter, expUrl: prev[akProblem.question_number]?.expUrl ?? null } }));
-                                setSavingAk(akProblem.question_number);
-                                try {
-                                  const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
-                                    method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ questionNumber: akProblem.question_number, correctAnswer: letter, explanationImageUrl: expUrl }),
-                                  });
-                                  if (res.ok) {
-                                    const { problem: updated } = await res.json() as { problem: WsProblem };
-                                    onProblemsChange(problems.map((p) => p.id === updated.id ? updated : p));
-                                  }
-                                } finally {
-                                  setSavingAk(null);
-                                }
-                              }}
+                              key={qt}
+                              onClick={() => setAkEdits((prev) => ({
+                                ...prev,
+                                [akProblem.question_number]: {
+                                  letter: prev[akProblem.question_number]?.letter ?? akProblem.correct_answer ?? '',
+                                  expUrl: prev[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url ?? null,
+                                  acceptedAnswers: prev[akProblem.question_number]?.acceptedAnswers ?? (akProblem.accepted_answers ?? []).join('\n'),
+                                  questionType: qt,
+                                },
+                              }))}
                               style={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: '50%',
-                                border: `2px solid ${current === letter ? 'var(--rose-deeper)' : 'var(--fog)'}`,
-                                background: current === letter ? 'var(--rose)' : 'var(--frost)',
-                                color: 'var(--charcoal)',
-                                fontSize: 15,
+                                flex: 1,
+                                padding: '6px 4px',
+                                borderRadius: 7,
+                                border: `1px solid ${currentType === qt ? (qt === 'multiple_choice' ? 'rgba(224,166,175,0.5)' : 'rgba(168,203,222,0.5)') : 'var(--fog)'}`,
+                                background: currentType === qt ? (qt === 'multiple_choice' ? 'rgba(224,166,175,0.14)' : 'rgba(168,203,222,0.14)') : 'var(--frost)',
+                                color: currentType === qt ? 'var(--charcoal)' : 'var(--mist)',
+                                fontSize: 11,
                                 fontWeight: 700,
                                 cursor: 'pointer',
                                 fontFamily: "'Syne', sans-serif",
                               }}
                             >
-                              {letter}
+                              {qt === 'multiple_choice' ? 'Multiple Choice' : 'Open Ended'}
                             </button>
                           );
                         })}
                       </div>
+
+                      {(akEdits[akProblem.question_number]?.questionType ?? akProblem.question_type ?? 'multiple_choice') === 'multiple_choice' ? (
+                        <>
+                          <p style={{ ...sectionHead, marginBottom: 10 }}>Correct Answer</p>
+                          <div style={{ display: 'flex', gap: 10 }}>
+                            {['A', 'B', 'C', 'D'].map((letter) => {
+                              const current = akEdits[akProblem.question_number]?.letter ?? akProblem.correct_answer ?? '';
+                              return (
+                                <button
+                                  key={letter}
+                                  onClick={async () => {
+                                    const expUrl = akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url ?? null;
+                                    const qType = akEdits[akProblem.question_number]?.questionType ?? akProblem.question_type ?? 'multiple_choice';
+                                    const rawAccepted = akEdits[akProblem.question_number]?.acceptedAnswers ?? (akProblem.accepted_answers ?? []).join('\n');
+                                    setAkEdits((prev) => ({ ...prev, [akProblem.question_number]: { ...prev[akProblem.question_number], letter, expUrl: prev[akProblem.question_number]?.expUrl ?? null, questionType: qType, acceptedAnswers: rawAccepted } }));
+                                    setSavingAk(akProblem.question_number);
+                                    try {
+                                      const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ questionNumber: akProblem.question_number, correctAnswer: letter, explanationImageUrl: expUrl, questionType: qType, acceptedAnswers: [] }),
+                                      });
+                                      if (res.ok) {
+                                        const { problem: updated } = await res.json() as { problem: WsProblem };
+                                        onProblemsChange(problems.map((p) => p.id === updated.id ? updated : p));
+                                      }
+                                    } finally {
+                                      setSavingAk(null);
+                                    }
+                                  }}
+                                  style={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: '50%',
+                                    border: `2px solid ${current === letter ? 'var(--rose-deeper)' : 'var(--fog)'}`,
+                                    background: current === letter ? 'var(--rose)' : 'var(--frost)',
+                                    color: 'var(--charcoal)',
+                                    fontSize: 15,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    fontFamily: "'Syne', sans-serif",
+                                  }}
+                                >
+                                  {letter}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p style={{ ...sectionHead, marginBottom: 6 }}>Accepted Answers</p>
+                          <p style={{ fontSize: 10, color: 'var(--mist)', marginBottom: 6 }}>One per line or comma-separated</p>
+                          <textarea
+                            rows={4}
+                            placeholder={'6/7\n0.857\n0.8571'}
+                            value={akEdits[akProblem.question_number]?.acceptedAnswers ?? (akProblem.accepted_answers ?? []).join('\n')}
+                            onChange={(e) => setAkEdits((prev) => ({
+                              ...prev,
+                              [akProblem.question_number]: {
+                                letter: prev[akProblem.question_number]?.letter ?? '',
+                                expUrl: prev[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url ?? null,
+                                questionType: 'open_ended',
+                                acceptedAnswers: e.target.value,
+                              },
+                            }))}
+                            style={{ ...inputStyle, resize: 'vertical', minHeight: 80 }}
+                          />
+                        </>
+                      )}
                     </div>
                     {(akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url) && (
                       <div>

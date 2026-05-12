@@ -17,6 +17,8 @@ export interface WsProblem {
   question_image_url: string;
   correct_answer: string | null;
   explanation_image_url: string | null;
+  question_type: 'multiple_choice' | 'open_ended';
+  accepted_answers: string[];
 }
 
 export interface WsStep {

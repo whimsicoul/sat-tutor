@@ -42,11 +42,17 @@ export async function PATCH(
 ) {
   if (!await requireAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { stepId } = await params;
-  const { questionNumber, correctAnswer, explanationImageUrl } = await req.json() as {
+  const { questionNumber, correctAnswer, explanationImageUrl, questionType, acceptedAnswers } = await req.json() as {
     questionNumber: number;
     correctAnswer: string | null;
     explanationImageUrl: string | null;
+    questionType?: 'multiple_choice' | 'open_ended';
+    acceptedAnswers?: string[];
   };
-  const problem = await updateWorksheetStepProblemAnswerKey(stepId, questionNumber, correctAnswer, explanationImageUrl);
+  const problem = await updateWorksheetStepProblemAnswerKey(
+    stepId, questionNumber, correctAnswer, explanationImageUrl,
+    questionType ?? 'multiple_choice',
+    acceptedAnswers ?? [],
+  );
   return NextResponse.json({ problem });
 }
