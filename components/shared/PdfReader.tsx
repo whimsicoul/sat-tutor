@@ -64,7 +64,7 @@ export default function PdfReader({ url, title }: Props) {
 
           const ctx = canvas.getContext('2d');
           if (!ctx) continue;
-          await page.render({ canvasContext: ctx, viewport: scaled }).promise;
+          await page.render({ canvasContext: ctx, canvas, viewport: scaled }).promise;
         }
 
         if (!cancelled) setLoading(false);
