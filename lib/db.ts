@@ -1227,7 +1227,7 @@ export async function getPreviousWorksheetAssignedDate(
     LIMIT 1
   `;
   if (rows.length === 0) return null;
-  return new Date(rows[0].proposed_time);
+  return new Date(rows[0].proposed_time as string);
 }
 
 export async function getMissedBreakfastProblemsSince(studentId: string, sinceDate: Date) {

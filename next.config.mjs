@@ -2,7 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    unoptimized: true, 
+    unoptimized: true,
+  },
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /pdfjs-dist/,
+      type: 'javascript/esm',
+    });
+    return config;
   },
 };
 

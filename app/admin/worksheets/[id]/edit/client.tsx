@@ -1193,7 +1193,7 @@ function WarmUpStepInfo({
   onSaveField,
 }: {
   step: WsStep;
-  onSaveField: (stepId: string, field: Record<string, unknown>) => Promise<void>;
+  onSaveField: (stepId: string, field: Record<string, unknown>) => Promise<boolean>;
 }) {
   const [title, setTitle] = useState(step.title);
 
