@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import {
+  getWorksheetStepProblems,
   insertWorksheetStepProblem,
   deleteWorksheetStepProblem,
   updateWorksheetStepProblemAnswerKey,
@@ -9,6 +10,16 @@ import {
 async function requireAdmin() {
   const session = await auth();
   return (session?.user as { role?: string } | undefined)?.role === 'admin';
+}
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string; stepId: string }> },
+) {
+  if (!await requireAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { stepId } = await params;
+  const problems = await getWorksheetStepProblems(stepId);
+  return NextResponse.json({ problems });
 }
 
 export async function POST(

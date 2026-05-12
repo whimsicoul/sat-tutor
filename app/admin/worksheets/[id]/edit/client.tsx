@@ -397,6 +397,51 @@ function PdfImportTab({
     return () => window.removeEventListener('keydown', handler);
   }, [lightboxUrl]);
 
+  const [autoImporting, setAutoImporting] = useState(false);
+  const [autoImportResult, setAutoImportResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const autoImportInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleAutoImport(file: File) {
+    setAutoImporting(true);
+    setAutoImportResult(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/auto-import`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json() as {
+        imported?: number;
+        skipped_parse?: { external_id: string; reason: string }[];
+        failed_pages?: { page: number; external_id: string; reason: string }[];
+        error?: string;
+      };
+      if (!res.ok) { toast.error(data.error ?? 'Auto-import failed'); return; }
+      const skippedCount = (data.skipped_parse?.length ?? 0) + (data.failed_pages?.length ?? 0);
+      setAutoImportResult({ imported: data.imported ?? 0, skipped: skippedCount });
+      toast.success(`Auto-imported ${data.imported} question${(data.imported ?? 0) !== 1 ? 's' : ''}`);
+      // Reload the step data by refreshing problems + positions via the parent
+      const [probRes, posRes] = await Promise.all([
+        fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`),
+        fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/positions`),
+      ]);
+      if (probRes.ok) {
+        const { problems: newProblems } = await probRes.json() as { problems: WsProblem[] };
+        onProblemsChange(newProblems);
+      }
+      if (posRes.ok) {
+        const { positions: newPositions } = await posRes.json() as { positions: WsPosition[] };
+        onPositionsChange(newPositions);
+      }
+      if ((data.imported ?? 0) > 0) setPhase('bubbles');
+    } catch {
+      toast.error('Auto-import failed');
+    } finally {
+      setAutoImporting(false);
+    }
+  }
+
   const [pdfZoom, setPdfZoom] = useState(1.5);
   const ZOOM_MIN = 0.25;
   const ZOOM_MAX = 3.0;
@@ -692,22 +737,76 @@ function PdfImportTab({
       {phase === 'crop' && (
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
           {!pdfUrl ? (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-              <FileText size={40} style={{ color: 'var(--sky-deeper)', opacity: 0.5 }} />
-              <p style={{ fontSize: 14, color: 'var(--mist)' }}>Upload the PDF to start cropping questions</p>
-              <UploadButton<OurFileRouter, 'pdfUploader'>
-                endpoint="pdfUploader"
-                onClientUploadComplete={async (files) => {
-                  if (!files[0]) return;
-                  const url = files[0].ufsUrl ?? files[0].url;
-                  setPdfUrl(url);
-                  await loadPdf(url);
-                  onPdfUrlSave(url);
-                  toast.success('PDF loaded');
-                }}
-                onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
-                appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-sm font-semibold py-2.5 px-6 rounded-lg font-[Syne]' }}
-              />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
+              {/* Manual crop flow */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '20px 28px', border: '1px solid var(--fog)', borderRadius: 12, background: 'var(--frost)' }}>
+                <FileText size={32} style={{ color: 'var(--sky-deeper)', opacity: 0.5 }} />
+                <p style={{ fontSize: 13, color: 'var(--mist)', margin: 0, fontWeight: 600 }}>Manual crop</p>
+                <p style={{ fontSize: 12, color: 'var(--mist)', margin: 0, textAlign: 'center', maxWidth: 220 }}>Upload a PDF and crop each question by hand</p>
+                <UploadButton<OurFileRouter, 'pdfUploader'>
+                  endpoint="pdfUploader"
+                  onClientUploadComplete={async (files) => {
+                    if (!files[0]) return;
+                    const url = files[0].ufsUrl ?? files[0].url;
+                    setPdfUrl(url);
+                    await loadPdf(url);
+                    onPdfUrlSave(url);
+                    toast.success('PDF loaded');
+                  }}
+                  onUploadError={(e) => { toast.error(`Upload error: ${e.message}`); }}
+                  appearance={{ button: 'bg-[#A8CBDE] text-[#1A1D23] text-sm font-semibold py-2.5 px-6 rounded-lg font-[Syne]' }}
+                />
+              </div>
+
+              {/* Divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: 340 }}>
+                <div style={{ flex: 1, height: 1, background: 'var(--fog)' }} />
+                <span style={{ fontSize: 11, color: 'var(--mist)', fontWeight: 600 }}>OR</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--fog)' }} />
+              </div>
+
+              {/* Auto-import flow */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '20px 28px', border: '1px solid rgba(168,203,222,0.4)', borderRadius: 12, background: 'rgba(168,203,222,0.06)' }}>
+                <Layers size={32} style={{ color: 'var(--sky-deeper)', opacity: 0.7 }} />
+                <p style={{ fontSize: 13, color: 'var(--charcoal)', margin: 0, fontWeight: 600 }}>Auto-import Question Bank PDF</p>
+                <p style={{ fontSize: 12, color: 'var(--mist)', margin: 0, textAlign: 'center', maxWidth: 260 }}>
+                  Upload a College Board question bank PDF. Questions, bubbles, answers, and rationale are extracted automatically.
+                </p>
+                <input
+                  ref={autoImportInputRef}
+                  type="file"
+                  accept=".pdf"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleAutoImport(f);
+                    e.target.value = '';
+                  }}
+                />
+                {autoImportResult && (
+                  <p style={{ fontSize: 12, color: 'var(--sky-deeper)', margin: 0, fontWeight: 600 }}>
+                    Imported {autoImportResult.imported} question{autoImportResult.imported !== 1 ? 's' : ''}
+                    {autoImportResult.skipped > 0 ? ` (${autoImportResult.skipped} skipped)` : ''}
+                  </p>
+                )}
+                <button
+                  onClick={() => autoImportInputRef.current?.click()}
+                  disabled={autoImporting}
+                  style={{
+                    padding: '8px 24px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: autoImporting ? 'var(--fog)' : 'var(--sky-deeper)',
+                    color: autoImporting ? 'var(--mist)' : 'var(--white)',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: autoImporting ? 'default' : 'pointer',
+                    fontFamily: "'Syne', sans-serif",
+                  }}
+                >
+                  {autoImporting ? 'Importing…' : 'Select PDF to Auto-Import'}
+                </button>
+              </div>
             </div>
           ) : (
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>

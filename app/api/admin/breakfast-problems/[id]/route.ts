@@ -42,7 +42,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
   }
 
-  const updated = await updateBreakfastProblem(params.id, {
+  const updateFields: Parameters<typeof updateBreakfastProblem>[1] = {
     question:           body.question,
     choice_a:           body.choice_a,
     choice_b:           body.choice_b,
@@ -55,7 +55,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     difficulty:         body.difficulty,
     crop_top_px:    body.crop_top_px    !== undefined ? Number(body.crop_top_px)    : undefined,
     crop_bottom_px: body.crop_bottom_px !== undefined ? Number(body.crop_bottom_px) : undefined,
-  });
+  };
+  if ('review_status' in body) updateFields.review_status = body.review_status ?? null;
+
+  const updated = await updateBreakfastProblem(params.id, updateFields);
 
   if (!updated) {
     return NextResponse.json({ error: 'Problem not found' }, { status: 404 });

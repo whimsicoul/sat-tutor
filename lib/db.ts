@@ -431,8 +431,11 @@ export async function updateBreakfastProblem(
     difficulty?: string | null;
     crop_top_px?: number | null;
     crop_bottom_px?: number | null;
+    review_status?: string | null;
   }
 ) {
+  const updateReviewStatus = 'review_status' in fields;
+  const newReviewStatus = fields.review_status ?? null;
   const rows = await sql`
     UPDATE breakfast_problems SET
       question           = COALESCE(${fields.question        ?? null}, question),
@@ -446,7 +449,8 @@ export async function updateBreakfastProblem(
       skill              = COALESCE(${fields.skill               ?? null}::text, skill),
       difficulty         = COALESCE(${fields.difficulty          ?? null}::text, difficulty),
       crop_top_px        = COALESCE(${fields.crop_top_px    ?? null}::int, crop_top_px),
-      crop_bottom_px     = COALESCE(${fields.crop_bottom_px ?? null}::int, crop_bottom_px)
+      crop_bottom_px     = COALESCE(${fields.crop_bottom_px ?? null}::int, crop_bottom_px),
+      review_status      = CASE WHEN ${updateReviewStatus} THEN ${newReviewStatus}::text ELSE review_status END
     WHERE id = ${id}
     RETURNING *
   `;
@@ -469,6 +473,7 @@ export async function getAllBreakfastProblemsWithFlagCounts() {
       bp.correct_answer, bp.category, bp.skill, bp.difficulty,
       bp.external_id, bp.created_at,
       bp.answer_explanation,
+      bp.review_status,
       bp.question_image_url, bp.crop_top_px, bp.crop_bottom_px,
       bp.image_width_px, bp.image_height_px,
       COUNT(bpf.id)::int AS flag_count,
