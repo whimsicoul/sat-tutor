@@ -521,7 +521,8 @@ export async function getTodayAssignmentsForStudent(studentId: string) {
       bp.image_height_px,
       sbr.student_answer,
       sbr.is_correct,
-      sbr.submitted_at
+      sbr.submitted_at,
+      sba.annotations
     FROM student_breakfast_assignments sba
     JOIN breakfast_problems bp ON bp.id = sba.problem_id
     LEFT JOIN student_breakfast_responses sbr
@@ -1280,4 +1281,55 @@ export async function hasAnyBreakfastHistory(studentId: string): Promise<boolean
     LIMIT 1
   `;
   return rows.length > 0;
+}
+
+export async function getWorksheetAnnotations(
+  stepId: string,
+  studentId: string,
+  questionNumber: number,
+): Promise<unknown[]> {
+  const rows = await sql`
+    SELECT annotations FROM worksheet_step_responses
+    WHERE step_id = ${stepId}
+      AND student_id = ${studentId}
+      AND question_number = ${questionNumber}
+    LIMIT 1
+  `;
+  return (rows[0]?.annotations ?? []) as unknown[];
+}
+
+export async function saveWorksheetAnnotations(
+  stepId: string,
+  studentId: string,
+  questionNumber: number,
+  annotations: unknown[],
+): Promise<void> {
+  await sql`
+    INSERT INTO worksheet_step_responses (step_id, student_id, question_number, annotations, updated_at)
+    VALUES (${stepId}, ${studentId}, ${questionNumber}, ${JSON.stringify(annotations)}, now())
+    ON CONFLICT (step_id, student_id, question_number)
+    DO UPDATE SET annotations = EXCLUDED.annotations, updated_at = now()
+  `;
+}
+
+export async function getBreakfastAnnotations(
+  assignmentId: string,
+): Promise<unknown[]> {
+  const rows = await sql`
+    SELECT annotations FROM student_breakfast_assignments
+    WHERE id = ${assignmentId}
+    LIMIT 1
+  `;
+  return (rows[0]?.annotations ?? []) as unknown[];
+}
+
+export async function saveBreakfastAnnotations(
+  assignmentId: string,
+  annotations: unknown[],
+): Promise<void> {
+  await sql`
+    UPDATE student_breakfast_assignments
+    SET annotations = ${JSON.stringify(annotations)}
+    WHERE id = ${assignmentId}
+  `;
 }

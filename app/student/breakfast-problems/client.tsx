@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import type { TodayAssignment } from './page';
+import AnnotationCanvas from '@/components/shared/AnnotationCanvas';
+import type { Annotations } from '@/types/annotations';
 
 const CHOICES = ['A', 'B', 'C', 'D'] as const;
 type Choice = (typeof CHOICES)[number];
@@ -201,6 +203,12 @@ export default function StudentBreakfastClient({
                                 alt="Math question"
                                 className="absolute left-0 w-full"
                                 style={{ top: 0, transform: `translateY(-${(top / h * 100).toFixed(4)}%)` }}
+                              />
+                              <AnnotationCanvas
+                                context="breakfast"
+                                assignmentId={a.assignment_id}
+                                initialAnnotations={(a.annotations ?? []) as Annotations}
+                                editable={true}
                               />
                             </div>
                           );

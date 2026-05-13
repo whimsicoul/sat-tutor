@@ -87,6 +87,7 @@ export interface FlowResponse {
   question_number: number;
   selected_answer: string | null;
   eliminated_choices: string[];
+  annotations: unknown[];
 }
 
 export default async function StudentWorksheetPage({

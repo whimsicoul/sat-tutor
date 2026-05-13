@@ -9,7 +9,9 @@ import {
 } from 'lucide-react';
 import type { FlowStep, FlowPage, FlowPosition, FlowAnswerKey, FlowProblem, WarmUpProblem } from './page';
 import PdfReader from '@/components/shared/PdfReader';
+import AnnotationCanvas from '@/components/shared/AnnotationCanvas';
 import { checkOpenEndedAnswer } from '@/lib/utils';
+import type { Annotations } from '@/types/annotations';
 
 const CHOICES = ['A', 'B', 'C', 'D'] as const;
 type Choice = typeof CHOICES[number];
@@ -467,10 +469,20 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={currentProblem.question_image_url} alt={`Question ${currentProblem.question_number}`} style={{ display: 'block', width: '100%' }} />
 
+        <AnnotationCanvas
+          context="worksheet"
+          worksheetId={worksheetId}
+          stepId={step.id}
+          questionNumber={currentProblem.question_number}
+          initialAnnotations={(step.initialResponses.find(r => r.question_number === currentProblem.question_number)?.annotations ?? []) as Annotations}
+          editable={true}
+        />
+
         {/* Open-ended: positioned text input over image */}
         {currentProblem.question_type === 'open_ended' && currentProblem.answer_box_x != null && (
           <div style={{
             position: 'absolute',
+            zIndex: 3,
             left: `${currentProblem.answer_box_x}%`,
             top: `${currentProblem.answer_box_y}%`,
             width: `${currentProblem.answer_box_width}%`,
@@ -516,6 +528,7 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
                   onClick={() => selectAnswer(currentProblem.question_number, letter)}
                   style={{
                     position: 'absolute',
+                    zIndex: 3,
                     left: `${Number(pos.x_percent)}%`,
                     top: `${Number(pos.y_percent)}%`,
                     transform: 'translate(-50%, -50%)',

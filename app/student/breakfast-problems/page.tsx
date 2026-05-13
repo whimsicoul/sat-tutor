@@ -20,6 +20,7 @@ export interface TodayAssignment {
   student_answer: string | null;
   is_correct: boolean | null;
   submitted_at: string | null;
+  annotations: unknown[];
 }
 
 export default async function StudentBreakfastPage() {
