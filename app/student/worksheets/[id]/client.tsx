@@ -378,6 +378,8 @@ function ProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: stri
 function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: string }) {
   const problems = step.problems.slice().sort((a, b) => a.question_number - b.question_number);
   const [currentQIdx, setCurrentQIdx] = useState(0);
+  const [editingQNav, setEditingQNav] = useState(false);
+  const [qNavInput, setQNavInput] = useState('');
 
   const currentProblem = problems[currentQIdx] as FlowProblem | undefined;
 
@@ -597,9 +599,44 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
           <ChevronLeft size={14} /> Prev
         </button>
 
-        <span style={{ fontSize: 12, color: 'var(--mist)', fontWeight: 500 }}>
-          Q{currentProblem.question_number} ({currentQIdx + 1} / {problems.length})
-        </span>
+        {editingQNav ? (
+          <input
+            type="number"
+            autoFocus
+            min={1}
+            max={problems.length}
+            value={qNavInput}
+            onChange={(e) => setQNavInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const n = parseInt(qNavInput, 10);
+                if (!isNaN(n)) setCurrentQIdx(Math.min(problems.length - 1, Math.max(0, n - 1)));
+                setEditingQNav(false);
+              } else if (e.key === 'Escape') {
+                setEditingQNav(false);
+              }
+            }}
+            onBlur={() => {
+              const n = parseInt(qNavInput, 10);
+              if (!isNaN(n)) setCurrentQIdx(Math.min(problems.length - 1, Math.max(0, n - 1)));
+              setEditingQNav(false);
+            }}
+            style={{
+              width: 44, padding: '2px 6px', borderRadius: 6,
+              border: '1px solid var(--fog)', background: 'var(--frost)',
+              color: 'var(--slate)', fontSize: 12, fontWeight: 600,
+              fontFamily: "'Syne', sans-serif", textAlign: 'center', outline: 'none',
+            }}
+          />
+        ) : (
+          <span
+            title="Click to jump to a question"
+            onClick={() => { setQNavInput(String(currentQIdx + 1)); setEditingQNav(true); }}
+            style={{ fontSize: 12, color: 'var(--mist)', fontWeight: 500, cursor: 'pointer', userSelect: 'none' }}
+          >
+            Q{currentProblem.question_number} ({currentQIdx + 1} / {problems.length})
+          </span>
+        )}
 
         <button
           onClick={() => setCurrentQIdx((i) => Math.min(problems.length - 1, i + 1))}
@@ -798,6 +835,8 @@ function LegacyProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId
   const [pages] = useState<FlowPage[]>(step.pages);
   const [positions] = useState<FlowPosition[]>(step.positions);
   const [currentPageIdx, setCurrentPageIdx] = useState(0);
+  const [editingPageNav, setEditingPageNav] = useState(false);
+  const [pageNavInput, setPageNavInput] = useState('');
   const [revealed, setRevealed] = useState(false);
   const [revealing, setRevealing] = useState(false);
   const [revealedKey, setRevealedKey] = useState<Record<number, string>>({});
@@ -917,9 +956,44 @@ function LegacyProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--mist)', fontWeight: 500 }}>
-            Page {currentPageIdx + 1} of {pages.length}
-          </span>
+          {editingPageNav ? (
+            <input
+              type="number"
+              autoFocus
+              min={1}
+              max={pages.length}
+              value={pageNavInput}
+              onChange={(e) => setPageNavInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const n = parseInt(pageNavInput, 10);
+                  if (!isNaN(n)) setCurrentPageIdx(Math.min(pages.length - 1, Math.max(0, n - 1)));
+                  setEditingPageNav(false);
+                } else if (e.key === 'Escape') {
+                  setEditingPageNav(false);
+                }
+              }}
+              onBlur={() => {
+                const n = parseInt(pageNavInput, 10);
+                if (!isNaN(n)) setCurrentPageIdx(Math.min(pages.length - 1, Math.max(0, n - 1)));
+                setEditingPageNav(false);
+              }}
+              style={{
+                width: 44, padding: '2px 6px', borderRadius: 6,
+                border: '1px solid var(--fog)', background: 'var(--frost)',
+                color: 'var(--slate)', fontSize: 12, fontWeight: 600,
+                fontFamily: "'Syne', sans-serif", textAlign: 'center', outline: 'none',
+              }}
+            />
+          ) : (
+            <span
+              title="Click to jump to a page"
+              onClick={() => { setPageNavInput(String(currentPageIdx + 1)); setEditingPageNav(true); }}
+              style={{ fontSize: 12, color: 'var(--mist)', fontWeight: 500, cursor: 'pointer', userSelect: 'none' }}
+            >
+              Page {currentPageIdx + 1} of {pages.length}
+            </span>
+          )}
           {step.answerKey.length > 0 && (
             <button
               onClick={revealAnswers}
