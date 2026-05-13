@@ -53,10 +53,11 @@ export async function PATCH(
 ) {
   if (!await requireAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { stepId } = await params;
-  const { questionNumber, correctAnswer, explanationImageUrl, questionType, acceptedAnswers, answerBoxX, answerBoxY, answerBoxWidth, answerBoxHeight } = await req.json() as {
+  const { questionNumber, correctAnswer, explanationImageUrl, explanationImageUrls, questionType, acceptedAnswers, answerBoxX, answerBoxY, answerBoxWidth, answerBoxHeight } = await req.json() as {
     questionNumber: number;
     correctAnswer: string | null;
     explanationImageUrl: string | null;
+    explanationImageUrls?: string[];
     questionType?: 'multiple_choice' | 'open_ended';
     acceptedAnswers?: string[];
     answerBoxX?: number | null;
@@ -64,6 +65,8 @@ export async function PATCH(
     answerBoxWidth?: number | null;
     answerBoxHeight?: number | null;
   };
+  const resolvedUrls = explanationImageUrls ?? (explanationImageUrl ? [explanationImageUrl] : []);
+  const hasAnswerBox = answerBoxX !== undefined;
   const problem = await updateWorksheetStepProblemAnswerKey(
     stepId, questionNumber, correctAnswer, explanationImageUrl,
     questionType ?? 'multiple_choice',
@@ -72,6 +75,8 @@ export async function PATCH(
     answerBoxY ?? null,
     answerBoxWidth ?? null,
     answerBoxHeight ?? null,
+    resolvedUrls,
+    hasAnswerBox,
   );
   return NextResponse.json({ problem });
 }

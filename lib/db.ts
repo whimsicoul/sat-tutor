@@ -1177,7 +1177,7 @@ export async function upsertWorksheetStepResponse(
 export async function getWorksheetStepProblems(stepId: string) {
   return sql`
     SELECT id, step_id, question_number, question_image_url, correct_answer, explanation_image_url,
-           question_type, accepted_answers,
+           explanation_image_urls, question_type, accepted_answers,
            answer_box_x, answer_box_y, answer_box_width, answer_box_height,
            created_at
     FROM worksheet_step_problems
@@ -1210,17 +1210,21 @@ export async function updateWorksheetStepProblemAnswerKey(
   answerBoxY: number | null = null,
   answerBoxWidth: number | null = null,
   answerBoxHeight: number | null = null,
+  explanationImageUrls: string[] = [],
+  updateAnswerBox: boolean = false,
 ) {
+  const primaryUrl = explanationImageUrls.length > 0 ? explanationImageUrls[0] : explanationImageUrl;
   const rows = await sql`
     UPDATE worksheet_step_problems
-    SET correct_answer        = ${correctAnswer},
-        explanation_image_url = ${explanationImageUrl},
-        question_type         = ${questionType},
-        accepted_answers      = ${acceptedAnswers},
-        answer_box_x          = ${answerBoxX},
-        answer_box_y          = ${answerBoxY},
-        answer_box_width      = ${answerBoxWidth},
-        answer_box_height     = ${answerBoxHeight}
+    SET correct_answer          = ${correctAnswer},
+        explanation_image_url   = ${primaryUrl},
+        explanation_image_urls  = ${explanationImageUrls},
+        question_type           = ${questionType},
+        accepted_answers        = ${acceptedAnswers},
+        answer_box_x            = CASE WHEN ${updateAnswerBox} THEN ${answerBoxX} ELSE answer_box_x END,
+        answer_box_y            = CASE WHEN ${updateAnswerBox} THEN ${answerBoxY} ELSE answer_box_y END,
+        answer_box_width        = CASE WHEN ${updateAnswerBox} THEN ${answerBoxWidth} ELSE answer_box_width END,
+        answer_box_height       = CASE WHEN ${updateAnswerBox} THEN ${answerBoxHeight} ELSE answer_box_height END
     WHERE step_id = ${stepId} AND question_number = ${questionNumber}
     RETURNING *
   `;

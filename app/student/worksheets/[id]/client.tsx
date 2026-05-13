@@ -808,16 +808,27 @@ function ReviewSummary({
                       </div>
                     </div>
 
-                    {/* Explanation image */}
-                    {p.explanation_image_url && (
-                      <div style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(22,163,74,0.2)' }}>
-                        <p style={{ fontSize: 10, fontWeight: 700, color: '#15803d', padding: '6px 10px 0', margin: 0 }}>
-                          EXPLANATION
-                        </p>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={p.explanation_image_url} alt="Explanation" style={{ display: 'block', width: '100%' }} />
-                      </div>
-                    )}
+                    {/* Explanation images */}
+                    {(() => {
+                      const urls = p.explanation_image_urls?.length ? p.explanation_image_urls : (p.explanation_image_url ? [p.explanation_image_url] : []);
+                      if (urls.length === 0) return null;
+                      return (
+                        <div style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(22,163,74,0.2)' }}>
+                          <p style={{ fontSize: 10, fontWeight: 700, color: '#15803d', padding: '6px 10px 0', margin: 0 }}>
+                            EXPLANATION
+                          </p>
+                          {urls.map((url, i) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              key={i}
+                              src={url}
+                              alt={`Explanation ${i + 1}`}
+                              style={{ display: 'block', width: '100%', borderTop: i > 0 ? '1px solid rgba(22,163,74,0.15)' : undefined }}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

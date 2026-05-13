@@ -388,7 +388,13 @@ function PdfImportTab({
   const [savingAnswerBox, setSavingAnswerBox] = useState(false);
 
   const [akQIdx, setAkQIdx] = useState(0);
-  const [akEdits, setAkEdits] = useState<Record<number, { letter: string; expUrl: string | null; questionType: 'multiple_choice' | 'open_ended'; acceptedAnswers: string }>>({});
+  const [editingBubbleQNav, setEditingBubbleQNav] = useState(false);
+  const [bubbleQNavInput, setBubbleQNavInput] = useState('');
+  const [editingAkQNav, setEditingAkQNav] = useState(false);
+  const [akQNavInput, setAkQNavInput] = useState('');
+  const [editingPageNav, setEditingPageNav] = useState(false);
+  const [pageNavInput, setPageNavInput] = useState('');
+  const [akEdits, setAkEdits] = useState<Record<number, { letter: string; expUrls: string[]; questionType: 'multiple_choice' | 'open_ended'; acceptedAnswers: string }>>({});
   const [akCropRect, setAkCropRect] = useState<CropRect | null>(null);
   const [akDragStart, setAkDragStart] = useState<{ x: number; y: number } | null>(null);
   const [savingAk, setSavingAk] = useState<number | null>(null);
@@ -733,7 +739,7 @@ function PdfImportTab({
       const results = await Promise.all(
         problems.map(async (p) => {
           const qType = akEdits[p.question_number]?.questionType ?? p.question_type ?? 'multiple_choice';
-          const expUrl = akEdits[p.question_number]?.expUrl ?? p.explanation_image_url ?? null;
+          const expUrls = akEdits[p.question_number]?.expUrls ?? (p.explanation_image_urls?.length ? p.explanation_image_urls : (p.explanation_image_url ? [p.explanation_image_url] : []));
           const letter = qType === 'multiple_choice'
             ? (akEdits[p.question_number]?.letter ?? p.correct_answer ?? '').toUpperCase() || null
             : null;
@@ -742,7 +748,7 @@ function PdfImportTab({
           const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ questionNumber: p.question_number, correctAnswer: letter, explanationImageUrl: expUrl, questionType: qType, acceptedAnswers }),
+            body: JSON.stringify({ questionNumber: p.question_number, correctAnswer: letter, explanationImageUrl: expUrls[0] ?? null, explanationImageUrls: expUrls, questionType: qType, acceptedAnswers }),
           });
           if (!res.ok) throw new Error(`Q${p.question_number} failed`);
           const { problem: updated } = await res.json() as { problem: WsProblem };
@@ -760,10 +766,14 @@ function PdfImportTab({
 
   async function handleCropExplanation(problem: WsProblem) {
     if (!akCropRect || akCropRect.w < 10 || akCropRect.h < 10) { toast.error('Draw a selection on the PDF first'); return; }
+    const edit = akEdits[problem.question_number];
+    const currentUrls = edit?.expUrls ?? (problem.explanation_image_urls?.length ? problem.explanation_image_urls : (problem.explanation_image_url ? [problem.explanation_image_url] : []));
+    if (currentUrls.length >= 3) { toast.error('Maximum 3 screenshots reached'); return; }
+
     const url = await cropAndUpload(akCropRect);
     if (!url) { toast.error('Upload failed'); return; }
 
-    const edit = akEdits[problem.question_number];
+    const newUrls = [...currentUrls, url];
     const correctAnswer = edit?.letter ?? problem.correct_answer ?? null;
     const qType = edit?.questionType ?? problem.question_type ?? 'multiple_choice';
     const rawAccepted = edit?.acceptedAnswers ?? (problem.accepted_answers ?? []).join('\n');
@@ -774,14 +784,14 @@ function PdfImportTab({
       const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionNumber: problem.question_number, correctAnswer, explanationImageUrl: url, questionType: qType, acceptedAnswers }),
+        body: JSON.stringify({ questionNumber: problem.question_number, correctAnswer, explanationImageUrl: newUrls[0] ?? null, explanationImageUrls: newUrls, questionType: qType, acceptedAnswers }),
       });
       if (res.ok) {
         const { problem: updated } = await res.json() as { problem: WsProblem };
         onProblemsChange(problems.map((p) => p.id === updated.id ? updated : p));
-        setAkEdits((prev) => ({ ...prev, [problem.question_number]: { ...prev[problem.question_number], letter: correctAnswer ?? '', expUrl: url, questionType: qType, acceptedAnswers: rawAccepted } }));
+        setAkEdits((prev) => ({ ...prev, [problem.question_number]: { ...prev[problem.question_number], letter: correctAnswer ?? '', expUrls: newUrls, questionType: qType, acceptedAnswers: rawAccepted } }));
         setAkCropRect(null);
-        toast.success('Explanation image saved');
+        toast.success(`Screenshot ${newUrls.length}/3 saved`);
       } else {
         toast.error('Failed to save explanation image');
       }
@@ -811,9 +821,44 @@ function PdfImportTab({
       >
         <ChevronLeft size={small ? 12 : 14} />
       </button>
-      <span style={{ fontSize: small ? 11 : 13, color: 'var(--slate)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-        Page {currentPage} / {totalPages}
-      </span>
+      {editingPageNav ? (
+        <input
+          type="number"
+          autoFocus
+          min={1}
+          max={totalPages}
+          value={pageNavInput}
+          onChange={(e) => setPageNavInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              const n = parseInt(pageNavInput, 10);
+              if (!isNaN(n)) setCurrentPage(Math.min(totalPages, Math.max(1, n)));
+              setEditingPageNav(false);
+            } else if (e.key === 'Escape') {
+              setEditingPageNav(false);
+            }
+          }}
+          onBlur={() => {
+            const n = parseInt(pageNavInput, 10);
+            if (!isNaN(n)) setCurrentPage(Math.min(totalPages, Math.max(1, n)));
+            setEditingPageNav(false);
+          }}
+          style={{
+            width: 44, padding: '2px 6px', borderRadius: 6,
+            border: '1px solid var(--fog)', background: 'var(--frost)',
+            color: 'var(--slate)', fontSize: small ? 11 : 13, fontWeight: 600,
+            fontFamily: "'Syne', sans-serif", textAlign: 'center', outline: 'none',
+          }}
+        />
+      ) : (
+        <span
+          title="Click to jump to a page"
+          onClick={() => { setPageNavInput(String(currentPage)); setEditingPageNav(true); }}
+          style={{ fontSize: small ? 11 : 13, color: 'var(--slate)', fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}
+        >
+          Page {currentPage} / {totalPages}
+        </span>
+      )}
       <button
         onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
         disabled={currentPage === totalPages}
@@ -1050,9 +1095,44 @@ function PdfImportTab({
                 <button onClick={() => { setBubbleQIdx((i) => Math.max(0, i - 1)); setBubbleMode(null); setPendingAnswerBox(null); setBoxDragStart(null); setPlacingBubbleLetter(null); }} disabled={bubbleQIdx === 0} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === 0 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronLeft size={14} />
                 </button>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--charcoal)' }}>
-                  Q{bubbleProblem?.question_number} ({bubbleQIdx + 1} / {problems.length})
-                </span>
+                {editingBubbleQNav ? (
+                  <input
+                    type="number"
+                    autoFocus
+                    min={1}
+                    max={problems.length}
+                    value={bubbleQNavInput}
+                    onChange={(e) => setBubbleQNavInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const n = parseInt(bubbleQNavInput, 10);
+                        if (!isNaN(n)) { setBubbleQIdx(Math.min(problems.length - 1, Math.max(0, n - 1))); setBubbleMode(null); setPendingAnswerBox(null); setBoxDragStart(null); setPlacingBubbleLetter(null); }
+                        setEditingBubbleQNav(false);
+                      } else if (e.key === 'Escape') {
+                        setEditingBubbleQNav(false);
+                      }
+                    }}
+                    onBlur={() => {
+                      const n = parseInt(bubbleQNavInput, 10);
+                      if (!isNaN(n)) { setBubbleQIdx(Math.min(problems.length - 1, Math.max(0, n - 1))); setBubbleMode(null); setPendingAnswerBox(null); setBoxDragStart(null); setPlacingBubbleLetter(null); }
+                      setEditingBubbleQNav(false);
+                    }}
+                    style={{
+                      width: 44, padding: '2px 6px', borderRadius: 6,
+                      border: '1px solid var(--fog)', background: 'var(--frost)',
+                      color: 'var(--charcoal)', fontSize: 13, fontWeight: 700,
+                      fontFamily: "'Syne', sans-serif", textAlign: 'center', outline: 'none',
+                    }}
+                  />
+                ) : (
+                  <span
+                    title="Click to jump to a question"
+                    onClick={() => { setBubbleQNavInput(String(bubbleQIdx + 1)); setEditingBubbleQNav(true); }}
+                    style={{ fontSize: 14, fontWeight: 700, color: 'var(--charcoal)', cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    Q{bubbleProblem?.question_number} ({bubbleQIdx + 1} / {problems.length})
+                  </span>
+                )}
                 <button onClick={() => { setBubbleQIdx((i) => Math.min(problems.length - 1, i + 1)); setBubbleMode(null); setPendingAnswerBox(null); setBoxDragStart(null); setPlacingBubbleLetter(null); }} disabled={bubbleQIdx === problems.length - 1} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronRight size={14} />
                 </button>
@@ -1277,9 +1357,44 @@ function PdfImportTab({
                 <button onClick={() => setAkQIdx((i) => Math.max(0, i - 1))} disabled={akQIdx === 0} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: akQIdx === 0 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronLeft size={14} />
                 </button>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--charcoal)' }}>
-                  Q{akProblem?.question_number} ({akQIdx + 1} / {problems.length})
-                </span>
+                {editingAkQNav ? (
+                  <input
+                    type="number"
+                    autoFocus
+                    min={1}
+                    max={problems.length}
+                    value={akQNavInput}
+                    onChange={(e) => setAkQNavInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const n = parseInt(akQNavInput, 10);
+                        if (!isNaN(n)) setAkQIdx(Math.min(problems.length - 1, Math.max(0, n - 1)));
+                        setEditingAkQNav(false);
+                      } else if (e.key === 'Escape') {
+                        setEditingAkQNav(false);
+                      }
+                    }}
+                    onBlur={() => {
+                      const n = parseInt(akQNavInput, 10);
+                      if (!isNaN(n)) setAkQIdx(Math.min(problems.length - 1, Math.max(0, n - 1)));
+                      setEditingAkQNav(false);
+                    }}
+                    style={{
+                      width: 44, padding: '2px 6px', borderRadius: 6,
+                      border: '1px solid var(--fog)', background: 'var(--frost)',
+                      color: 'var(--charcoal)', fontSize: 13, fontWeight: 700,
+                      fontFamily: "'Syne', sans-serif", textAlign: 'center', outline: 'none',
+                    }}
+                  />
+                ) : (
+                  <span
+                    title="Click to jump to a question"
+                    onClick={() => { setAkQNavInput(String(akQIdx + 1)); setEditingAkQNav(true); }}
+                    style={{ fontSize: 14, fontWeight: 700, color: 'var(--charcoal)', cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    Q{akProblem?.question_number} ({akQIdx + 1} / {problems.length})
+                  </span>
+                )}
                 <button onClick={() => setAkQIdx((i) => Math.min(problems.length - 1, i + 1))} disabled={akQIdx === problems.length - 1} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: akQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronRight size={14} />
                 </button>
@@ -1314,7 +1429,7 @@ function PdfImportTab({
                                 ...prev,
                                 [akProblem.question_number]: {
                                   letter: prev[akProblem.question_number]?.letter ?? akProblem.correct_answer ?? '',
-                                  expUrl: prev[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url ?? null,
+                                  expUrls: prev[akProblem.question_number]?.expUrls ?? (akProblem.explanation_image_urls?.length ? akProblem.explanation_image_urls : (akProblem.explanation_image_url ? [akProblem.explanation_image_url] : [])),
                                   acceptedAnswers: prev[akProblem.question_number]?.acceptedAnswers ?? (akProblem.accepted_answers ?? []).join('\n'),
                                   questionType: qt,
                                 },
@@ -1348,16 +1463,16 @@ function PdfImportTab({
                                 <button
                                   key={letter}
                                   onClick={async () => {
-                                    const expUrl = akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url ?? null;
+                                    const expUrls = akEdits[akProblem.question_number]?.expUrls ?? (akProblem.explanation_image_urls?.length ? akProblem.explanation_image_urls : (akProblem.explanation_image_url ? [akProblem.explanation_image_url] : []));
                                     const qType = akEdits[akProblem.question_number]?.questionType ?? akProblem.question_type ?? 'multiple_choice';
                                     const rawAccepted = akEdits[akProblem.question_number]?.acceptedAnswers ?? (akProblem.accepted_answers ?? []).join('\n');
-                                    setAkEdits((prev) => ({ ...prev, [akProblem.question_number]: { ...prev[akProblem.question_number], letter, expUrl: prev[akProblem.question_number]?.expUrl ?? null, questionType: qType, acceptedAnswers: rawAccepted } }));
+                                    setAkEdits((prev) => ({ ...prev, [akProblem.question_number]: { ...prev[akProblem.question_number], letter, expUrls: prev[akProblem.question_number]?.expUrls ?? expUrls, questionType: qType, acceptedAnswers: rawAccepted } }));
                                     setSavingAk(akProblem.question_number);
                                     try {
                                       const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
                                         method: 'PATCH',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ questionNumber: akProblem.question_number, correctAnswer: letter, explanationImageUrl: expUrl, questionType: qType, acceptedAnswers: qType === 'open_ended' ? parseAcceptedAnswers(rawAccepted) : [] }),
+                                        body: JSON.stringify({ questionNumber: akProblem.question_number, correctAnswer: letter, explanationImageUrl: expUrls[0] ?? null, explanationImageUrls: expUrls, questionType: qType, acceptedAnswers: qType === 'open_ended' ? parseAcceptedAnswers(rawAccepted) : [] }),
                                       });
                                       if (res.ok) {
                                         const { problem: updated } = await res.json() as { problem: WsProblem };
@@ -1398,7 +1513,7 @@ function PdfImportTab({
                               ...prev,
                               [akProblem.question_number]: {
                                 letter: prev[akProblem.question_number]?.letter ?? '',
-                                expUrl: prev[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url ?? null,
+                                expUrls: prev[akProblem.question_number]?.expUrls ?? (akProblem.explanation_image_urls?.length ? akProblem.explanation_image_urls : (akProblem.explanation_image_url ? [akProblem.explanation_image_url] : [])),
                                 questionType: 'open_ended',
                                 acceptedAnswers: e.target.value,
                               },
@@ -1408,18 +1523,59 @@ function PdfImportTab({
                         </>
                       )}
                     </div>
-                    {(akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url) && (
-                      <div>
-                        <p style={{ ...sectionHead, marginBottom: 6 }}>Explanation Image</p>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url!}
-                          alt="explanation"
-                          onClick={() => setLightboxUrl(akEdits[akProblem.question_number]?.expUrl ?? akProblem.explanation_image_url!)}
-                          style={{ display: 'block', width: '100%', borderRadius: 8, border: '1px solid var(--fog)', cursor: 'zoom-in' }}
-                        />
-                      </div>
-                    )}
+                    {(() => {
+                      const expUrls = akEdits[akProblem.question_number]?.expUrls ?? (akProblem.explanation_image_urls?.length ? akProblem.explanation_image_urls : (akProblem.explanation_image_url ? [akProblem.explanation_image_url] : []));
+                      if (expUrls.length === 0) return null;
+                      return (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                            <p style={{ ...sectionHead, margin: 0, flex: 1 }}>Explanation ({expUrls.length}/3)</p>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {expUrls.map((url, i) => (
+                              <div key={url} style={{ position: 'relative' }}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={url}
+                                  alt={`Explanation ${i + 1}`}
+                                  onClick={() => setLightboxUrl(url)}
+                                  style={{ display: 'block', width: '100%', borderRadius: 8, border: '1px solid var(--fog)', cursor: 'zoom-in' }}
+                                />
+                                <button
+                                  title="Remove screenshot"
+                                  onClick={async () => {
+                                    const newUrls = expUrls.filter((_, idx) => idx !== i);
+                                    const edit = akEdits[akProblem.question_number];
+                                    const correctAnswer = edit?.letter ?? akProblem.correct_answer ?? null;
+                                    const qType = edit?.questionType ?? akProblem.question_type ?? 'multiple_choice';
+                                    const rawAccepted = edit?.acceptedAnswers ?? (akProblem.accepted_answers ?? []).join('\n');
+                                    const acceptedAnswers = qType === 'open_ended' ? parseAcceptedAnswers(rawAccepted) : [];
+                                    setSavingAk(akProblem.question_number);
+                                    try {
+                                      const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ questionNumber: akProblem.question_number, correctAnswer, explanationImageUrl: newUrls[0] ?? null, explanationImageUrls: newUrls, questionType: qType, acceptedAnswers }),
+                                      });
+                                      if (res.ok) {
+                                        const { problem: updated } = await res.json() as { problem: WsProblem };
+                                        onProblemsChange(problems.map((p) => p.id === updated.id ? updated : p));
+                                        setAkEdits((prev) => ({ ...prev, [akProblem.question_number]: { ...prev[akProblem.question_number], expUrls: newUrls } }));
+                                      }
+                                    } finally {
+                                      setSavingAk(null);
+                                    }
+                                  }}
+                                  style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.45)', color: 'white', fontSize: 11, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Right: PDF to crop explanation */}
@@ -1445,13 +1601,21 @@ function PdfImportTab({
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: 'var(--white)', borderBottom: '1px solid var(--fog)', flexShrink: 0 }}>
                           <PageNav small />
                           <span style={{ fontSize: 11, color: 'var(--mist)', flex: 1 }}>Drag to select the explanation region</span>
-                          <button
-                            onClick={() => handleCropExplanation(akProblem)}
-                            disabled={!akCropRect}
-                            style={{ padding: '5px 14px', borderRadius: 7, border: 'none', background: akCropRect ? 'var(--rose)' : 'var(--fog)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: akCropRect ? 'pointer' : 'default', fontFamily: "'Syne', sans-serif", whiteSpace: 'nowrap' }}
-                          >
-                            Crop Explanation
-                          </button>
+                          {(() => {
+                            const expUrls = akEdits[akProblem.question_number]?.expUrls ?? (akProblem.explanation_image_urls?.length ? akProblem.explanation_image_urls : (akProblem.explanation_image_url ? [akProblem.explanation_image_url] : []));
+                            const atCap = expUrls.length >= 3;
+                            const canCrop = akCropRect && !atCap;
+                            return (
+                              <button
+                                onClick={() => handleCropExplanation(akProblem)}
+                                disabled={!canCrop}
+                                title={atCap ? '3/3 screenshots saved' : undefined}
+                                style={{ padding: '5px 14px', borderRadius: 7, border: 'none', background: canCrop ? 'var(--rose)' : 'var(--fog)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 600, cursor: canCrop ? 'pointer' : 'default', fontFamily: "'Syne', sans-serif", whiteSpace: 'nowrap' }}
+                              >
+                                {atCap ? 'Crop Explanation (3/3)' : expUrls.length > 0 ? `Add Screenshot (${expUrls.length}/3)` : 'Crop Explanation'}
+                              </button>
+                            );
+                          })()}
                         </div>
                         <div style={{ flex: 1, overflow: 'auto' }}>
                           <div style={{ transformOrigin: 'top left', transform: `scale(${pdfZoom})`, display: 'inline-block' }}>

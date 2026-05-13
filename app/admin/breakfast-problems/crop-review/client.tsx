@@ -50,6 +50,8 @@ function FullImageWithLines({ problem, cropTop, cropBottom }: { problem: CropPro
 
 export default function CropReviewClient({ problems }: Props) {
   const [index, setIndex] = useState(0);
+  const [editingNav, setEditingNav] = useState(false);
+  const [navInput, setNavInput] = useState('');
   const [cropTop, setCropTop] = useState(0);
   const [cropBottom, setCropBottom] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -136,7 +138,44 @@ export default function CropReviewClient({ problems }: Props) {
           </button>
           <span style={{ fontSize: 14, color: 'var(--slate)', fontFamily: "'Syne', sans-serif", minWidth: 80, textAlign: 'center' }}>
             {savedIds.has(problem.id) && <Check size={13} style={{ color: '#16a34a', display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />}
-            {index + 1} / {problems.length}
+            {editingNav ? (
+              <input
+                type="number"
+                autoFocus
+                min={1}
+                max={problems.length}
+                value={navInput}
+                onChange={(e) => setNavInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const n = parseInt(navInput, 10);
+                    if (!isNaN(n)) setIndex(Math.min(problems.length - 1, Math.max(0, n - 1)));
+                    setEditingNav(false);
+                  } else if (e.key === 'Escape') {
+                    setEditingNav(false);
+                  }
+                }}
+                onBlur={() => {
+                  const n = parseInt(navInput, 10);
+                  if (!isNaN(n)) setIndex(Math.min(problems.length - 1, Math.max(0, n - 1)));
+                  setEditingNav(false);
+                }}
+                style={{
+                  width: 44, padding: '2px 6px', borderRadius: 6,
+                  border: '1px solid var(--fog)', background: 'var(--frost)',
+                  color: 'var(--slate)', fontSize: 13, fontWeight: 600,
+                  fontFamily: "'Syne', sans-serif", textAlign: 'center', outline: 'none',
+                }}
+              />
+            ) : (
+              <span
+                title="Click to jump to a problem"
+                onClick={() => { setNavInput(String(index + 1)); setEditingNav(true); }}
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+              >
+                {index + 1} / {problems.length}
+              </span>
+            )}
           </span>
           <button
             onClick={() => setIndex(i => Math.min(problems.length - 1, i + 1))}
