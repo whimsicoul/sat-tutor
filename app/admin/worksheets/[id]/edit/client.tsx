@@ -1076,6 +1076,7 @@ function PdfImportTab({
                           ref={drawingDivRef}
                           onMouseDown={handleAnswerBoxMouseDown}
                           onMouseMove={handleAnswerBoxMouseMove}
+                          onMouseUp={handleAnswerBoxMouseUp}
                           style={{ position: 'relative', width: '100%', cursor: 'crosshair', userSelect: 'none' }}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
