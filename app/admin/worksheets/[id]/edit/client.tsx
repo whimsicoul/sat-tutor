@@ -619,10 +619,28 @@ function PdfImportTab({
     return problem.question_type ?? 'multiple_choice';
   }
 
-  function handleAnswerBoxMouseDown(e: React.MouseEvent<HTMLDivElement>) {
+  function handleAnswerBoxClick(e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
-    setBoxDragStart({ x: ((e.clientX - rect.left) / rect.width) * 100, y: ((e.clientY - rect.top) / rect.height) * 100 });
-    setPendingAnswerBox(null);
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    if (!boxDragStart) {
+      // First click: set the start corner and clear any previous pending box
+      setBoxDragStart({ x, y });
+      setPendingAnswerBox(null);
+    } else {
+      // Second click: finalize the box
+      const box = {
+        x: Math.min(boxDragStart.x, x),
+        y: Math.min(boxDragStart.y, y),
+        w: Math.abs(x - boxDragStart.x),
+        h: Math.abs(y - boxDragStart.y),
+      };
+      setBoxDragStart(null);
+      if (box.w >= 1 && box.h >= 1) {
+        setPendingAnswerBox(box);
+      }
+    }
   }
 
   function handleAnswerBoxMouseMove(e: React.MouseEvent<HTMLDivElement>) {
@@ -636,10 +654,6 @@ function PdfImportTab({
       w: Math.abs(x2 - boxDragStart.x),
       h: Math.abs(y2 - boxDragStart.y),
     });
-  }
-
-  function handleAnswerBoxMouseUp() {
-    setBoxDragStart(null);
   }
 
   async function handleSaveAnswerBox() {
@@ -981,13 +995,13 @@ function PdfImportTab({
             <>
               {/* Bubble nav bar */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', background: 'var(--white)', borderBottom: '1px solid var(--fog)', flexShrink: 0, flexWrap: 'wrap' }}>
-                <button onClick={() => { setBubbleQIdx((i) => Math.max(0, i - 1)); setBubbleMode(null); setPendingAnswerBox(null); setPlacingBubbleLetter(null); }} disabled={bubbleQIdx === 0} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === 0 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
+                <button onClick={() => { setBubbleQIdx((i) => Math.max(0, i - 1)); setBubbleMode(null); setPendingAnswerBox(null); setBoxDragStart(null); setPlacingBubbleLetter(null); }} disabled={bubbleQIdx === 0} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === 0 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronLeft size={14} />
                 </button>
                 <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--charcoal)' }}>
                   Q{bubbleProblem?.question_number} ({bubbleQIdx + 1} / {problems.length})
                 </span>
-                <button onClick={() => { setBubbleQIdx((i) => Math.min(problems.length - 1, i + 1)); setBubbleMode(null); setPendingAnswerBox(null); setPlacingBubbleLetter(null); }} disabled={bubbleQIdx === problems.length - 1} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
+                <button onClick={() => { setBubbleQIdx((i) => Math.min(problems.length - 1, i + 1)); setBubbleMode(null); setPendingAnswerBox(null); setBoxDragStart(null); setPlacingBubbleLetter(null); }} disabled={bubbleQIdx === problems.length - 1} style={{ border: '1px solid var(--fog)', background: 'var(--frost)', borderRadius: 7, padding: '4px 10px', cursor: bubbleQIdx === problems.length - 1 ? 'default' : 'pointer', color: 'var(--mist)', display: 'flex', alignItems: 'center' }}>
                   <ChevronRight size={14} />
                 </button>
                 <div style={{ display: 'flex', gap: 4 }}>
@@ -996,7 +1010,7 @@ function PdfImportTab({
                     return (
                       <button
                         key={m}
-                        onClick={() => { setBubbleMode(m); setPendingAnswerBox(null); if (m === 'open_ended') setPlacingBubbleLetter(null); else setPlacingBubbleLetter('A'); }}
+                        onClick={() => { setBubbleMode(m); setPendingAnswerBox(null); setBoxDragStart(null); if (m === 'open_ended') setPlacingBubbleLetter(null); else setPlacingBubbleLetter('A'); }}
                         style={{
                           padding: '4px 10px',
                           borderRadius: 7,
@@ -1030,16 +1044,14 @@ function PdfImportTab({
                     {effectiveBubbleMode(bubbleProblem) === 'open_ended' ? (
                       <div style={{ position: 'relative', width: '100%' }}>
                         <div
-                          onMouseDown={handleAnswerBoxMouseDown}
+                          onClick={handleAnswerBoxClick}
                           onMouseMove={handleAnswerBoxMouseMove}
-                          onMouseUp={handleAnswerBoxMouseUp}
-                          onMouseLeave={handleAnswerBoxMouseUp}
-                          style={{ position: 'relative', width: '100%', cursor: 'crosshair', userSelect: 'none' }}
+                          style={{ position: 'relative', width: '100%', cursor: boxDragStart ? 'crosshair' : 'cell', userSelect: 'none' }}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={bubbleProblem.question_image_url} alt={`Q${bubbleProblem.question_number}`} style={{ display: 'block', width: '100%' }} />
-                          {/* Show saved answer box if it exists and no pending drag */}
-                          {!pendingAnswerBox && bubbleProblem.answer_box_x != null && (
+                          {/* Show saved answer box if no active drawing in progress */}
+                          {!pendingAnswerBox && !boxDragStart && bubbleProblem.answer_box_x != null && (
                             <div style={{
                               position: 'absolute',
                               left: `${bubbleProblem.answer_box_x}%`,
@@ -1052,7 +1064,22 @@ function PdfImportTab({
                               pointerEvents: 'none',
                             }} />
                           )}
-                          {/* Pending drag preview */}
+                          {/* First corner anchor dot */}
+                          {boxDragStart && !pendingAnswerBox && (
+                            <div style={{
+                              position: 'absolute',
+                              left: `${boxDragStart.x}%`,
+                              top: `${boxDragStart.y}%`,
+                              transform: 'translate(-50%, -50%)',
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              background: 'rgba(168,203,222,0.9)',
+                              border: '2px solid white',
+                              pointerEvents: 'none',
+                            }} />
+                          )}
+                          {/* Live preview while moving after first click */}
                           {pendingAnswerBox && (
                             <div style={{
                               position: 'absolute',
@@ -1067,16 +1094,22 @@ function PdfImportTab({
                             }} />
                           )}
                         </div>
-                        {pendingAnswerBox && (
+                        {(pendingAnswerBox || boxDragStart) && (
                           <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <button
-                              onClick={handleSaveAnswerBox}
-                              disabled={savingAnswerBox}
-                              style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: 'rgba(168,203,222,0.8)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
-                            >
-                              {savingAnswerBox ? 'Saving…' : 'Save Answer Box'}
-                            </button>
-                            <button onClick={() => setPendingAnswerBox(null)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--fog)', background: 'var(--white)', color: 'var(--mist)', fontSize: 12, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}>
+                            {pendingAnswerBox ? (
+                              <button
+                                onClick={handleSaveAnswerBox}
+                                disabled={savingAnswerBox}
+                                style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: 'rgba(168,203,222,0.8)', color: 'var(--charcoal)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}
+                              >
+                                {savingAnswerBox ? 'Saving…' : 'Save Answer Box'}
+                              </button>
+                            ) : (
+                              <span style={{ fontSize: 12, color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>
+                                Click a second point to finish the box
+                              </span>
+                            )}
+                            <button onClick={() => { setPendingAnswerBox(null); setBoxDragStart(null); }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--fog)', background: 'var(--white)', color: 'var(--mist)', fontSize: 12, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}>
                               Cancel
                             </button>
                           </div>
