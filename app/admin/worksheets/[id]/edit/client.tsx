@@ -762,9 +762,32 @@ function PdfImportTab({
     if (!akCropRect || akCropRect.w < 10 || akCropRect.h < 10) { toast.error('Draw a selection on the PDF first'); return; }
     const url = await cropAndUpload(akCropRect);
     if (!url) { toast.error('Upload failed'); return; }
-    setAkEdits((prev) => ({ ...prev, [problem.question_number]: { ...prev[problem.question_number], letter: prev[problem.question_number]?.letter ?? '', expUrl: url } }));
-    setAkCropRect(null);
-    toast.success('Explanation image cropped');
+
+    const edit = akEdits[problem.question_number];
+    const correctAnswer = edit?.letter ?? problem.correct_answer ?? null;
+    const qType = edit?.questionType ?? problem.question_type ?? 'multiple_choice';
+    const rawAccepted = edit?.acceptedAnswers ?? (problem.accepted_answers ?? []).join('\n');
+    const acceptedAnswers = qType === 'open_ended' ? parseAcceptedAnswers(rawAccepted) : [];
+
+    setSavingAk(problem.question_number);
+    try {
+      const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionNumber: problem.question_number, correctAnswer, explanationImageUrl: url, questionType: qType, acceptedAnswers }),
+      });
+      if (res.ok) {
+        const { problem: updated } = await res.json() as { problem: WsProblem };
+        onProblemsChange(problems.map((p) => p.id === updated.id ? updated : p));
+        setAkEdits((prev) => ({ ...prev, [problem.question_number]: { ...prev[problem.question_number], letter: correctAnswer ?? '', expUrl: url, questionType: qType, acceptedAnswers: rawAccepted } }));
+        setAkCropRect(null);
+        toast.success('Explanation image saved');
+      } else {
+        toast.error('Failed to save explanation image');
+      }
+    } finally {
+      setSavingAk(null);
+    }
   }
 
   const bubbleProblem = problems[bubbleQIdx] ?? null;
@@ -1334,7 +1357,7 @@ function PdfImportTab({
                                       const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
                                         method: 'PATCH',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ questionNumber: akProblem.question_number, correctAnswer: letter, explanationImageUrl: expUrl, questionType: qType, acceptedAnswers: [] }),
+                                        body: JSON.stringify({ questionNumber: akProblem.question_number, correctAnswer: letter, explanationImageUrl: expUrl, questionType: qType, acceptedAnswers: qType === 'open_ended' ? parseAcceptedAnswers(rawAccepted) : [] }),
                                       });
                                       if (res.ok) {
                                         const { problem: updated } = await res.json() as { problem: WsProblem };
