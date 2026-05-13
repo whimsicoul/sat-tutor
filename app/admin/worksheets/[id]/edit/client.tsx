@@ -404,6 +404,7 @@ function PdfImportTab({
   const [autoImporting, setAutoImporting] = useState(false);
   const [autoImportResult, setAutoImportResult] = useState<{ imported: number; skipped: number } | null>(null);
   const autoImportInputRef = useRef<HTMLInputElement>(null);
+  const drawingDivRef = useRef<HTMLDivElement>(null);
 
   async function handleAutoImport(file: File) {
     setAutoImporting(true);
@@ -483,6 +484,31 @@ function PdfImportTab({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Finalize the answer box even when mouse is released outside the drawing div
+  useEffect(() => {
+    if (!boxDragStart) return;
+    function onWindowMouseUp(e: MouseEvent) {
+      const div = drawingDivRef.current;
+      if (!div) { setBoxDragStart(null); return; }
+      const rect = div.getBoundingClientRect();
+      const x2 = Math.min(Math.max(((e.clientX - rect.left) / rect.width) * 100, 0), 100);
+      const y2 = Math.min(Math.max(((e.clientY - rect.top) / rect.height) * 100, 0), 100);
+      setBoxDragStart((start) => {
+        if (!start) return null;
+        const box = {
+          x: Math.min(start.x, x2),
+          y: Math.min(start.y, y2),
+          w: Math.abs(x2 - start.x),
+          h: Math.abs(y2 - start.y),
+        };
+        if (box.w >= 1 && box.h >= 1) setPendingAnswerBox(box);
+        return null;
+      });
+    }
+    window.addEventListener('mouseup', onWindowMouseUp);
+    return () => window.removeEventListener('mouseup', onWindowMouseUp);
+  }, [boxDragStart]);
 
   async function loadPdf(url: string) {
     const pdfjsLib = await import('pdfjs-dist');
@@ -619,28 +645,11 @@ function PdfImportTab({
     return problem.question_type ?? 'multiple_choice';
   }
 
-  function handleAnswerBoxClick(e: React.MouseEvent<HTMLDivElement>) {
+  function handleAnswerBoxMouseDown(e: React.MouseEvent<HTMLDivElement>) {
+    e.preventDefault();
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-
-    if (!boxDragStart) {
-      // First click: set the start corner and clear any previous pending box
-      setBoxDragStart({ x, y });
-      setPendingAnswerBox(null);
-    } else {
-      // Second click: finalize the box
-      const box = {
-        x: Math.min(boxDragStart.x, x),
-        y: Math.min(boxDragStart.y, y),
-        w: Math.abs(x - boxDragStart.x),
-        h: Math.abs(y - boxDragStart.y),
-      };
-      setBoxDragStart(null);
-      if (box.w >= 1 && box.h >= 1) {
-        setPendingAnswerBox(box);
-      }
-    }
+    setBoxDragStart({ x: ((e.clientX - rect.left) / rect.width) * 100, y: ((e.clientY - rect.top) / rect.height) * 100 });
+    setPendingAnswerBox(null);
   }
 
   function handleAnswerBoxMouseMove(e: React.MouseEvent<HTMLDivElement>) {
@@ -654,6 +663,26 @@ function PdfImportTab({
       w: Math.abs(x2 - boxDragStart.x),
       h: Math.abs(y2 - boxDragStart.y),
     });
+  }
+
+  function handleAnswerBoxMouseUp(e: React.MouseEvent<HTMLDivElement>) {
+    if (!boxDragStart) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x2 = ((e.clientX - rect.left) / rect.width) * 100;
+    const y2 = ((e.clientY - rect.top) / rect.height) * 100;
+    const box = {
+      x: Math.min(boxDragStart.x, x2),
+      y: Math.min(boxDragStart.y, y2),
+      w: Math.abs(x2 - boxDragStart.x),
+      h: Math.abs(y2 - boxDragStart.y),
+    };
+    setBoxDragStart(null);
+    // Only keep the box if the user actually dragged a meaningful area
+    if (box.w >= 1 && box.h >= 1) {
+      setPendingAnswerBox(box);
+    } else {
+      setPendingAnswerBox(null);
+    }
   }
 
   async function handleSaveAnswerBox() {
@@ -1044,12 +1073,13 @@ function PdfImportTab({
                     {effectiveBubbleMode(bubbleProblem) === 'open_ended' ? (
                       <div style={{ position: 'relative', width: '100%' }}>
                         <div
-                          onClick={handleAnswerBoxClick}
+                          ref={drawingDivRef}
+                          onMouseDown={handleAnswerBoxMouseDown}
                           onMouseMove={handleAnswerBoxMouseMove}
-                          style={{ position: 'relative', width: '100%', cursor: boxDragStart ? 'crosshair' : 'cell', userSelect: 'none' }}
+                          style={{ position: 'relative', width: '100%', cursor: 'crosshair', userSelect: 'none' }}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={bubbleProblem.question_image_url} alt={`Q${bubbleProblem.question_number}`} style={{ display: 'block', width: '100%' }} />
+                          <img src={bubbleProblem.question_image_url} alt={`Q${bubbleProblem.question_number}`} draggable={false} style={{ display: 'block', width: '100%', pointerEvents: 'none' }} />
                           {/* Show saved answer box if no active drawing in progress */}
                           {!pendingAnswerBox && !boxDragStart && bubbleProblem.answer_box_x != null && (
                             <div style={{
