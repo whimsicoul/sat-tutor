@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getAllUsers, createUser } from '@/lib/db';
+import sql from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if ((session.user as { role?: string }).role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const role = searchParams.get('role');
+
+  if (role) {
+    const users = await sql`SELECT id, name, email, role FROM users WHERE role = ${role} ORDER BY name ASC`;
+    return NextResponse.json(users);
   }
 
   const users = await getAllUsers();

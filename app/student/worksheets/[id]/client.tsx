@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import type { FlowStep, FlowPage, FlowPosition, FlowAnswerKey, FlowProblem, WarmUpProblem } from './page';
 import PdfReader from '@/components/shared/PdfReader';
-import AnnotationCanvas from '@/components/shared/AnnotationCanvas';
+import AnnotationCanvas, { type AnnotationCanvasHandle } from '@/components/shared/AnnotationCanvas';
+import DraggableAnnotationToolbar from '@/components/shared/DraggableAnnotationToolbar';
 import { checkOpenEndedAnswer } from '@/lib/utils';
 import type { Annotations } from '@/types/annotations';
 
@@ -400,6 +401,12 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
   const [reviewMode, setReviewMode] = useState(false);
   const [expandedWrong, setExpandedWrong] = useState<number | null>(null);
 
+  // Annotation toolbar state — shared across all problems in this step
+  const [annotationTool, setAnnotationTool] = useState<'highlight' | 'pen' | 'eraser'>('highlight');
+  const [annotationSliderVal, setAnnotationSliderVal] = useState(5);
+  const [annotationStrokeCount, setAnnotationStrokeCount] = useState(0);
+  const annotationCanvasRef = useRef<AnnotationCanvasHandle>(null);
+
   const allAnswered = problems.every(
     (p) => responses[p.question_number]?.selectedAnswer != null,
   );
@@ -466,18 +473,32 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <DraggableAnnotationToolbar
+        tool={annotationTool}
+        sliderVal={annotationSliderVal}
+        strokeCount={annotationStrokeCount}
+        onToolChange={setAnnotationTool}
+        onSliderChange={setAnnotationSliderVal}
+        onClearAll={() => annotationCanvasRef.current?.clearAll()}
+      />
+
       {/* Question image with positioned bubbles */}
-      <div style={{ position: 'relative', width: '100%', borderRadius: 14, overflow: 'hidden', border: '1px solid var(--fog)' }}>
+      <div style={{ position: 'relative', width: '100%', borderRadius: 14, overflow: 'hidden', border: '1px solid var(--fog)', paddingBottom: currentProblem.answer_box_bottom_padding ? `${currentProblem.answer_box_bottom_padding}px` : undefined }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={currentProblem.question_image_url} alt={`Question ${currentProblem.question_number}`} style={{ display: 'block', width: '100%' }} />
 
         <AnnotationCanvas
+          ref={annotationCanvasRef}
           context="worksheet"
           worksheetId={worksheetId}
           stepId={step.id}
           questionNumber={currentProblem.question_number}
           initialAnnotations={(step.initialResponses.find(r => r.question_number === currentProblem.question_number)?.annotations ?? []) as Annotations}
           editable={true}
+          externalToolbar={true}
+          externalTool={annotationTool}
+          externalSliderVal={annotationSliderVal}
+          onStrokeCountChange={setAnnotationStrokeCount}
         />
 
         {/* Open-ended: positioned text input over image */}

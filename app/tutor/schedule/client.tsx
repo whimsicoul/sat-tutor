@@ -309,10 +309,7 @@ export default function TutorScheduleClient({
     ? (sessionsByDay[format(selectedDay, 'yyyy-MM-dd')] ?? [])
     : [];
 
-  // ── Relevant worksheets for selected session (same student) ────────────
-  const relevantWorksheets = selectedSession
-    ? allWorksheets.filter((w) => w.student_id === selectedSession.student_id)
-    : [];
+  const relevantWorksheets = selectedSession ? allWorksheets : [];
 
   // ── Render ─────────────────────────────────────────────────────────────
 

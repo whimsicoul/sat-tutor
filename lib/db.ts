@@ -368,6 +368,16 @@ export async function getWorksheetsByTutor(tutorId: string) {
   `;
 }
 
+export async function getStudentsForTutor(tutorId: string) {
+  return sql`
+    SELECT u.id, u.name
+    FROM tutor_student_assignments tsa
+    JOIN users u ON u.id = tsa.student_id
+    WHERE tsa.tutor_id = ${tutorId}
+    ORDER BY u.name ASC
+  `;
+}
+
 // ─── Breakfast Problems: Admin ────────────────────────────────────────────────
 
 export async function getAllBreakfastProblems() {
@@ -1179,7 +1189,7 @@ export async function getWorksheetStepProblems(stepId: string) {
     SELECT id, step_id, question_number, question_image_url, correct_answer, explanation_image_url,
            explanation_image_urls, question_type, accepted_answers,
            answer_box_x, answer_box_y, answer_box_width, answer_box_height,
-           created_at
+           answer_box_bottom_padding, created_at
     FROM worksheet_step_problems
     WHERE step_id = ${stepId}
     ORDER BY question_number ASC
@@ -1212,6 +1222,7 @@ export async function updateWorksheetStepProblemAnswerKey(
   answerBoxHeight: number | null = null,
   explanationImageUrls: string[] = [],
   updateAnswerBox: boolean = false,
+  answerBoxBottomPadding: number | null = null,
 ) {
   const primaryUrl = explanationImageUrls.length > 0 ? explanationImageUrls[0] : explanationImageUrl;
   const rows = await sql`
@@ -1221,10 +1232,11 @@ export async function updateWorksheetStepProblemAnswerKey(
         explanation_image_urls  = ${explanationImageUrls},
         question_type           = ${questionType},
         accepted_answers        = ${acceptedAnswers},
-        answer_box_x            = CASE WHEN ${updateAnswerBox} THEN ${answerBoxX} ELSE answer_box_x END,
-        answer_box_y            = CASE WHEN ${updateAnswerBox} THEN ${answerBoxY} ELSE answer_box_y END,
-        answer_box_width        = CASE WHEN ${updateAnswerBox} THEN ${answerBoxWidth} ELSE answer_box_width END,
-        answer_box_height       = CASE WHEN ${updateAnswerBox} THEN ${answerBoxHeight} ELSE answer_box_height END
+        answer_box_x              = CASE WHEN ${updateAnswerBox} THEN ${answerBoxX} ELSE answer_box_x END,
+        answer_box_y              = CASE WHEN ${updateAnswerBox} THEN ${answerBoxY} ELSE answer_box_y END,
+        answer_box_width          = CASE WHEN ${updateAnswerBox} THEN ${answerBoxWidth} ELSE answer_box_width END,
+        answer_box_height         = CASE WHEN ${updateAnswerBox} THEN ${answerBoxHeight} ELSE answer_box_height END,
+        answer_box_bottom_padding = CASE WHEN ${updateAnswerBox} THEN ${answerBoxBottomPadding} ELSE answer_box_bottom_padding END
     WHERE step_id = ${stepId} AND question_number = ${questionNumber}
     RETURNING *
   `;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Highlighter, Pen, Eraser, Trash2 } from 'lucide-react';
 import type { AnnotationStroke, Annotations } from '@/types/annotations';
 
@@ -12,6 +12,16 @@ interface AnnotationCanvasProps {
   assignmentId?: string;
   initialAnnotations?: Annotations;
   editable?: boolean;
+  // External toolbar mode — when true the built-in toolbar is hidden and
+  // tool/slider state is controlled from outside.
+  externalToolbar?: boolean;
+  externalTool?: Tool;
+  externalSliderVal?: number;
+  onStrokeCountChange?: (count: number) => void;
+}
+
+export interface AnnotationCanvasHandle {
+  clearAll: () => void;
 }
 
 type Tool = 'highlight' | 'pen' | 'eraser';
@@ -66,7 +76,7 @@ function drawStroke(
   ctx.restore();
 }
 
-export default function AnnotationCanvas({
+const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProps>(function AnnotationCanvas({
   context,
   worksheetId,
   stepId,
@@ -74,7 +84,11 @@ export default function AnnotationCanvas({
   assignmentId,
   initialAnnotations = [],
   editable = true,
-}: AnnotationCanvasProps) {
+  externalToolbar = false,
+  externalTool,
+  externalSliderVal,
+  onStrokeCountChange,
+}, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const strokesRef = useRef<Annotations>(initialAnnotations);
@@ -82,10 +96,13 @@ export default function AnnotationCanvas({
   const isDrawingRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [tool, setTool] = useState<Tool>('highlight');
-  const [sliderVal, setSliderVal] = useState(5);
-  // Re-render toolbar when strokes change so clear-all reflects state
+  // Internal state — used only when externalToolbar is false
+  const [internalTool, setInternalTool] = useState<Tool>('highlight');
+  const [internalSliderVal, setInternalSliderVal] = useState(5);
   const [strokeCount, setStrokeCount] = useState(initialAnnotations.length);
+
+  const tool: Tool = externalToolbar && externalTool != null ? externalTool : internalTool;
+  const sliderVal: number = externalToolbar && externalSliderVal != null ? externalSliderVal : internalSliderVal;
 
   const redrawAll = useCallback(() => {
     const canvas = canvasRef.current;
@@ -119,9 +136,11 @@ export default function AnnotationCanvas({
   // Draw initial annotations once on mount
   useEffect(() => {
     strokesRef.current = initialAnnotations;
-    setStrokeCount(initialAnnotations.length);
+    const count = initialAnnotations.length;
+    setStrokeCount(count);
+    onStrokeCountChange?.(count);
     redrawAll();
-  }, [initialAnnotations, redrawAll]);
+  }, [initialAnnotations, redrawAll, onStrokeCountChange]);
 
   const triggerSave = useCallback((strokes: Annotations) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -181,23 +200,28 @@ export default function AnnotationCanvas({
       const updated = [...strokesRef.current, stroke];
       strokesRef.current = updated;
       setStrokeCount(updated.length);
+      onStrokeCountChange?.(updated.length);
       triggerSave(updated);
     }
     redrawAll();
-  }, [redrawAll, triggerSave]);
+  }, [redrawAll, triggerSave, onStrokeCountChange]);
 
   const clearAll = useCallback(() => {
     strokesRef.current = [];
     currentStrokeRef.current = null;
     isDrawingRef.current = false;
     setStrokeCount(0);
+    onStrokeCountChange?.(0);
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
       ctx?.clearRect(0, 0, canvas.width, canvas.height);
     }
     triggerSave([]);
-  }, [triggerSave]);
+  }, [triggerSave, onStrokeCountChange]);
+
+  // Expose clearAll to parent via ref
+  useImperativeHandle(ref, () => ({ clearAll }), [clearAll]);
 
   // Mouse handlers
   const onMouseDown = (e: React.MouseEvent) => { e.preventDefault(); beginStroke(e.clientX, e.clientY); };
@@ -241,7 +265,7 @@ export default function AnnotationCanvas({
         onTouchEnd={onTouchEnd}
       />
 
-      {editable && (
+      {editable && !externalToolbar && (
         <div
           style={{
             position: 'absolute',
@@ -262,7 +286,7 @@ export default function AnnotationCanvas({
             <button
               key={id}
               title={title}
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setTool(id); }}
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setInternalTool(id); }}
               style={{
                 width: 28,
                 height: 28,
@@ -289,7 +313,7 @@ export default function AnnotationCanvas({
             max={10}
             value={sliderVal}
             onMouseDown={(e) => e.stopPropagation()}
-            onChange={(e) => setSliderVal(Number(e.target.value))}
+            onChange={(e) => setInternalSliderVal(Number(e.target.value))}
             title="Thickness"
             style={{ width: 64, accentColor: 'var(--rose-deeper)', cursor: 'pointer' }}
           />
@@ -319,4 +343,6 @@ export default function AnnotationCanvas({
       )}
     </div>
   );
-}
+});
+
+export default AnnotationCanvas;

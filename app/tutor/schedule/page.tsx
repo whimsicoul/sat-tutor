@@ -1,12 +1,11 @@
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
-import { getSatDatesForTutorStudents, getWorksheetsByTutor } from '@/lib/db';
+import { getSatDatesForTutorStudents, getAllWorksheets } from '@/lib/db';
 import TutorScheduleClient from './client';
 
 export interface TutorWorksheet {
   id: string;
   title: string;
-  student_id: string;
 }
 
 export interface TutorSessionRow {
@@ -52,7 +51,7 @@ export default async function TutorSchedulePage() {
       ORDER BY u.name
     `,
     getSatDatesForTutorStudents(tutorId),
-    getWorksheetsByTutor(tutorId),
+    getAllWorksheets(),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,7 +66,6 @@ export default async function TutorSchedulePage() {
   const allWorksheets: TutorWorksheet[] = (tutorWorksheets as unknown as TutorWorksheet[]).map((w) => ({
     id: w.id,
     title: w.title,
-    student_id: w.student_id,
   }));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

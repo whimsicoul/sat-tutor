@@ -386,6 +386,7 @@ function PdfImportTab({
   const [boxDragStart, setBoxDragStart] = useState<{ x: number; y: number } | null>(null);
   const [pendingAnswerBox, setPendingAnswerBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [savingAnswerBox, setSavingAnswerBox] = useState(false);
+  const [bottomPadding, setBottomPadding] = useState<number>(0);
 
   const [akQIdx, setAkQIdx] = useState(0);
   const [editingBubbleQNav, setEditingBubbleQNav] = useState(false);
@@ -515,6 +516,12 @@ function PdfImportTab({
     window.addEventListener('mouseup', onWindowMouseUp);
     return () => window.removeEventListener('mouseup', onWindowMouseUp);
   }, [boxDragStart]);
+
+  const bubbleProblem = problems[bubbleQIdx] ?? null;
+
+  useEffect(() => {
+    setBottomPadding(bubbleProblem?.answer_box_bottom_padding ?? 0);
+  }, [bubbleProblem?.id]);
 
   async function loadPdf(url: string) {
     const pdfjsLib = await import('pdfjs-dist');
@@ -712,6 +719,7 @@ function PdfImportTab({
           answerBoxY: pendingAnswerBox.y,
           answerBoxWidth: pendingAnswerBox.w,
           answerBoxHeight: pendingAnswerBox.h,
+          answerBoxBottomPadding: bottomPadding > 0 ? bottomPadding : null,
         }),
       });
       if (!res.ok) { toast.error('Failed to save answer box'); return; }
@@ -800,7 +808,6 @@ function PdfImportTab({
     }
   }
 
-  const bubbleProblem = problems[bubbleQIdx] ?? null;
   const akProblem = problems[akQIdx] ?? null;
 
   const getPositionsForProblem = (qNum: number) =>
@@ -1180,7 +1187,7 @@ function PdfImportTab({
                           onMouseDown={handleAnswerBoxMouseDown}
                           onMouseMove={handleAnswerBoxMouseMove}
                           onMouseUp={handleAnswerBoxMouseUp}
-                          style={{ position: 'relative', width: '100%', cursor: 'crosshair', userSelect: 'none' }}
+                          style={{ position: 'relative', width: '100%', cursor: 'crosshair', userSelect: 'none', paddingBottom: bottomPadding > 0 ? bottomPadding : undefined, background: 'var(--white)' }}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={bubbleProblem.question_image_url} alt={`Q${bubbleProblem.question_number}`} draggable={false} style={{ display: 'block', width: '100%', pointerEvents: 'none' }} />
@@ -1227,6 +1234,21 @@ function PdfImportTab({
                               pointerEvents: 'none',
                             }} />
                           )}
+                        </div>
+                        <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, borderTop: '1px solid var(--fog)' }}>
+                          <label style={{ fontSize: 11, color: 'var(--mist)', fontFamily: "'Syne', sans-serif", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+                            Bottom padding
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={600}
+                            step={10}
+                            value={bottomPadding}
+                            onChange={(e) => setBottomPadding(Math.max(0, Math.min(600, Number(e.target.value) || 0)))}
+                            style={{ width: 64, padding: '3px 6px', border: '1px solid rgba(168,203,222,0.6)', borderRadius: 6, fontSize: 12, fontFamily: "'Syne', sans-serif", fontWeight: 600, color: 'var(--charcoal)', background: 'var(--white)', outline: 'none' }}
+                          />
+                          <span style={{ fontSize: 11, color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>px</span>
                         </div>
                         {(pendingAnswerBox || boxDragStart) && (
                           <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>

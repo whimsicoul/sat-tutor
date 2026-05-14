@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
-import { setSessionWorksheet, getWorksheetsByTutor } from '@/lib/db';
+import { setSessionWorksheet, getAllWorksheets } from '@/lib/db';
 
 export async function GET(
   _req: Request,
@@ -27,7 +27,7 @@ export async function GET(
       WHERE s.id = ${id}
       LIMIT 1
     `,
-    getWorksheetsByTutor(authSession.user.id),
+    getAllWorksheets(),
   ]);
 
   return NextResponse.json({
@@ -56,9 +56,7 @@ export async function PUT(
   const { worksheetId } = (await req.json()) as { worksheetId: string | null };
 
   if (worksheetId !== null) {
-    const [ws] = await sql`
-      SELECT id FROM worksheets WHERE id = ${worksheetId} AND created_by = ${authSession.user.id}
-    `;
+    const [ws] = await sql`SELECT id FROM worksheets WHERE id = ${worksheetId}`;
     if (!ws) return NextResponse.json({ error: 'Worksheet not found' }, { status: 404 });
   }
 

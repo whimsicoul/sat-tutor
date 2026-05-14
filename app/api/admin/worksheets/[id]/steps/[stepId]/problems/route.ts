@@ -53,7 +53,7 @@ export async function PATCH(
 ) {
   if (!await requireAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { stepId } = await params;
-  const { questionNumber, correctAnswer, explanationImageUrl, explanationImageUrls, questionType, acceptedAnswers, answerBoxX, answerBoxY, answerBoxWidth, answerBoxHeight } = await req.json() as {
+  const { questionNumber, correctAnswer, explanationImageUrl, explanationImageUrls, questionType, acceptedAnswers, answerBoxX, answerBoxY, answerBoxWidth, answerBoxHeight, answerBoxBottomPadding } = await req.json() as {
     questionNumber: number;
     correctAnswer: string | null;
     explanationImageUrl: string | null;
@@ -64,6 +64,7 @@ export async function PATCH(
     answerBoxY?: number | null;
     answerBoxWidth?: number | null;
     answerBoxHeight?: number | null;
+    answerBoxBottomPadding?: number | null;
   };
   const resolvedUrls = explanationImageUrls ?? (explanationImageUrl ? [explanationImageUrl] : []);
   const hasAnswerBox = answerBoxX !== undefined;
@@ -77,6 +78,7 @@ export async function PATCH(
     answerBoxHeight ?? null,
     resolvedUrls,
     hasAnswerBox,
+    answerBoxBottomPadding ?? null,
   );
   return NextResponse.json({ problem });
 }

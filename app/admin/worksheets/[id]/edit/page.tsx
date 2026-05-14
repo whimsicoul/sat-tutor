@@ -24,6 +24,7 @@ export interface WsProblem {
   answer_box_y: number | null;
   answer_box_width: number | null;
   answer_box_height: number | null;
+  answer_box_bottom_padding: number | null;
 }
 
 export interface WsStep {
