@@ -15,6 +15,7 @@ interface TestResult {
   score_type: string | null;
   act_english_score: number | null;
   act_reading_score: number | null;
+  act_science_score: number | null;
   created_at: string;
   student_name: string;
 }
@@ -136,6 +137,15 @@ export default async function TutorTestResultsPage() {
                           >
                             <span className="text-sm font-bold" style={{ color: 'var(--sky-deeper)' }}>{r.act_reading_score}</span>
                             <span className="text-xs" style={{ color: 'var(--slate)' }}>Reading</span>
+                          </div>
+                        )}
+                        {r.act_science_score != null && (
+                          <div
+                            className="flex items-center gap-2 rounded-lg px-4 py-2"
+                            style={{ background: 'rgba(168,203,222,0.12)', border: '1px solid rgba(168,203,222,0.25)' }}
+                          >
+                            <span className="text-sm font-bold" style={{ color: 'var(--sky-deeper)' }}>{r.act_science_score}</span>
+                            <span className="text-xs" style={{ color: 'var(--slate)' }}>Science</span>
                           </div>
                         )}
                       </div>

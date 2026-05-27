@@ -15,6 +15,7 @@ interface TestResult {
   score_type: string | null;
   act_english_score: number | null;
   act_reading_score: number | null;
+  act_science_score: number | null;
   created_at: string;
 }
 
@@ -24,7 +25,7 @@ export default async function StudentTestResultsPage() {
 
   const results = await sql`
     SELECT id, test_name, test_date, total_score, math_score, reading_writing_score,
-           notes, pdf_url, score_type, act_english_score, act_reading_score, created_at
+           notes, pdf_url, score_type, act_english_score, act_reading_score, act_science_score, created_at
     FROM test_results
     WHERE student_id = ${userId}
     ORDER BY test_date DESC
@@ -130,6 +131,15 @@ export default async function StudentTestResultsPage() {
                     >
                       <span className="text-sm font-bold" style={{ color: 'var(--sky-deeper)' }}>{r.act_reading_score}</span>
                       <span className="text-xs" style={{ color: 'var(--slate)' }}>Reading</span>
+                    </div>
+                  )}
+                  {r.act_science_score != null && (
+                    <div
+                      className="flex items-center gap-2 rounded-lg px-4 py-2"
+                      style={{ background: 'rgba(168,203,222,0.12)', border: '1px solid rgba(168,203,222,0.25)' }}
+                    >
+                      <span className="text-sm font-bold" style={{ color: 'var(--sky-deeper)' }}>{r.act_science_score}</span>
+                      <span className="text-xs" style={{ color: 'var(--slate)' }}>Science</span>
                     </div>
                   )}
                 </div>

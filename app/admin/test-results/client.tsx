@@ -55,16 +55,23 @@ export default function AdminTestResultsClient({
   const [studentId, setStudentId] = useState('');
   const [testName, setTestName] = useState('');
   const [testDate, setTestDate] = useState('');
+  const [scoreType, setScoreType] = useState<'sat' | 'act'>('sat');
   const [totalScore, setTotalScore] = useState('');
   const [mathScore, setMathScore] = useState('');
   const [rwScore, setRwScore] = useState('');
+  const [actEnglishScore, setActEnglishScore] = useState('');
+  const [actReadingScore, setActReadingScore] = useState('');
+  const [actScienceScore, setActScienceScore] = useState('');
   const [notes, setNotes] = useState('');
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfName, setPdfName] = useState<string | null>(null);
 
   function resetForm() {
     setStudentId(''); setTestName(''); setTestDate('');
-    setTotalScore(''); setMathScore(''); setRwScore(''); setNotes('');
+    setScoreType('sat');
+    setTotalScore(''); setMathScore(''); setRwScore('');
+    setActEnglishScore(''); setActReadingScore(''); setActScienceScore('');
+    setNotes('');
     setPdfUrl(null); setPdfName(null);
   }
 
@@ -73,19 +80,28 @@ export default function AdminTestResultsClient({
     if (!studentId || !testName || !testDate) { toast.error('Student, test name, and date are required.'); return; }
     setSaving(true);
     try {
+      const body: Record<string, unknown> = {
+        studentId,
+        testName,
+        testDate,
+        scoreType,
+        totalScore: totalScore ? parseInt(totalScore) : null,
+        mathScore: mathScore ? parseInt(mathScore) : null,
+        notes: notes || null,
+        pdfUrl: pdfUrl || null,
+      };
+      if (scoreType === 'sat') {
+        body.readingWritingScore = rwScore ? parseInt(rwScore) : null;
+      } else {
+        body.actEnglishScore = actEnglishScore ? parseInt(actEnglishScore) : null;
+        body.actReadingScore = actReadingScore ? parseInt(actReadingScore) : null;
+        body.actScienceScore = actScienceScore ? parseInt(actScienceScore) : null;
+      }
+
       const res = await fetch('/api/admin/test-results', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentId,
-          testName,
-          testDate,
-          totalScore: totalScore ? parseInt(totalScore) : null,
-          mathScore: mathScore ? parseInt(mathScore) : null,
-          readingWritingScore: rwScore ? parseInt(rwScore) : null,
-          notes: notes || null,
-          pdfUrl: pdfUrl || null,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error('Failed');
       const newResult: TestResultRow = await res.json();
@@ -209,7 +225,7 @@ export default function AdminTestResultsClient({
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--fog)' }}>
-                {['Student', 'Test', 'Date', 'Total', 'Math', 'R&W', 'Notes', 'PDF', ''].map((h) => (
+                {['Student', 'Test', 'Type', 'Date', 'Total', 'Sections', 'Notes', 'PDF', ''].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -234,6 +250,19 @@ export default function AdminTestResultsClient({
                     {r.student_name}
                   </td>
                   <td style={{ padding: '12px 16px', color: 'var(--charcoal)' }}>{r.test_name}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <span
+                      style={{
+                        fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+                        letterSpacing: '0.08em', padding: '2px 7px', borderRadius: 6,
+                        background: r.score_type === 'act' ? 'rgba(168,203,222,0.18)' : 'var(--rose-ultra)',
+                        color: r.score_type === 'act' ? 'var(--sky-deeper)' : 'var(--rose-deeper)',
+                        border: `1px solid ${r.score_type === 'act' ? 'rgba(168,203,222,0.3)' : 'rgba(224,166,175,0.3)'}`,
+                      }}
+                    >
+                      {r.score_type === 'act' ? 'ACT' : 'SAT'}
+                    </span>
+                  </td>
                   <td style={{ padding: '12px 16px', color: 'var(--slate)', whiteSpace: 'nowrap' }}>
                     {format(new Date(r.test_date), 'MMM d, yyyy')}
                   </td>
@@ -241,10 +270,21 @@ export default function AdminTestResultsClient({
                     {r.total_score ?? '—'}
                   </td>
                   <td style={{ padding: '12px 16px', color: 'var(--sky-deeper)' }}>
-                    {r.math_score ?? '—'}
-                  </td>
-                  <td style={{ padding: '12px 16px', color: 'var(--sky-deeper)' }}>
-                    {r.reading_writing_score ?? '—'}
+                    {r.score_type === 'act' ? (
+                      <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {r.act_english_score != null && <span title="English">E: {r.act_english_score}</span>}
+                        {r.math_score != null && <span title="Math">M: {r.math_score}</span>}
+                        {r.act_reading_score != null && <span title="Reading">R: {r.act_reading_score}</span>}
+                        {r.act_science_score != null && <span title="Science">Sc: {r.act_science_score}</span>}
+                        {r.act_english_score == null && r.math_score == null && r.act_reading_score == null && r.act_science_score == null && '—'}
+                      </span>
+                    ) : (
+                      <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {r.math_score != null && <span title="Math">M: {r.math_score}</span>}
+                        {r.reading_writing_score != null && <span title="Reading & Writing">R&W: {r.reading_writing_score}</span>}
+                        {r.math_score == null && r.reading_writing_score == null && '—'}
+                      </span>
+                    )}
                   </td>
                   <td
                     style={{
@@ -436,6 +476,44 @@ export default function AdminTestResultsClient({
                 </select>
               </div>
 
+              {/* Test type toggle */}
+              <div>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+                  Test Type
+                </label>
+                <div className="flex gap-2">
+                  {(['sat', 'act'] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setScoreType(type)}
+                      style={{
+                        flex: 1,
+                        padding: '0.5rem',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        fontFamily: "'Syne', sans-serif",
+                        cursor: 'pointer',
+                        border: scoreType === type
+                          ? `1px solid ${type === 'act' ? 'rgba(168,203,222,0.5)' : 'rgba(224,166,175,0.5)'}`
+                          : '1px solid var(--fog)',
+                        background: scoreType === type
+                          ? (type === 'act' ? 'rgba(168,203,222,0.18)' : 'var(--rose-ultra)')
+                          : 'var(--white)',
+                        color: scoreType === type
+                          ? (type === 'act' ? 'var(--sky-deeper)' : 'var(--rose-deeper)')
+                          : 'var(--mist)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                      }}
+                    >
+                      {type.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Test name */}
               <div>
                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
@@ -445,7 +523,7 @@ export default function AdminTestResultsClient({
                   type="text"
                   value={testName}
                   onChange={(e) => setTestName(e.target.value)}
-                  placeholder="e.g. SAT Practice Test 1"
+                  placeholder={scoreType === 'act' ? 'e.g. ACT Practice Test 1' : 'e.g. SAT Practice Test 1'}
                   required
                   style={inputStyle}
                   onFocus={roseFocus}
@@ -469,54 +547,141 @@ export default function AdminTestResultsClient({
                 />
               </div>
 
-              {/* Scores */}
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
-                    Total
-                  </label>
-                  <input
-                    type="number"
-                    value={totalScore}
-                    onChange={(e) => setTotalScore(e.target.value)}
-                    placeholder="1600"
-                    min={0} max={1600}
-                    style={inputStyle}
-                    onFocus={roseFocus}
-                    onBlur={roseBlur}
-                  />
+              {/* Scores — SAT */}
+              {scoreType === 'sat' && (
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+                      Total
+                    </label>
+                    <input
+                      type="number"
+                      value={totalScore}
+                      onChange={(e) => setTotalScore(e.target.value)}
+                      placeholder="1600"
+                      min={0} max={1600}
+                      style={inputStyle}
+                      onFocus={roseFocus}
+                      onBlur={roseBlur}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+                      Math
+                    </label>
+                    <input
+                      type="number"
+                      value={mathScore}
+                      onChange={(e) => setMathScore(e.target.value)}
+                      placeholder="800"
+                      min={0} max={800}
+                      style={inputStyle}
+                      onFocus={roseFocus}
+                      onBlur={roseBlur}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+                      R&amp;W
+                    </label>
+                    <input
+                      type="number"
+                      value={rwScore}
+                      onChange={(e) => setRwScore(e.target.value)}
+                      placeholder="800"
+                      min={0} max={800}
+                      style={inputStyle}
+                      onFocus={roseFocus}
+                      onBlur={roseBlur}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
-                    Math
-                  </label>
-                  <input
-                    type="number"
-                    value={mathScore}
-                    onChange={(e) => setMathScore(e.target.value)}
-                    placeholder="800"
-                    min={0} max={800}
-                    style={inputStyle}
-                    onFocus={roseFocus}
-                    onBlur={roseBlur}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
-                    R&amp;W
-                  </label>
-                  <input
-                    type="number"
-                    value={rwScore}
-                    onChange={(e) => setRwScore(e.target.value)}
-                    placeholder="800"
-                    min={0} max={800}
-                    style={inputStyle}
-                    onFocus={roseFocus}
-                    onBlur={roseBlur}
-                  />
-                </div>
-              </div>
+              )}
+
+              {/* Scores — ACT */}
+              {scoreType === 'act' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+                        Composite
+                      </label>
+                      <input
+                        type="number"
+                        value={totalScore}
+                        onChange={(e) => setTotalScore(e.target.value)}
+                        placeholder="1–36"
+                        min={1} max={36}
+                        style={inputStyle}
+                        onFocus={roseFocus}
+                        onBlur={roseBlur}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+                        English
+                      </label>
+                      <input
+                        type="number"
+                        value={actEnglishScore}
+                        onChange={(e) => setActEnglishScore(e.target.value)}
+                        placeholder="1–36"
+                        min={1} max={36}
+                        style={inputStyle}
+                        onFocus={roseFocus}
+                        onBlur={roseBlur}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+                        Math
+                      </label>
+                      <input
+                        type="number"
+                        value={mathScore}
+                        onChange={(e) => setMathScore(e.target.value)}
+                        placeholder="1–36"
+                        min={1} max={36}
+                        style={inputStyle}
+                        onFocus={roseFocus}
+                        onBlur={roseBlur}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+                        Reading
+                      </label>
+                      <input
+                        type="number"
+                        value={actReadingScore}
+                        onChange={(e) => setActReadingScore(e.target.value)}
+                        placeholder="1–36"
+                        min={1} max={36}
+                        style={inputStyle}
+                        onFocus={roseFocus}
+                        onBlur={roseBlur}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+                        Science <span style={{ fontWeight: 400, textTransform: 'none' }}>(opt.)</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={actScienceScore}
+                        onChange={(e) => setActScienceScore(e.target.value)}
+                        placeholder="1–36"
+                        min={1} max={36}
+                        style={inputStyle}
+                        onFocus={roseFocus}
+                        onBlur={roseBlur}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Notes */}
               <div>

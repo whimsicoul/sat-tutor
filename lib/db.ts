@@ -334,7 +334,7 @@ export async function getTestResultsForTutorStudents(tutorId: string) {
   return sql`
     SELECT tr.id, tr.test_name, tr.test_date, tr.total_score, tr.math_score,
            tr.reading_writing_score, tr.notes, tr.pdf_url, tr.created_at,
-           tr.score_type, tr.act_english_score, tr.act_reading_score,
+           tr.score_type, tr.act_english_score, tr.act_reading_score, tr.act_science_score,
            s.name AS student_name
     FROM test_results tr
     JOIN users s ON s.id = tr.student_id
@@ -553,6 +553,7 @@ export async function assignBreakfastProblemsForToday(
     SELECT category, COUNT(*) AS cnt
     FROM breakfast_problems
     WHERE category IN ('Math', 'Reading and Writing')
+      AND (review_status IS NULL OR review_status != 'flagged_for_review')
       AND id NOT IN (
         SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
       )
@@ -572,6 +573,7 @@ export async function assignBreakfastProblemsForToday(
         SELECT ${studentId}, bp.id, CURRENT_DATE
         FROM breakfast_problems bp
         WHERE bp.category = 'Math'
+          AND (bp.review_status IS NULL OR bp.review_status != 'flagged_for_review')
           AND bp.id NOT IN (
             SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
           )
@@ -585,6 +587,7 @@ export async function assignBreakfastProblemsForToday(
         SELECT ${studentId}, bp.id, CURRENT_DATE
         FROM breakfast_problems bp
         WHERE bp.category = 'Reading and Writing'
+          AND (bp.review_status IS NULL OR bp.review_status != 'flagged_for_review')
           AND bp.id NOT IN (
             SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
           )
@@ -602,9 +605,10 @@ export async function assignBreakfastProblemsForToday(
     INSERT INTO student_breakfast_assignments (student_id, problem_id, assigned_date)
     SELECT ${studentId}, bp.id, CURRENT_DATE
     FROM breakfast_problems bp
-    WHERE bp.id NOT IN (
-      SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
-    )
+    WHERE (bp.review_status IS NULL OR bp.review_status != 'flagged_for_review')
+      AND bp.id NOT IN (
+        SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
+      )
     ORDER BY random()
     LIMIT ${limit}
     ON CONFLICT (student_id, problem_id) DO NOTHING
@@ -966,13 +970,14 @@ export async function insertActCompositeResult(
   composite: number,
   englishScale: number,
   mathScale: number,
-  readingScale: number
+  readingScale: number,
+  scienceScale: number | null = null
 ) {
   return sql`
     INSERT INTO test_results
-      (student_id, test_name, test_date, total_score, math_score, act_english_score, act_reading_score, score_type)
+      (student_id, test_name, test_date, total_score, math_score, act_english_score, act_reading_score, act_science_score, score_type)
     VALUES
-      (${studentId}, ${testName}, NOW(), ${composite}, ${mathScale}, ${englishScale}, ${readingScale}, 'act')
+      (${studentId}, ${testName}, NOW(), ${composite}, ${mathScale}, ${englishScale}, ${readingScale}, ${scienceScale}, 'act')
     ON CONFLICT (student_id, test_name, score_type) DO NOTHING
   `;
 }

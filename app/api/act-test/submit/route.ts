@@ -85,7 +85,7 @@ export async function POST(req: Request) {
 
   // Composite score: check if all three composite sections now have completed attempts
   let compositeScore: number | null = null;
-  if ((COMPOSITE_SECTIONS as readonly string[]).includes(section)) {
+  if ((COMPOSITE_SECTIONS as readonly string[]).includes(section) || section === 'science') {
     const sectionRaws = await getActScoredRawForStudent(userId);
     const completedSections = new Set(sectionRaws.map(r => r.section));
 
@@ -98,8 +98,11 @@ export async function POST(req: Request) {
       const engScale = actRawToScale('english', currentRawMap.get('english') ?? 0);
       const mathScale = actRawToScale('math', currentRawMap.get('math') ?? 0);
       const readScale = actRawToScale('reading', currentRawMap.get('reading') ?? 0);
+      // Science doesn't affect composite but is saved for display if completed
+      const scienceRaw = currentRawMap.get('science');
+      const scienceScale = scienceRaw != null ? actRawToScale('science', scienceRaw) : null;
       compositeScore = Math.round((engScale + mathScale + readScale) / 3);
-      await insertActCompositeResult(userId, 'ACT1 Practice', compositeScore, engScale, mathScale, readScale);
+      await insertActCompositeResult(userId, 'ACT1 Practice', compositeScore, engScale, mathScale, readScale, scienceScale);
     }
   }
 

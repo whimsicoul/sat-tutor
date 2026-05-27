@@ -1,14 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { Coffee, CheckCircle, XCircle, Flag } from 'lucide-react';
+import { Coffee, CheckCircle, XCircle, Flag, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import type { TodayAssignment } from './page';
-import AnnotationCanvas from '@/components/shared/AnnotationCanvas';
+import AnnotationCanvas, { type AnnotationCanvasHandle } from '@/components/shared/AnnotationCanvas';
+import DraggableAnnotationToolbar from '@/components/shared/DraggableAnnotationToolbar';
 import type { Annotations } from '@/types/annotations';
+
+type AnnotationTool = 'highlight' | 'pen' | 'eraser';
 
 const CHOICES = ['A', 'B', 'C', 'D'] as const;
 type Choice = (typeof CHOICES)[number];
@@ -25,6 +28,14 @@ export default function StudentBreakfastClient({
   assignments: TodayAssignment[];
 }) {
   const alreadySubmitted = initial.length > 0 && initial.every((a) => a.submitted_at !== null);
+
+  const [annotationTool, setAnnotationTool] = useState<AnnotationTool>('highlight');
+  const [annotationSliderVal, setAnnotationSliderVal] = useState(5);
+  const [strokeCounts, setStrokeCounts] = useState<Record<number, number>>({});
+  const [showAnnotationToolbar, setShowAnnotationToolbar] = useState(false);
+  const canvasRefs = useRef<(AnnotationCanvasHandle | null)[]>([]);
+
+  const totalStrokeCount = Object.values(strokeCounts).reduce((s, n) => s + n, 0);
 
   const [answers, setAnswers] = useState<Record<string, Choice>>(() => {
     const pre: Record<string, Choice> = {};
@@ -124,15 +135,43 @@ export default function StudentBreakfastClient({
 
   return (
     <div className="space-y-8">
-      <div>
-        <div className="eyebrow-rose mb-3">Student Portal</div>
-        <h1 className="portal-section-title">Breakfast Problems</h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--slate)' }}>
-          {submitted
-            ? "Here are your results for today. Incorrect answers will be reviewed at your next session."
-            : "Answer all 5 problems, then submit. Results are auto-graded."}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="eyebrow-rose mb-3">Student Portal</div>
+          <h1 className="portal-section-title">Breakfast Problems</h1>
+          <p className="text-sm mt-2" style={{ color: 'var(--slate)' }}>
+            {submitted
+              ? "Here are your results for today. Incorrect answers will be reviewed at your next session."
+              : "Answer all 5 problems, then submit. Results are auto-graded."}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAnnotationToolbar((v) => !v)}
+          title={showAnnotationToolbar ? 'Hide annotation toolbar' : 'Show annotation toolbar'}
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+          style={{
+            background: showAnnotationToolbar ? 'var(--rose-ultra)' : 'transparent',
+            border: showAnnotationToolbar ? '1px solid rgba(224,166,175,0.5)' : '1px solid var(--fog)',
+            color: showAnnotationToolbar ? 'var(--rose-deeper)' : 'var(--slate)',
+            cursor: 'pointer',
+            marginTop: 4,
+          }}
+        >
+          <Pencil className="h-3 w-3" />
+          {showAnnotationToolbar ? 'Hide tools' : 'Annotate'}
+        </button>
       </div>
+
+      {showAnnotationToolbar && (
+        <DraggableAnnotationToolbar
+          tool={annotationTool}
+          sliderVal={annotationSliderVal}
+          strokeCount={totalStrokeCount}
+          onToolChange={setAnnotationTool}
+          onSliderChange={setAnnotationSliderVal}
+          onClearAll={() => canvasRefs.current.forEach((r) => r?.clearAll())}
+        />
+      )}
 
       {initial.length === 0 ? (
         <div className="portal-card flex flex-col items-center justify-center py-20 text-center">
@@ -205,10 +244,15 @@ export default function StudentBreakfastClient({
                                 style={{ top: 0, transform: `translateY(-${(top / h * 100).toFixed(4)}%)` }}
                               />
                               <AnnotationCanvas
+                                ref={(el) => { canvasRefs.current[idx] = el; }}
                                 context="breakfast"
                                 assignmentId={a.assignment_id}
                                 initialAnnotations={(a.annotations ?? []) as Annotations}
                                 editable={true}
+                                externalToolbar={showAnnotationToolbar}
+                                externalTool={annotationTool}
+                                externalSliderVal={annotationSliderVal}
+                                onStrokeCountChange={(count) => setStrokeCounts((prev) => ({ ...prev, [idx]: count }))}
                               />
                             </div>
                           );
