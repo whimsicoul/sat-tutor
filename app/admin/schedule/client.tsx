@@ -186,6 +186,10 @@ export default function ScheduleClient({
   const [selectedWorksheetId, setSelectedWorksheetId] = useState<string>('');
   const [worksheetSaving, setWorksheetSaving] = useState(false);
 
+  // Tutor reassignment state
+  const [selectedTutorId, setSelectedTutorId] = useState<string>('');
+  const [tutorSaving, setTutorSaving] = useState(false);
+
   // SAT date detail dialog
   const [satDetailOpen, setSatDetailOpen] = useState(false);
   const [satDetailDate, setSatDetailDate] = useState<AdminSatDate | null>(null);
@@ -239,6 +243,7 @@ export default function ScheduleClient({
     }
     if (event.type !== 'session' || !event.resource) return;
     setDetailSession(event.resource);
+    setSelectedTutorId(event.resource.tutor_id);
     setDetailOpen(true);
     setDetailLoading(true);
     try {
@@ -348,6 +353,27 @@ export default function ScheduleClient({
       toast.error('Failed to update worksheet.');
     } finally {
       setWorksheetSaving(false);
+    }
+  }
+
+  async function handleSaveTutor() {
+    if (!detailSession || !selectedTutorId || selectedTutorId === detailSession.tutor_id) return;
+    setTutorSaving(true);
+    try {
+      const res = await fetch(`/api/admin/sessions/${detailSession.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tutorId: selectedTutorId }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
+      const updated = await res.json() as AdminSession;
+      setSessions((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+      setDetailSession(updated);
+      toast.success('Tutor updated');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update tutor');
+    } finally {
+      setTutorSaving(false);
     }
   }
 
@@ -516,6 +542,31 @@ export default function ScheduleClient({
                 <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: statusColor, fontFamily: "'Syne', sans-serif" }}>
                   {detailSession.status}
                 </span>
+              </div>
+
+              {/* Tutor reassignment */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', fontFamily: "'Syne', sans-serif", marginBottom: 10 }}>
+                  Tutor
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <select
+                    value={selectedTutorId}
+                    onChange={(e) => setSelectedTutorId(e.target.value)}
+                    style={{ flex: 1, padding: '0.4rem 0.6rem', borderRadius: '0.5rem', fontSize: '0.8rem', border: '1px solid var(--fog)', background: 'var(--white)', color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif" }}
+                  >
+                    {tutors.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  <Button
+                    onClick={handleSaveTutor}
+                    disabled={tutorSaving || selectedTutorId === detailSession?.tutor_id}
+                    style={{ background: 'var(--sky)', color: 'var(--charcoal)', border: 'none', fontFamily: "'Syne', sans-serif", fontSize: 12, padding: '6px 14px', height: 'auto' }}
+                  >
+                    {tutorSaving ? 'Saving…' : 'Save'}
+                  </Button>
+                </div>
               </div>
 
               {/* Worksheet */}

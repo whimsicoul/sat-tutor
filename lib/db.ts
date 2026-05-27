@@ -100,6 +100,18 @@ export async function getAllUsers() {
   return sql`SELECT id, name, email, role, active, created_at FROM users ORDER BY name`;
 }
 
+export async function getAllUsersWithTutors() {
+  return sql`
+    SELECT u.id, u.name, u.email, u.role, u.active, u.created_at,
+           t.id   AS tutor_id,
+           t.name AS tutor_name
+    FROM users u
+    LEFT JOIN tutor_student_assignments tsa ON tsa.student_id = u.id
+    LEFT JOIN users t ON t.id = tsa.tutor_id
+    ORDER BY u.name
+  `;
+}
+
 export async function getUsersByRole(role: string) {
   return sql`SELECT id, name, email, role, active, created_at FROM users WHERE role = ${role} ORDER BY name`;
 }
@@ -246,6 +258,20 @@ export async function deleteSessionSeries(id: string) {
 export async function adminUpdateSessionStatus(id: string, status: string) {
   const rows = await sql`
     UPDATE sessions SET status = ${status} WHERE id = ${id} RETURNING *
+  `;
+  return rows[0] ?? null;
+}
+
+export async function adminUpdateSessionTutor(sessionId: string, tutorId: string) {
+  await sql`UPDATE sessions SET tutor_id = ${tutorId} WHERE id = ${sessionId}`;
+  const rows = await sql`
+    SELECT s.id, s.proposed_time, s.status, s.series_id,
+           t.id AS tutor_id, t.name AS tutor_name,
+           st.id AS student_id, st.name AS student_name
+    FROM sessions s
+    JOIN users t  ON t.id  = s.tutor_id
+    JOIN users st ON st.id = s.student_id
+    WHERE s.id = ${sessionId}
   `;
   return rows[0] ?? null;
 }

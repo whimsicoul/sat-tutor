@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
-import { adminUpdateSessionStatus } from '@/lib/db';
+import { adminUpdateSessionStatus, adminUpdateSessionTutor } from '@/lib/db';
 
 export async function DELETE(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -29,17 +29,31 @@ export async function PATCH(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { status } = await req.json();
-  if (status !== 'approved' && status !== 'denied') {
-    return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+  const body = await req.json() as { status?: string; tutorId?: string };
+
+  // Reassign tutor
+  if (body.tutorId) {
+    const [tutor] = await sql`SELECT id FROM users WHERE id = ${body.tutorId} AND role = 'tutor'`;
+    if (!tutor) return NextResponse.json({ error: 'Tutor not found' }, { status: 404 });
+    const updated = await adminUpdateSessionTutor(params.id, body.tutorId);
+    if (!updated) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    return NextResponse.json(updated);
   }
 
-  try {
-    const updated = await adminUpdateSessionStatus(params.id, status);
-    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    return NextResponse.json(updated);
-  } catch (err) {
-    console.error('[PATCH /api/admin/sessions/[id]]', err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+  // Update status
+  if (body.status !== undefined) {
+    if (body.status !== 'approved' && body.status !== 'denied') {
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    }
+    try {
+      const updated = await adminUpdateSessionStatus(params.id, body.status);
+      if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      return NextResponse.json(updated);
+    } catch (err) {
+      console.error('[PATCH /api/admin/sessions/[id]]', err);
+      return NextResponse.json({ error: String(err) }, { status: 500 });
+    }
   }
+
+  return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
 }

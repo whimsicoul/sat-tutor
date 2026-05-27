@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { AdminUser } from './page';
+import type { AdminUser, TutorOption } from './page';
 
 const roleBadge = (role: string, active: boolean) => {
   const isRose = role === 'student';
@@ -42,7 +42,40 @@ const roleBadge = (role: string, active: boolean) => {
   );
 };
 
-export default function UsersClient({ users: initial }: { users: AdminUser[] }) {
+const TutorSelect = ({
+  value,
+  onChange,
+  tutors,
+  placeholder = 'No tutor assigned',
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  tutors: TutorOption[];
+  placeholder?: string;
+}) => (
+  <select
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    style={{
+      display: 'block', width: '100%', marginTop: 4,
+      height: 32, padding: '0 8px', borderRadius: 8,
+      border: '1px solid var(--fog)', background: 'transparent',
+      fontSize: 14, color: 'var(--charcoal)', cursor: 'pointer',
+      fontFamily: "'Syne', sans-serif",
+    }}
+  >
+    <option value="">{placeholder}</option>
+    {tutors.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+  </select>
+);
+
+export default function UsersClient({
+  users: initial,
+  tutors,
+}: {
+  users: AdminUser[];
+  tutors: TutorOption[];
+}) {
   const [users, setUsers] = useState<AdminUser[]>(initial);
   const [filter, setFilter] = useState<'all' | 'tutor' | 'student'>('all');
   const [addOpen, setAddOpen] = useState(false);
@@ -50,12 +83,40 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
   const [deleteUser, setDeleteUser] = useState<AdminUser | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [addForm, setAddForm] = useState({ name: '', email: '', password: '', role: 'tutor' });
-  const [editForm, setEditForm] = useState({ name: '', email: '', role: '', newPassword: '' });
+  const [addForm, setAddForm] = useState({ name: '', email: '', password: '', role: 'student', tutorId: '' });
+  const [editForm, setEditForm] = useState({ name: '', email: '', role: '', newPassword: '', tutorId: '' });
   const [showAddPassword, setShowAddPassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
 
   const filtered = users.filter((u) => filter === 'all' || u.role === filter);
+
+  /** Set the tutor assignment for a student. Removes any existing then creates new. */
+  async function applyTutorAssignment(studentId: string, oldTutorId: string | null | undefined, newTutorId: string) {
+    // If tutor hasn't changed, skip
+    if ((oldTutorId ?? '') === newTutorId) return;
+
+    // Remove old assignment first (we need the assignment id — re-fetch from the assignments list)
+    if (oldTutorId) {
+      // Fetch to find the assignment id
+      const listRes = await fetch('/api/admin/assignments');
+      if (listRes.ok) {
+        const all = await listRes.json() as Array<{ id: string; tutor_id: string; student_id: string }>;
+        const existing = all.find((a) => a.student_id === studentId && a.tutor_id === oldTutorId);
+        if (existing) {
+          await fetch(`/api/admin/assignments/${existing.id}`, { method: 'DELETE' });
+        }
+      }
+    }
+
+    // Create new assignment
+    if (newTutorId) {
+      await fetch('/api/admin/assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tutorId: newTutorId, studentId }),
+      });
+    }
+  }
 
   async function handleAdd() {
     setSaving(true);
@@ -63,13 +124,26 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(addForm),
+        body: JSON.stringify({ name: addForm.name, email: addForm.email, password: addForm.password, role: addForm.role }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
-      const user = await res.json();
+      const user = await res.json() as AdminUser;
+
+      // If student with a tutor selected, create the assignment
+      if (addForm.role === 'student' && addForm.tutorId) {
+        await fetch('/api/admin/assignments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tutorId: addForm.tutorId, studentId: user.id }),
+        });
+        const tutor = tutors.find((t) => t.id === addForm.tutorId);
+        user.tutor_id = addForm.tutorId;
+        user.tutor_name = tutor?.name ?? null;
+      }
+
       setUsers((prev) => [user, ...prev]);
       setAddOpen(false);
-      setAddForm({ name: '', email: '', password: '', role: 'tutor' });
+      setAddForm({ name: '', email: '', password: '', role: 'student', tutorId: '' });
       toast.success('User created');
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Error creating user');
@@ -82,7 +156,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
     if (!editUser) return;
     setSaving(true);
     try {
-      const { newPassword, ...rest } = editForm;
+      const { newPassword, tutorId, ...rest } = editForm;
       const body = { ...rest, ...(newPassword ? { password: newPassword } : {}) };
       const res = await fetch(`/api/admin/users/${editUser.id}`, {
         method: 'PATCH',
@@ -90,7 +164,17 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed');
-      const updated = await res.json();
+      const updated = await res.json() as AdminUser;
+
+      // Handle tutor assignment change for students
+      const isStudent = editForm.role === 'student' || editUser.role === 'student';
+      if (isStudent) {
+        await applyTutorAssignment(editUser.id, editUser.tutor_id, tutorId);
+        const tutor = tutors.find((t) => t.id === tutorId);
+        updated.tutor_id = tutorId || null;
+        updated.tutor_name = tutor?.name ?? null;
+      }
+
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       setEditUser(null);
       setShowEditPassword(false);
@@ -110,7 +194,10 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
         body: JSON.stringify({ active: !user.active }),
       });
       if (!res.ok) throw new Error();
-      const updated = await res.json();
+      const updated = await res.json() as AdminUser;
+      // Preserve tutor info (not returned by basic PATCH)
+      updated.tutor_id = user.tutor_id;
+      updated.tutor_name = user.tutor_name;
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       toast.success(updated.active ? 'User reactivated' : 'User deactivated');
     } catch {
@@ -135,6 +222,10 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
   }
 
   const filterTabs: Array<'all' | 'tutor' | 'student'> = ['all', 'tutor', 'student'];
+
+  // Table headers — show Tutor column only for student filter or all
+  const showTutorCol = filter === 'all' || filter === 'student';
+  const headers = ['Name', 'Email', 'Role', ...(showTutorCol ? ['Tutor'] : []), 'Created', 'Actions'];
 
   return (
     <div style={{ padding: '40px 48px' }}>
@@ -210,7 +301,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--fog)', background: 'var(--frost)' }}>
-              {['Name', 'Email', 'Role', 'Created', 'Actions'].map((h) => (
+              {headers.map((h) => (
                 <th
                   key={h}
                   style={{
@@ -233,7 +324,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={headers.length}
                   style={{
                     textAlign: 'center',
                     padding: 40,
@@ -264,13 +355,37 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
                     {user.email}
                   </td>
                   <td style={{ padding: '14px 20px' }}>{roleBadge(user.role, user.active)}</td>
+                  {showTutorCol && (
+                    <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
+                      {user.role === 'student' ? (
+                        user.tutor_name ? (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            background: 'rgba(168,203,222,0.15)', color: 'var(--sky-deeper)',
+                            padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500,
+                            fontFamily: "'Syne', sans-serif",
+                          }}>
+                            {user.tutor_name}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--cloud)', fontSize: 12, fontStyle: 'italic' }}>unassigned</span>
+                        )
+                      ) : (
+                        <span style={{ color: 'var(--cloud)', fontSize: 12 }}>—</span>
+                      )}
+                    </td>
+                  )}
                   <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>
                     {format(new Date(user.created_at), 'MMM d, yyyy')}
                   </td>
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button
-                        onClick={() => { setEditUser(user); setEditForm({ name: user.name, email: user.email, role: user.role, newPassword: '' }); setShowEditPassword(false); }}
+                        onClick={() => {
+                          setEditUser(user);
+                          setEditForm({ name: user.name, email: user.email, role: user.role, newPassword: '', tutorId: user.tutor_id ?? '' });
+                          setShowEditPassword(false);
+                        }}
                         title="Edit"
                         style={{
                           background: 'var(--frost)',
@@ -373,7 +488,7 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
               <Label style={{ color: 'var(--slate)' }}>Role</Label>
               <select
                 value={addForm.role}
-                onChange={(e) => setAddForm((f) => ({ ...f, role: e.target.value }))}
+                onChange={(e) => setAddForm((f) => ({ ...f, role: e.target.value, tutorId: '' }))}
                 style={{
                   display: 'block', width: '100%', marginTop: 4,
                   height: 32, padding: '0 8px', borderRadius: 8,
@@ -386,6 +501,19 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
                 <option value="tutor">Tutor</option>
               </select>
             </div>
+            {addForm.role === 'student' && (
+              <div>
+                <Label style={{ color: 'var(--slate)' }}>
+                  Assign Tutor{' '}
+                  <span style={{ color: 'var(--mist)', fontWeight: 400 }}>(optional)</span>
+                </Label>
+                <TutorSelect
+                  value={addForm.tutorId}
+                  onChange={(v) => setAddForm((f) => ({ ...f, tutorId: v }))}
+                  tutors={tutors}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
@@ -434,6 +562,17 @@ export default function UsersClient({ users: initial }: { users: AdminUser[] }) 
                 <option value="tutor">Tutor</option>
               </select>
             </div>
+            {(editForm.role === 'student' || editUser?.role === 'student') && (
+              <div>
+                <Label style={{ color: 'var(--slate)' }}>Assigned Tutor</Label>
+                <TutorSelect
+                  value={editForm.tutorId}
+                  onChange={(v) => setEditForm((f) => ({ ...f, tutorId: v }))}
+                  tutors={tutors}
+                  placeholder="Remove tutor assignment"
+                />
+              </div>
+            )}
             <div>
               <Label htmlFor="edit-password" style={{ color: 'var(--slate)' }}>New Password <span style={{ color: 'var(--mist)', fontWeight: 400 }}>(optional)</span></Label>
               <div style={{ position: 'relative' }} className="mt-1">

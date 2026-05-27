@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, BookOpen, TrendingUp, Award, Users } from 'lucide-react';
+import { ArrowRight, BookOpen, TrendingUp, ClipboardList, Coffee, CalendarDays, Target, PenLine } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
 
 interface Tutor {
@@ -36,6 +36,7 @@ export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRo
           <div className="flex items-center gap-6">
             <nav className="hidden md:flex items-center gap-6 text-sm" style={{ color: 'var(--slate)' }}>
               <a href="#about" className="transition-colors hover:text-[color:var(--rose-dark)]">About</a>
+              <a href="#approach" className="transition-colors hover:text-[color:var(--rose-dark)]">Our Approach</a>
               <a href="#tutors" className="transition-colors hover:text-[color:var(--rose-dark)]">Our Tutors</a>
             </nav>
             {userRole ? (
@@ -124,8 +125,7 @@ export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRo
           {/* Section header */}
           <div className="section-divider mb-16"><span>About</span></div>
 
-          <div className="grid lg:grid-cols-2 gap-16 items-start">
-            <div>
+          <div className="max-w-2xl">
               <h2
                 className="text-4xl lg:text-5xl font-bold leading-tight mb-6 text-balance"
                 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: 'var(--charcoal)', letterSpacing: '-0.025em' }}
@@ -134,14 +134,14 @@ export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRo
               </h2>
               <p className="text-base leading-relaxed mb-5" style={{ color: 'var(--slate)' }}>
                 At DC SAT Tutor, we believe every student deserves a customized path to their best
-                score. We don&apos;t believe in one-size-fits-all prep — we build strategies around
-                each student&apos;s unique strengths, weaknesses, and goals.
+                score. That starts before the first session: we compare ACT and SAT diagnostic
+                results, walk students through the structure of the test, and build a daily practice
+                rhythm that fits their life.
               </p>
               <p className="text-base leading-relaxed mb-10" style={{ color: 'var(--slate)' }}>
-                From structured worksheets to flexible scheduling, every tool in our program is
-                designed to build genuine understanding — not just test-taking tricks. Students
-                leave our program not just better prepared for the SAT, but better equipped for
-                college coursework.
+                Every step in our program is designed to build genuine understanding — not just
+                test-taking tricks. By the end, students leave better prepared for the SAT and
+                more confident as learners.
               </p>
               <Link
                 href="/login"
@@ -150,60 +150,147 @@ export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRo
               >
                 Access Your Portal <ArrowRight className="h-4 w-4" />
               </Link>
-            </div>
+          </div>
+        </div>
+      </section>
 
-            <div className="grid grid-cols-2 gap-4">
+      {/* ── Our Approach ── */}
+      <section
+        id="approach"
+        className="py-24 lg:py-32"
+        style={{
+          background: 'linear-gradient(135deg, #F3F9FC 0%, #FDF5F6 100%)',
+          borderTop: '1px solid var(--fog)',
+          borderBottom: '1px solid var(--fog)',
+        }}
+      >
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="section-divider mb-16"><span>Our Approach</span></div>
+
+          <div className="text-center mb-16">
+            <h2
+              className="text-4xl lg:text-5xl font-bold leading-tight mb-4 text-balance"
+              style={{
+                fontFamily: "'Cormorant Garamond', Georgia, serif",
+                color: 'var(--charcoal)',
+                letterSpacing: '-0.025em',
+              }}
+            >
+              A proven, step-by-step system.
+            </h2>
+            <p className="text-base max-w-xl mx-auto leading-relaxed" style={{ color: 'var(--slate)' }}>
+              Every student follows the same structured cycle — personalized at every turn.
+            </p>
+          </div>
+
+          <div className="relative">
+            {/* Vertical connector line */}
+            <div
+              className="absolute left-[23px] top-12 bottom-12 w-px hidden sm:block"
+              style={{ background: 'var(--fog)' }}
+              aria-hidden="true"
+            />
+
+            <div className="flex flex-col gap-10">
               {[
                 {
+                  n: 1,
+                  icon: <ClipboardList className="h-5 w-5" />,
+                  title: 'Test Selection',
+                  body: 'Start with full practice tests for both the ACT and SAT. Compare scores side by side to determine which test plays to your strengths — before committing to either.',
+                  accent: 'sky',
+                },
+                {
+                  n: 2,
                   icon: <BookOpen className="h-5 w-5" />,
-                  title: 'Custom Problem Sets',
-                  desc: 'Targeted practice materials assigned to each student based on their diagnostic performance.',
+                  title: 'Test Fundamentals',
+                  body: "Meet with your tutor to understand exactly how the test works — scoring systems, question types, module structures, and section weighting. Most students are surprised by what they learn.",
                   accent: 'rose',
                 },
                 {
+                  n: 3,
+                  icon: <Coffee className="h-5 w-5" />,
+                  title: 'Daily Practice Problems',
+                  body: 'Five "breakfast problems" every morning: 15–20 minutes, easy to medium difficulty. Consistent daily exposure builds pattern recognition faster than any single cram session.',
+                  accent: 'sky',
+                },
+                {
+                  n: 4,
+                  icon: <CalendarDays className="h-5 w-5" />,
+                  title: 'Weekly Tutoring Sessions',
+                  body: "Each session opens by reviewing the breakfast problems you struggled with. Your tutor identifies error patterns — careless mistakes, concept gaps, or test-strategy issues — and adjusts the plan.",
+                  accent: 'rose',
+                },
+                {
+                  n: 5,
+                  icon: <Target className="h-5 w-5" />,
+                  title: 'Targeted Mini-Lessons',
+                  body: "Custom interactive worksheets built around your specific weaknesses. A focused lesson aligned to exactly what you need — no time wasted on material you already know.",
+                  accent: 'sky',
+                },
+                {
+                  n: 6,
+                  icon: <PenLine className="h-5 w-5" />,
+                  title: 'Guided Problem Practice',
+                  body: "Work through harder problems together after the lesson. Your tutor is there to guide, not just watch — building confidence and mastery through deliberate practice.",
+                  accent: 'rose',
+                },
+                {
+                  n: 7,
                   icon: <TrendingUp className="h-5 w-5" />,
-                  title: 'Proven Results',
-                  desc: 'Students see measurable score improvements, tracked session by session.',
+                  title: 'Ongoing Progress',
+                  body: "Repeat the cycle. Once you're ready, take another full practice test to track real improvement and sharpen the focus for the next round. The system compounds.",
                   accent: 'sky',
                 },
-                {
-                  icon: <Award className="h-5 w-5" />,
-                  title: 'Expert Instruction',
-                  desc: 'Deep knowledge of the current SAT format and scoring, with strategies that work.',
-                  accent: 'sky',
-                },
-                {
-                  icon: <Users className="h-5 w-5" />,
-                  title: 'Flexible Scheduling',
-                  desc: 'Propose, confirm, and manage sessions through the student and tutor portals.',
-                  accent: 'rose',
-                },
-              ].map((feature) => (
-                <div
-                  key={feature.title}
-                  className="p-5 rounded-xl transition-all hover:-translate-y-0.5"
-                  style={{
-                    background: feature.accent === 'rose' ? 'var(--rose-ultra)' : 'var(--sky-ultra)',
-                    border: `1px solid ${feature.accent === 'rose' ? 'rgba(224,166,175,0.25)' : 'rgba(168,203,222,0.25)'}`,
-                  }}
-                >
-                  <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center mb-3"
-                    style={{
-                      background: feature.accent === 'rose' ? 'rgba(224,166,175,0.25)' : 'rgba(168,203,222,0.25)',
-                      color: feature.accent === 'rose' ? 'var(--rose-deeper)' : 'var(--sky-deeper)',
-                    }}
-                  >
-                    {feature.icon}
+              ].map((step) => {
+                const isSky = step.accent === 'sky';
+                const numBg = isSky ? 'rgba(168,203,222,0.25)' : 'rgba(224,166,175,0.25)';
+                const numColor = isSky ? 'var(--sky-deeper)' : 'var(--rose-deeper)';
+                const iconBg = isSky ? 'var(--sky-ultra)' : 'var(--rose-ultra)';
+                const borderColor = isSky ? 'rgba(168,203,222,0.35)' : 'rgba(224,166,175,0.35)';
+
+                return (
+                  <div key={step.n} className="flex gap-5 sm:gap-7 items-start">
+                    {/* Number badge */}
+                    <div
+                      className="relative z-10 flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold"
+                      style={{
+                        background: numBg,
+                        color: numColor,
+                        fontFamily: "'Syne', sans-serif",
+                        border: `1px solid ${borderColor}`,
+                      }}
+                    >
+                      {step.n}
+                    </div>
+
+                    {/* Content card */}
+                    <div
+                      className="flex-1 rounded-2xl p-6 transition-all hover:-translate-y-0.5"
+                      style={{
+                        background: 'var(--white)',
+                        border: `1px solid ${borderColor}`,
+                        boxShadow: '0 1px 3px rgba(26,29,35,0.04), 0 4px 16px rgba(26,29,35,0.03)',
+                      }}
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ background: iconBg, color: numColor }}
+                        >
+                          {step.icon}
+                        </div>
+                        <h3 className="text-base font-semibold" style={{ color: 'var(--charcoal)' }}>
+                          {step.title}
+                        </h3>
+                      </div>
+                      <p className="text-sm leading-relaxed" style={{ color: 'var(--slate)' }}>
+                        {step.body}
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="text-sm font-semibold mb-1.5" style={{ color: 'var(--charcoal)' }}>
-                    {feature.title}
-                  </h3>
-                  <p className="text-xs leading-relaxed" style={{ color: 'var(--slate)' }}>
-                    {feature.desc}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
