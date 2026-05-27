@@ -339,8 +339,8 @@ export default function AdminTestResultsClient({
                       </span>
                       {r.notes && (
                         r.notes_visible_to_student
-                          ? <Eye size={12} title="Visible to student" style={{ color: 'var(--sky-deeper)', flexShrink: 0 }} />
-                          : <EyeOff size={12} title="Hidden from student" style={{ color: 'var(--mist)', flexShrink: 0 }} />
+                          ? <span title="Visible to student" style={{ flexShrink: 0, lineHeight: 0 }}><Eye size={12} style={{ color: 'var(--sky-deeper)' }} /></span>
+                          : <span title="Hidden from student" style={{ flexShrink: 0, lineHeight: 0 }}><EyeOff size={12} style={{ color: 'var(--mist)' }} /></span>
                       )}
                     </div>
                   </td>
