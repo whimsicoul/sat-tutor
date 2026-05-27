@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { LayoutDashboard, Users, CalendarDays, Coffee, LogOut, Settings, MessageSquare, BarChart2, FileText, Layers } from 'lucide-react';
+import { LayoutDashboard, Users, CalendarDays, Coffee, LogOut, Settings, MessageSquare, BarChart2, FileText, Layers, TrendingUp } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
 
 const navItems = [
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/admin/breakfast-problems', label: 'Breakfast Problems', icon: Coffee },
   { href: '/admin/act-test', label: 'ACT Test', icon: FileText },
   { href: '/admin/test-results', label: 'Test Results', icon: BarChart2 },
+  { href: '/admin/analytics', label: 'Analytics', icon: TrendingUp },
   { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];

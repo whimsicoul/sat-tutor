@@ -1220,17 +1220,41 @@ export async function getWorksheetStepProblems(stepId: string) {
     SELECT id, step_id, question_number, question_image_url, correct_answer, explanation_image_url,
            explanation_image_urls, question_type, accepted_answers,
            answer_box_x, answer_box_y, answer_box_width, answer_box_height,
-           answer_box_bottom_padding, created_at
+           answer_box_bottom_padding, category, skill, difficulty, created_at
     FROM worksheet_step_problems
     WHERE step_id = ${stepId}
     ORDER BY question_number ASC
   `;
 }
 
-export async function insertWorksheetStepProblem(stepId: string, questionNumber: number, questionImageUrl: string) {
+export async function insertWorksheetStepProblem(
+  stepId: string,
+  questionNumber: number,
+  questionImageUrl: string,
+  metadata?: { skill?: string | null; difficulty?: string | null; category?: string | null },
+) {
   const rows = await sql`
-    INSERT INTO worksheet_step_problems (step_id, question_number, question_image_url)
-    VALUES (${stepId}, ${questionNumber}, ${questionImageUrl})
+    INSERT INTO worksheet_step_problems
+      (step_id, question_number, question_image_url, skill, difficulty, category)
+    VALUES (
+      ${stepId}, ${questionNumber}, ${questionImageUrl},
+      ${metadata?.skill ?? null}, ${metadata?.difficulty ?? null}, ${metadata?.category ?? null}
+    )
+    RETURNING *
+  `;
+  return rows[0];
+}
+
+export async function updateWorksheetStepProblemMetadata(
+  problemId: string,
+  fields: { skill?: string | null; difficulty?: string | null; category?: string | null },
+) {
+  const rows = await sql`
+    UPDATE worksheet_step_problems
+    SET skill      = ${fields.skill      ?? null},
+        difficulty = ${fields.difficulty ?? null},
+        category   = ${fields.category   ?? null}
+    WHERE id = ${problemId}
     RETURNING *
   `;
   return rows[0];
@@ -1379,4 +1403,336 @@ export async function saveBreakfastAnnotations(
     SET annotations = ${JSON.stringify(annotations)}
     WHERE id = ${assignmentId}
   `;
+}
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+export interface AnalyticsFilters {
+  source?: 'breakfast' | 'worksheets' | 'all';
+  studentId?: string | null;
+  category?: string | null;
+  dateStart?: string | null;
+  dateEnd?: string | null;
+}
+
+/** Builds dynamic WHERE clause + positional params for analytics filters.
+ *  The caller is responsible for inlining the UNION CTE in their query.
+ */
+function buildAnalyticsCte(filters: AnalyticsFilters) {
+  const params: unknown[] = [];
+  const conditions: string[] = [];
+
+  if (filters.studentId) {
+    params.push(filters.studentId);
+    conditions.push(`student_id = $${params.length}`);
+  }
+
+  if (filters.category) {
+    params.push(filters.category);
+    conditions.push(`category = $${params.length}`);
+  }
+
+  if (filters.dateStart) {
+    params.push(filters.dateStart);
+    conditions.push(`submitted_at >= $${params.length}::timestamptz`);
+  }
+
+  if (filters.dateEnd) {
+    params.push(filters.dateEnd);
+    conditions.push(`submitted_at < ($${params.length}::timestamptz + interval '1 day')`);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  return { whereClause, params };
+}
+
+export async function getAnalyticsSummary(filters: AnalyticsFilters): Promise<{
+  total_attempts: number;
+  correct_count: number;
+  overall_accuracy: number;
+  most_missed_skill: string | null;
+  most_missed_difficulty: string | null;
+}> {
+  const { whereClause, params } = buildAnalyticsCte(filters);
+  const sourceFilter =
+    filters.source === 'breakfast'
+      ? "WHERE source = 'breakfast'"
+      : filters.source === 'worksheets'
+        ? "WHERE source = 'worksheet'"
+        : '';
+
+  const query = `
+    WITH combined AS (
+      SELECT sbr.student_id, sbr.is_correct, sbr.submitted_at,
+             bp.skill, bp.difficulty, bp.category, 'breakfast' AS source
+      FROM student_breakfast_responses sbr
+      JOIN breakfast_problems bp ON bp.id = sbr.problem_id
+      UNION ALL
+      SELECT wsr.student_id,
+             (wsr.selected_answer = wsp.correct_answer) AS is_correct,
+             wsr.updated_at AS submitted_at,
+             wsp.skill, wsp.difficulty, wsp.category, 'worksheet' AS source
+      FROM worksheet_step_responses wsr
+      JOIN worksheet_step_problems wsp
+        ON wsp.step_id = wsr.step_id
+       AND wsp.question_number = wsr.question_number
+      WHERE wsr.selected_answer IS NOT NULL
+        AND wsp.question_type = 'multiple_choice'
+        AND wsp.correct_answer IS NOT NULL
+    ),
+    filtered AS (
+      SELECT * FROM combined
+      ${sourceFilter}
+    ),
+    stats AS (
+      SELECT
+        COUNT(*)::int                                     AS total_attempts,
+        SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct_count
+      FROM filtered
+      ${whereClause}
+    ),
+    missed_skill AS (
+      SELECT skill
+      FROM filtered
+      ${whereClause ? whereClause + ' AND' : 'WHERE'} skill IS NOT NULL
+      GROUP BY skill
+      HAVING COUNT(*) >= 3
+      ORDER BY SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::float / COUNT(*) ASC
+      LIMIT 1
+    ),
+    missed_diff AS (
+      SELECT difficulty
+      FROM filtered
+      ${whereClause ? whereClause + ' AND' : 'WHERE'} difficulty IS NOT NULL
+      GROUP BY difficulty
+      ORDER BY SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::float / COUNT(*) ASC
+      LIMIT 1
+    )
+    SELECT
+      s.total_attempts,
+      s.correct_count,
+      CASE WHEN s.total_attempts = 0 THEN 0
+           ELSE ROUND((s.correct_count::float / s.total_attempts * 100)::numeric, 1)
+      END AS overall_accuracy,
+      ms.skill      AS most_missed_skill,
+      md.difficulty AS most_missed_difficulty
+    FROM stats s
+    LEFT JOIN missed_skill ms ON true
+    LEFT JOIN missed_diff  md ON true
+  `;
+
+  const rows = await (sql as unknown as SqlProxy).query(query, params);
+  const r = rows[0] ?? {};
+  return {
+    total_attempts: (r.total_attempts as number) ?? 0,
+    correct_count: (r.correct_count as number) ?? 0,
+    overall_accuracy: Number(r.overall_accuracy ?? 0),
+    most_missed_skill: (r.most_missed_skill as string | null) ?? null,
+    most_missed_difficulty: (r.most_missed_difficulty as string | null) ?? null,
+  };
+}
+
+export interface SkillRow {
+  skill: string;
+  category: string | null;
+  total_attempts: number;
+  correct_count: number;
+  accuracy_pct: number;
+  unique_student_count: number;
+}
+
+export async function getAnalyticsBySkill(filters: AnalyticsFilters): Promise<SkillRow[]> {
+  const { whereClause, params } = buildAnalyticsCte(filters);
+  const sourceWhere =
+    filters.source === 'breakfast'
+      ? "source = 'breakfast'"
+      : filters.source === 'worksheets'
+        ? "source = 'worksheet'"
+        : null;
+
+  const combinedWhere = [
+    'skill IS NOT NULL',
+    sourceWhere,
+    ...(whereClauses(whereClause)),
+  ]
+    .filter(Boolean)
+    .join(' AND ');
+
+  const query = `
+    WITH combined AS (
+      SELECT sbr.student_id, sbr.is_correct, sbr.submitted_at,
+             bp.skill, bp.difficulty, bp.category, 'breakfast' AS source
+      FROM student_breakfast_responses sbr
+      JOIN breakfast_problems bp ON bp.id = sbr.problem_id
+      UNION ALL
+      SELECT wsr.student_id,
+             (wsr.selected_answer = wsp.correct_answer) AS is_correct,
+             wsr.updated_at AS submitted_at,
+             wsp.skill, wsp.difficulty, wsp.category, 'worksheet' AS source
+      FROM worksheet_step_responses wsr
+      JOIN worksheet_step_problems wsp
+        ON wsp.step_id = wsr.step_id
+       AND wsp.question_number = wsr.question_number
+      WHERE wsr.selected_answer IS NOT NULL
+        AND wsp.question_type = 'multiple_choice'
+        AND wsp.correct_answer IS NOT NULL
+    )
+    SELECT
+      skill,
+      MAX(category) AS category,
+      COUNT(*)::int                                     AS total_attempts,
+      SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct_count,
+      ROUND((SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::float / COUNT(*) * 100)::numeric, 1) AS accuracy_pct,
+      COUNT(DISTINCT student_id)::int                   AS unique_student_count
+    FROM combined
+    ${combinedWhere ? 'WHERE ' + combinedWhere : ''}
+    GROUP BY skill
+    ORDER BY total_attempts DESC
+  `;
+
+  const rows = await (sql as unknown as SqlProxy).query(query, params);
+  return rows.map((r) => ({
+    skill: r.skill as string,
+    category: (r.category as string | null) ?? null,
+    total_attempts: r.total_attempts as number,
+    correct_count: r.correct_count as number,
+    accuracy_pct: Number(r.accuracy_pct),
+    unique_student_count: r.unique_student_count as number,
+  }));
+}
+
+export interface DifficultyRow {
+  difficulty: string;
+  total_attempts: number;
+  correct_count: number;
+  accuracy_pct: number;
+}
+
+export async function getAnalyticsByDifficulty(filters: AnalyticsFilters): Promise<DifficultyRow[]> {
+  const { whereClause, params } = buildAnalyticsCte(filters);
+  const sourceWhere =
+    filters.source === 'breakfast'
+      ? "source = 'breakfast'"
+      : filters.source === 'worksheets'
+        ? "source = 'worksheet'"
+        : null;
+
+  const combinedWhere = [
+    'difficulty IS NOT NULL',
+    sourceWhere,
+    ...(whereClauses(whereClause)),
+  ]
+    .filter(Boolean)
+    .join(' AND ');
+
+  const query = `
+    WITH combined AS (
+      SELECT sbr.student_id, sbr.is_correct, sbr.submitted_at,
+             bp.skill, bp.difficulty, bp.category, 'breakfast' AS source
+      FROM student_breakfast_responses sbr
+      JOIN breakfast_problems bp ON bp.id = sbr.problem_id
+      UNION ALL
+      SELECT wsr.student_id,
+             (wsr.selected_answer = wsp.correct_answer) AS is_correct,
+             wsr.updated_at AS submitted_at,
+             wsp.skill, wsp.difficulty, wsp.category, 'worksheet' AS source
+      FROM worksheet_step_responses wsr
+      JOIN worksheet_step_problems wsp
+        ON wsp.step_id = wsr.step_id
+       AND wsp.question_number = wsr.question_number
+      WHERE wsr.selected_answer IS NOT NULL
+        AND wsp.question_type = 'multiple_choice'
+        AND wsp.correct_answer IS NOT NULL
+    )
+    SELECT
+      difficulty,
+      COUNT(*)::int                                     AS total_attempts,
+      SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct_count,
+      ROUND((SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::float / COUNT(*) * 100)::numeric, 1) AS accuracy_pct
+    FROM combined
+    ${combinedWhere ? 'WHERE ' + combinedWhere : ''}
+    GROUP BY difficulty
+    ORDER BY
+      CASE difficulty
+        WHEN '1-2' THEN 1
+        WHEN '3'   THEN 2
+        WHEN '4-5' THEN 3
+        ELSE 4
+      END
+  `;
+
+  const rows = await (sql as unknown as SqlProxy).query(query, params);
+  return rows.map((r) => ({
+    difficulty: r.difficulty as string,
+    total_attempts: r.total_attempts as number,
+    correct_count: r.correct_count as number,
+    accuracy_pct: Number(r.accuracy_pct),
+  }));
+}
+
+export interface WeeklyRow {
+  week_start: string;
+  total_attempts: number;
+  correct_count: number;
+  accuracy_pct: number;
+}
+
+export async function getAnalyticsOverTime(filters: AnalyticsFilters): Promise<WeeklyRow[]> {
+  const { whereClause, params } = buildAnalyticsCte(filters);
+  const sourceWhere =
+    filters.source === 'breakfast'
+      ? "source = 'breakfast'"
+      : filters.source === 'worksheets'
+        ? "source = 'worksheet'"
+        : null;
+
+  const combinedWhere = [sourceWhere, ...(whereClauses(whereClause))]
+    .filter(Boolean)
+    .join(' AND ');
+
+  const query = `
+    WITH combined AS (
+      SELECT sbr.student_id, sbr.is_correct, sbr.submitted_at,
+             bp.skill, bp.difficulty, bp.category, 'breakfast' AS source
+      FROM student_breakfast_responses sbr
+      JOIN breakfast_problems bp ON bp.id = sbr.problem_id
+      UNION ALL
+      SELECT wsr.student_id,
+             (wsr.selected_answer = wsp.correct_answer) AS is_correct,
+             wsr.updated_at AS submitted_at,
+             wsp.skill, wsp.difficulty, wsp.category, 'worksheet' AS source
+      FROM worksheet_step_responses wsr
+      JOIN worksheet_step_problems wsp
+        ON wsp.step_id = wsr.step_id
+       AND wsp.question_number = wsr.question_number
+      WHERE wsr.selected_answer IS NOT NULL
+        AND wsp.question_type = 'multiple_choice'
+        AND wsp.correct_answer IS NOT NULL
+    )
+    SELECT
+      date_trunc('week', submitted_at)::date::text     AS week_start,
+      COUNT(*)::int                                     AS total_attempts,
+      SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::int AS correct_count,
+      ROUND((SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::float / COUNT(*) * 100)::numeric, 1) AS accuracy_pct
+    FROM combined
+    ${combinedWhere ? 'WHERE ' + combinedWhere : ''}
+    GROUP BY week_start
+    ORDER BY week_start ASC
+  `;
+
+  const rows = await (sql as unknown as SqlProxy).query(query, params);
+  return rows.map((r) => ({
+    week_start: r.week_start as string,
+    total_attempts: r.total_attempts as number,
+    correct_count: r.correct_count as number,
+    accuracy_pct: Number(r.accuracy_pct),
+  }));
+}
+
+/** Extracts raw condition strings from a WHERE clause like "WHERE a = $1 AND b = $2".
+ *  Returns an array of individual conditions (without the leading WHERE). */
+function whereClauses(whereClause: string): string[] {
+  if (!whereClause.trim()) return [];
+  return whereClause.replace(/^\s*WHERE\s+/i, '').split(/\s+AND\s+/i);
 }

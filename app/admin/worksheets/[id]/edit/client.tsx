@@ -396,6 +396,7 @@ function PdfImportTab({
   const [editingPageNav, setEditingPageNav] = useState(false);
   const [pageNavInput, setPageNavInput] = useState('');
   const [akEdits, setAkEdits] = useState<Record<number, { letter: string; expUrls: string[]; questionType: 'multiple_choice' | 'open_ended'; acceptedAnswers: string }>>({});
+  const [metaEdits, setMetaEdits] = useState<Record<string, { skill?: string; difficulty?: string; category?: string }>>({});
   const [akCropRect, setAkCropRect] = useState<CropRect | null>(null);
   const [akDragStart, setAkDragStart] = useState<{ x: number; y: number } | null>(null);
   const [savingAk, setSavingAk] = useState<number | null>(null);
@@ -763,7 +764,33 @@ function PdfImportTab({
           return updated;
         }),
       );
-      onProblemsChange(problems.map((p) => results.find((u) => u.id === p.id) ?? p));
+      // Save metadata edits for problems that have pending changes
+      const metaUpdates = await Promise.all(
+        problems
+          .filter((p) => metaEdits[p.id] !== undefined)
+          .map(async (p) => {
+            const meta = metaEdits[p.id];
+            const res = await fetch(`/api/admin/worksheets/${wsId}/steps/${stepId}/problems`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                problemId: p.id,
+                skill: meta?.skill ?? p.skill ?? null,
+                difficulty: meta?.difficulty ?? p.difficulty ?? null,
+                category: meta?.category ?? p.category ?? null,
+              }),
+            });
+            if (!res.ok) return null;
+            const { problem: updated } = await res.json() as { problem: WsProblem };
+            return updated;
+          }),
+      );
+      const allUpdated = [
+        ...results,
+        ...metaUpdates.filter((u): u is WsProblem => u !== null),
+      ];
+      onProblemsChange(problems.map((p) => allUpdated.find((u) => u.id === p.id) ?? p));
+      setMetaEdits({});
       toast.success(`Saved ${results.length} answers`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Save failed');
@@ -1545,6 +1572,49 @@ function PdfImportTab({
                         </>
                       )}
                     </div>
+
+                    {/* ── Problem Metadata (skill / difficulty / category) ── */}
+                    <div style={{ borderTop: '1px solid var(--fog)', paddingTop: 14 }}>
+                      <p style={sectionHead}>Problem Metadata</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div>
+                          <label style={labelStyle}>Category</label>
+                          <select
+                            value={metaEdits[akProblem.id]?.category ?? akProblem.category ?? ''}
+                            onChange={(e) => setMetaEdits((prev) => ({ ...prev, [akProblem.id]: { ...prev[akProblem.id], category: e.target.value || undefined } }))}
+                            style={inputStyle}
+                          >
+                            <option value="">— select —</option>
+                            <option value="Math">Math</option>
+                            <option value="Reading and Writing">Reading and Writing</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Difficulty</label>
+                          <select
+                            value={metaEdits[akProblem.id]?.difficulty ?? akProblem.difficulty ?? ''}
+                            onChange={(e) => setMetaEdits((prev) => ({ ...prev, [akProblem.id]: { ...prev[akProblem.id], difficulty: e.target.value || undefined } }))}
+                            style={inputStyle}
+                          >
+                            <option value="">— select —</option>
+                            <option value="1-2">1–2 (Easy)</option>
+                            <option value="3">3 (Medium)</option>
+                            <option value="4-5">4–5 (Hard)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Skill</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Linear Functions"
+                            value={metaEdits[akProblem.id]?.skill ?? akProblem.skill ?? ''}
+                            onChange={(e) => setMetaEdits((prev) => ({ ...prev, [akProblem.id]: { ...prev[akProblem.id], skill: e.target.value } }))}
+                            style={inputStyle}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     {(() => {
                       const expUrls = akEdits[akProblem.question_number]?.expUrls ?? (akProblem.explanation_image_urls?.length ? akProblem.explanation_image_urls : (akProblem.explanation_image_url ? [akProblem.explanation_image_url] : []));
                       if (expUrls.length === 0) return null;

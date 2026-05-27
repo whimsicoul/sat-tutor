@@ -25,6 +25,9 @@ export interface WsProblem {
   answer_box_width: number | null;
   answer_box_height: number | null;
   answer_box_bottom_padding: number | null;
+  skill: string | null;
+  difficulty: string | null;
+  category: string | null;
 }
 
 export interface WsStep {

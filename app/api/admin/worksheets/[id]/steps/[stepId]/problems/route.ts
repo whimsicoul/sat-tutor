@@ -5,6 +5,7 @@ import {
   insertWorksheetStepProblem,
   deleteWorksheetStepProblem,
   updateWorksheetStepProblemAnswerKey,
+  updateWorksheetStepProblemMetadata,
 } from '@/lib/db';
 
 async function requireAdmin() {
@@ -28,11 +29,16 @@ export async function POST(
 ) {
   if (!await requireAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { stepId } = await params;
-  const { questionNumber, questionImageUrl } = await req.json() as {
+  const { questionNumber, questionImageUrl, skill, difficulty, category } = await req.json() as {
     questionNumber: number;
     questionImageUrl: string;
+    skill?: string | null;
+    difficulty?: string | null;
+    category?: string | null;
   };
-  const problem = await insertWorksheetStepProblem(stepId, questionNumber, questionImageUrl);
+  const problem = await insertWorksheetStepProblem(stepId, questionNumber, questionImageUrl, {
+    skill, difficulty, category,
+  });
   return NextResponse.json({ problem }, { status: 201 });
 }
 
@@ -53,10 +59,16 @@ export async function PATCH(
 ) {
   if (!await requireAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { stepId } = await params;
-  const { questionNumber, correctAnswer, explanationImageUrl, explanationImageUrls, questionType, acceptedAnswers, answerBoxX, answerBoxY, answerBoxWidth, answerBoxHeight, answerBoxBottomPadding } = await req.json() as {
-    questionNumber: number;
-    correctAnswer: string | null;
-    explanationImageUrl: string | null;
+  const body = await req.json() as {
+    // metadata update fields
+    problemId?: string;
+    skill?: string | null;
+    difficulty?: string | null;
+    category?: string | null;
+    // answer key update fields
+    questionNumber?: number;
+    correctAnswer?: string | null;
+    explanationImageUrl?: string | null;
     explanationImageUrls?: string[];
     questionType?: 'multiple_choice' | 'open_ended';
     acceptedAnswers?: string[];
@@ -66,10 +78,27 @@ export async function PATCH(
     answerBoxHeight?: number | null;
     answerBoxBottomPadding?: number | null;
   };
+
+  // Metadata-only update (problemId present + at least one metadata field)
+  if (body.problemId && ('skill' in body || 'difficulty' in body || 'category' in body)) {
+    const problem = await updateWorksheetStepProblemMetadata(body.problemId, {
+      skill: body.skill ?? null,
+      difficulty: body.difficulty ?? null,
+      category: body.category ?? null,
+    });
+    return NextResponse.json({ problem });
+  }
+
+  // Answer key update (existing behaviour)
+  const {
+    questionNumber, correctAnswer, explanationImageUrl, explanationImageUrls,
+    questionType, acceptedAnswers, answerBoxX, answerBoxY, answerBoxWidth,
+    answerBoxHeight, answerBoxBottomPadding,
+  } = body;
   const resolvedUrls = explanationImageUrls ?? (explanationImageUrl ? [explanationImageUrl] : []);
   const hasAnswerBox = answerBoxX !== undefined;
   const problem = await updateWorksheetStepProblemAnswerKey(
-    stepId, questionNumber, correctAnswer, explanationImageUrl,
+    stepId, questionNumber!, correctAnswer ?? null, explanationImageUrl ?? null,
     questionType ?? 'multiple_choice',
     acceptedAnswers ?? [],
     answerBoxX ?? null,
