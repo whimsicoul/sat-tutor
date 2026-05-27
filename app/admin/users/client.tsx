@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
 import { Plus, Pencil, Trash2, UserX, UserCheck, Eye, EyeOff } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -77,7 +76,6 @@ export default function UsersClient({
   tutors: TutorOption[];
 }) {
   const [users, setUsers] = useState<AdminUser[]>(initial);
-  const [filter, setFilter] = useState<'all' | 'tutor' | 'student'>('all');
   const [addOpen, setAddOpen] = useState(false);
   const [editUser, setEditUser] = useState<AdminUser | null>(null);
   const [deleteUser, setDeleteUser] = useState<AdminUser | null>(null);
@@ -88,7 +86,12 @@ export default function UsersClient({
   const [showAddPassword, setShowAddPassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
 
-  const filtered = users.filter((u) => filter === 'all' || u.role === filter);
+  // Sort newest-first within each group
+  const sortedUsers = [...users].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+  const tutorList = sortedUsers.filter((u) => u.role === 'tutor');
+  const studentList = sortedUsers.filter((u) => u.role === 'student');
 
   /** Set the tutor assignment for a student. Removes any existing then creates new. */
   async function applyTutorAssignment(studentId: string, oldTutorId: string | null | undefined, newTutorId: string) {
@@ -221,25 +224,68 @@ export default function UsersClient({
     }
   }
 
-  const filterTabs: Array<'all' | 'tutor' | 'student'> = ['all', 'tutor', 'student'];
+  /** Reusable row action buttons */
+  const rowActions = (user: AdminUser) => (
+    <div style={{ display: 'flex', gap: 6 }}>
+      <button
+        onClick={() => {
+          setEditUser(user);
+          setEditForm({ name: user.name, email: user.email, role: user.role, newPassword: '', tutorId: user.tutor_id ?? '' });
+          setShowEditPassword(false);
+        }}
+        title="Edit"
+        style={{
+          background: 'var(--frost)', border: '1px solid var(--fog)',
+          borderRadius: 8, padding: '6px 8px', cursor: 'pointer',
+          color: 'var(--slate)', transition: 'all 0.15s',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sky-pale)'; e.currentTarget.style.color = 'var(--sky-deeper)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--frost)'; e.currentTarget.style.color = 'var(--slate)'; }}
+      >
+        <Pencil size={14} />
+      </button>
+      <button
+        onClick={() => handleToggleActive(user)}
+        title={user.active ? 'Deactivate' : 'Reactivate'}
+        style={{
+          background: 'var(--frost)', border: '1px solid var(--fog)',
+          borderRadius: 8, padding: '6px 8px', cursor: 'pointer',
+          color: user.active ? 'var(--rose-deeper)' : 'var(--sky-deeper)',
+          transition: 'all 0.15s',
+        }}
+      >
+        {user.active ? <UserX size={14} /> : <UserCheck size={14} />}
+      </button>
+      <button
+        onClick={() => setDeleteUser(user)}
+        title="Delete"
+        style={{
+          background: '#FEF2F2', border: '1px solid #FECACA',
+          borderRadius: 8, padding: '6px 8px', cursor: 'pointer',
+          color: '#EF4444', transition: 'all 0.15s',
+        }}
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
 
-  // Table headers — show Tutor column only for student filter or all
-  const showTutorCol = filter === 'all' || filter === 'student';
-  const headers = ['Name', 'Email', 'Role', ...(showTutorCol ? ['Tutor'] : []), 'Created', 'Actions'];
+  const thStyle: React.CSSProperties = {
+    textAlign: 'left', padding: '12px 20px', fontSize: 11, fontWeight: 700,
+    color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '0.08em',
+    fontFamily: "'Syne', sans-serif",
+  };
 
   return (
     <div style={{ padding: '40px 48px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 40 }}>
         <div>
           <h1
             style={{
               fontFamily: "'Cormorant Garamond', serif",
-              fontSize: 34,
-              fontWeight: 700,
-              color: 'var(--charcoal)',
-              margin: 0,
-              letterSpacing: '-0.025em',
+              fontSize: 34, fontWeight: 700, color: 'var(--charcoal)',
+              margin: 0, letterSpacing: '-0.025em',
             }}
           >
             Users
@@ -248,196 +294,138 @@ export default function UsersClient({
             Manage tutor and student accounts
           </p>
         </div>
-        <button
-          onClick={() => setAddOpen(true)}
-          className="btn-rose"
-          style={{ gap: 8 }}
-        >
+        <button onClick={() => setAddOpen(true)} className="btn-rose" style={{ gap: 8 }}>
           <Plus size={16} /> Add User
         </button>
       </div>
 
-      {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
-        {filterTabs.map((tab) => {
-          const active = filter === tab;
-          return (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              style={{
-                padding: '7px 16px',
-                borderRadius: 20,
-                border: active ? '1px solid rgba(224,166,175,0.4)' : '1px solid var(--fog)',
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: active ? 600 : 400,
-                background: active ? 'rgba(224,166,175,0.14)' : 'var(--white)',
-                color: active ? 'var(--rose-deeper)' : 'var(--slate)',
-                transition: 'all 0.15s',
-                textTransform: 'capitalize',
-                fontFamily: "'Syne', sans-serif",
-              }}
-            >
-              {tab}{' '}
-              <span style={{ opacity: 0.65 }}>
-                ({tab === 'all' ? users.length : users.filter((u) => u.role === tab).length})
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Table */}
-      <div
-        style={{
-          background: 'var(--white)',
-          borderRadius: 14,
-          border: '1px solid var(--fog)',
-          boxShadow: '0 2px 8px rgba(26,29,35,0.04)',
-          overflow: 'hidden',
-        }}
-      >
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--fog)', background: 'var(--frost)' }}>
-              {headers.map((h) => (
-                <th
-                  key={h}
-                  style={{
-                    textAlign: 'left',
-                    padding: '12px 20px',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: 'var(--mist)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                    fontFamily: "'Syne', sans-serif",
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={headers.length}
-                  style={{
-                    textAlign: 'center',
-                    padding: 40,
-                    color: 'var(--mist)',
-                    fontSize: 14,
-                    fontFamily: "'Syne', sans-serif",
-                  }}
-                >
-                  No users found
-                </td>
+      {/* ── Tutors Section ── */}
+      <div style={{ marginBottom: 36 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <h2 style={{
+            fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 700,
+            color: 'var(--charcoal)', margin: 0, letterSpacing: '-0.02em',
+          }}>
+            Tutors
+          </h2>
+          <span style={{
+            fontSize: 12, fontWeight: 600, color: 'var(--sky-deeper)',
+            background: 'rgba(168,203,222,0.18)', padding: '2px 10px',
+            borderRadius: 20, fontFamily: "'Syne', sans-serif",
+          }}>
+            {tutorList.length}
+          </span>
+        </div>
+        <div style={{
+          background: 'var(--white)', borderRadius: 14, border: '1px solid var(--fog)',
+          boxShadow: '0 2px 8px rgba(26,29,35,0.04)', overflow: 'hidden',
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--fog)', background: 'var(--frost)' }}>
+                <th style={thStyle}>Name</th>
+                <th style={thStyle}>Email</th>
+                <th style={thStyle}>Status</th>
+                <th style={thStyle}>Actions</th>
               </tr>
-            ) : (
-              filtered.map((user, i) => (
-                <tr
-                  key={user.id}
-                  style={{
-                    borderBottom: i < filtered.length - 1 ? '1px solid var(--fog)' : 'none',
-                    opacity: user.active ? 1 : 0.5,
-                    transition: 'background 0.1s',
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'var(--frost)'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
-                >
-                  <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 600, color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif" }}>
-                    {user.name}
-                  </td>
-                  <td style={{ padding: '14px 20px', fontSize: 14, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
-                    {user.email}
-                  </td>
-                  <td style={{ padding: '14px 20px' }}>{roleBadge(user.role, user.active)}</td>
-                  {showTutorCol && (
-                    <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
-                      {user.role === 'student' ? (
-                        user.tutor_name ? (
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 5,
-                            background: 'rgba(168,203,222,0.15)', color: 'var(--sky-deeper)',
-                            padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500,
-                            fontFamily: "'Syne', sans-serif",
-                          }}>
-                            {user.tutor_name}
-                          </span>
-                        ) : (
-                          <span style={{ color: 'var(--cloud)', fontSize: 12, fontStyle: 'italic' }}>unassigned</span>
-                        )
-                      ) : (
-                        <span style={{ color: 'var(--cloud)', fontSize: 12 }}>—</span>
-                      )}
-                    </td>
-                  )}
-                  <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--mist)', fontFamily: "'Syne', sans-serif" }}>
-                    {format(new Date(user.created_at), 'MMM d, yyyy')}
-                  </td>
-                  <td style={{ padding: '14px 20px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button
-                        onClick={() => {
-                          setEditUser(user);
-                          setEditForm({ name: user.name, email: user.email, role: user.role, newPassword: '', tutorId: user.tutor_id ?? '' });
-                          setShowEditPassword(false);
-                        }}
-                        title="Edit"
-                        style={{
-                          background: 'var(--frost)',
-                          border: '1px solid var(--fog)',
-                          borderRadius: 8,
-                          padding: '6px 8px',
-                          cursor: 'pointer',
-                          color: 'var(--slate)',
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--sky-pale)'; e.currentTarget.style.color = 'var(--sky-deeper)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--frost)'; e.currentTarget.style.color = 'var(--slate)'; }}
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleToggleActive(user)}
-                        title={user.active ? 'Deactivate' : 'Reactivate'}
-                        style={{
-                          background: 'var(--frost)',
-                          border: '1px solid var(--fog)',
-                          borderRadius: 8,
-                          padding: '6px 8px',
-                          cursor: 'pointer',
-                          color: user.active ? 'var(--rose-deeper)' : 'var(--sky-deeper)',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {user.active ? <UserX size={14} /> : <UserCheck size={14} />}
-                      </button>
-                      <button
-                        onClick={() => setDeleteUser(user)}
-                        title="Delete"
-                        style={{
-                          background: '#FEF2F2',
-                          border: '1px solid #FECACA',
-                          borderRadius: 8,
-                          padding: '6px 8px',
-                          cursor: 'pointer',
-                          color: '#EF4444',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+            </thead>
+            <tbody>
+              {tutorList.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: 40, color: 'var(--mist)', fontSize: 14, fontFamily: "'Syne', sans-serif" }}>
+                    No tutors yet
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                tutorList.map((user, i) => (
+                  <tr
+                    key={user.id}
+                    style={{ borderBottom: i < tutorList.length - 1 ? '1px solid var(--fog)' : 'none', opacity: user.active ? 1 : 0.5, transition: 'background 0.1s' }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'var(--frost)'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
+                  >
+                    <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 600, color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif" }}>{user.name}</td>
+                    <td style={{ padding: '14px 20px', fontSize: 14, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>{user.email}</td>
+                    <td style={{ padding: '14px 20px' }}>{roleBadge(user.role, user.active)}</td>
+                    <td style={{ padding: '14px 20px' }}>{rowActions(user)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Students Section ── */}
+      <div style={{ marginBottom: 36 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <h2 style={{
+            fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 700,
+            color: 'var(--charcoal)', margin: 0, letterSpacing: '-0.02em',
+          }}>
+            Students
+          </h2>
+          <span style={{
+            fontSize: 12, fontWeight: 600, color: 'var(--rose-deeper)',
+            background: 'rgba(224,166,175,0.18)', padding: '2px 10px',
+            borderRadius: 20, fontFamily: "'Syne', sans-serif",
+          }}>
+            {studentList.length}
+          </span>
+        </div>
+        <div style={{
+          background: 'var(--white)', borderRadius: 14, border: '1px solid var(--fog)',
+          boxShadow: '0 2px 8px rgba(26,29,35,0.04)', overflow: 'hidden',
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--fog)', background: 'var(--frost)' }}>
+                <th style={thStyle}>Name</th>
+                <th style={thStyle}>Email</th>
+                <th style={thStyle}>Status</th>
+                <th style={thStyle}>Tutor</th>
+                <th style={thStyle}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {studentList.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: 40, color: 'var(--mist)', fontSize: 14, fontFamily: "'Syne', sans-serif" }}>
+                    No students yet
+                  </td>
+                </tr>
+              ) : (
+                studentList.map((user, i) => (
+                  <tr
+                    key={user.id}
+                    style={{ borderBottom: i < studentList.length - 1 ? '1px solid var(--fog)' : 'none', opacity: user.active ? 1 : 0.5, transition: 'background 0.1s' }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'var(--frost)'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
+                  >
+                    <td style={{ padding: '14px 20px', fontSize: 14, fontWeight: 600, color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif" }}>{user.name}</td>
+                    <td style={{ padding: '14px 20px', fontSize: 14, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>{user.email}</td>
+                    <td style={{ padding: '14px 20px' }}>{roleBadge(user.role, user.active)}</td>
+                    <td style={{ padding: '14px 20px', fontSize: 13, color: 'var(--slate)', fontFamily: "'Syne', sans-serif" }}>
+                      {user.tutor_name ? (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          background: 'rgba(168,203,222,0.15)', color: 'var(--sky-deeper)',
+                          padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500,
+                          fontFamily: "'Syne', sans-serif",
+                        }}>
+                          {user.tutor_name}
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--cloud)', fontSize: 12, fontStyle: 'italic' }}>unassigned</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>{rowActions(user)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Add user dialog */}

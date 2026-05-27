@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Plus, Trash2, X, BarChart2, FileText, GraduationCap } from 'lucide-react';
+import { Plus, Trash2, X, BarChart2, FileText, GraduationCap, Pencil, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { UploadButton } from '@uploadthing/react';
 import type { OurFileRouter } from '@/lib/uploadthing';
@@ -43,6 +43,12 @@ export default function AdminTestResultsClient({
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Edit notes state
+  const [editingResult, setEditingResult] = useState<TestResultRow | null>(null);
+  const [editNotes, setEditNotes] = useState('');
+  const [editVisible, setEditVisible] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
 
   // SAT dates state
   const [satDates, setSatDates] = useState(initialSatDates);
@@ -127,6 +133,40 @@ export default function AdminTestResultsClient({
       toast.error('Failed to delete result.');
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  function openEdit(r: TestResultRow) {
+    setEditingResult(r);
+    setEditNotes(r.notes ?? '');
+    setEditVisible(r.notes_visible_to_student ?? false);
+  }
+
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingResult) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/admin/test-results/${editingResult.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: editNotes || null, notesVisibleToStudent: editVisible }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const updated = await res.json();
+      setResults((prev) =>
+        prev.map((r) =>
+          r.id === editingResult.id
+            ? { ...r, notes: updated.notes, notes_visible_to_student: updated.notes_visible_to_student }
+            : r
+        )
+      );
+      setEditingResult(null);
+      toast.success('Notes updated.');
+    } catch {
+      toast.error('Failed to save notes.');
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -289,11 +329,20 @@ export default function AdminTestResultsClient({
                   <td
                     style={{
                       padding: '12px 16px', color: 'var(--slate)',
-                      maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      maxWidth: 200,
                     }}
                     title={r.notes ?? undefined}
                   >
-                    {r.notes ?? '—'}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                        {r.notes ?? '—'}
+                      </span>
+                      {r.notes && (
+                        r.notes_visible_to_student
+                          ? <Eye size={12} title="Visible to student" style={{ color: 'var(--sky-deeper)', flexShrink: 0 }} />
+                          : <EyeOff size={12} title="Hidden from student" style={{ color: 'var(--mist)', flexShrink: 0 }} />
+                      )}
+                    </div>
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     {r.pdf_url ? (
@@ -310,19 +359,34 @@ export default function AdminTestResultsClient({
                     )}
                   </td>
                   <td style={{ padding: '12px 16px' }}>
-                    <button
-                      onClick={() => handleDelete(r.id)}
-                      disabled={deletingId === r.id}
-                      style={{
-                        background: 'none', border: 'none', cursor: deletingId === r.id ? 'not-allowed' : 'pointer',
-                        color: 'var(--mist)', padding: 4, borderRadius: 6,
-                        opacity: deletingId === r.id ? 0.5 : 1,
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--rose-deeper)'; e.currentTarget.style.background = 'var(--rose-ultra)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--mist)'; e.currentTarget.style.background = 'none'; }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <button
+                        onClick={() => openEdit(r)}
+                        title="Edit notes"
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: 'var(--mist)', padding: 4, borderRadius: 6,
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--sky-deeper)'; e.currentTarget.style.background = 'rgba(168,203,222,0.15)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--mist)'; e.currentTarget.style.background = 'none'; }}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(r.id)}
+                        disabled={deletingId === r.id}
+                        title="Delete result"
+                        style={{
+                          background: 'none', border: 'none', cursor: deletingId === r.id ? 'not-allowed' : 'pointer',
+                          color: 'var(--mist)', padding: 4, borderRadius: 6,
+                          opacity: deletingId === r.id ? 0.5 : 1,
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--rose-deeper)'; e.currentTarget.style.background = 'var(--rose-ultra)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--mist)'; e.currentTarget.style.background = 'none'; }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -422,6 +486,123 @@ export default function AdminTestResultsClient({
           </div>
         )}
       </div>
+
+      {/* Edit notes modal */}
+      {editingResult && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 50,
+            background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setEditingResult(null); }}
+        >
+          <div
+            className="portal-card"
+            style={{ width: '100%', maxWidth: 440, padding: 28 }}
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: 'rgba(168,203,222,0.18)', border: '1px solid rgba(168,203,222,0.3)' }}
+                >
+                  <Pencil className="h-3.5 w-3.5" style={{ color: 'var(--sky-deeper)' }} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
+                    Edit Notes
+                  </h2>
+                  <p className="text-xs" style={{ color: 'var(--mist)' }}>
+                    {editingResult.student_name} · {editingResult.test_name}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingResult(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mist)' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              {/* Notes textarea */}
+              <div>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+                  Notes
+                </label>
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Add observations or feedback…"
+                  rows={4}
+                  style={{ ...inputStyle, resize: 'vertical' }}
+                  onFocus={roseFocus}
+                  onBlur={roseBlur}
+                />
+              </div>
+
+              {/* Visibility toggle */}
+              <div>
+                <label className="block text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: 'var(--mist)' }}>
+                  Student Visibility
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditVisible(false)}
+                    style={{
+                      flex: 1, padding: '0.5rem', borderRadius: '0.5rem',
+                      fontSize: '0.8125rem', fontWeight: 600,
+                      fontFamily: "'Syne', sans-serif", cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      border: !editVisible ? '1px solid rgba(224,166,175,0.5)' : '1px solid var(--fog)',
+                      background: !editVisible ? 'var(--rose-ultra)' : 'var(--white)',
+                      color: !editVisible ? 'var(--rose-deeper)' : 'var(--mist)',
+                    }}
+                  >
+                    <EyeOff size={13} />
+                    Hidden from student
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditVisible(true)}
+                    style={{
+                      flex: 1, padding: '0.5rem', borderRadius: '0.5rem',
+                      fontSize: '0.8125rem', fontWeight: 600,
+                      fontFamily: "'Syne', sans-serif", cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      border: editVisible ? '1px solid rgba(168,203,222,0.5)' : '1px solid var(--fog)',
+                      background: editVisible ? 'rgba(168,203,222,0.18)' : 'var(--white)',
+                      color: editVisible ? 'var(--sky-deeper)' : 'var(--mist)',
+                    }}
+                  >
+                    <Eye size={13} />
+                    Visible to student
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={editSaving}
+                className="w-full flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold"
+                style={{
+                  background: editSaving ? 'var(--fog)' : 'var(--rose)',
+                  color: editSaving ? 'var(--mist)' : 'var(--charcoal)',
+                  border: 'none',
+                  cursor: editSaving ? 'not-allowed' : 'pointer',
+                  marginTop: 4,
+                }}
+              >
+                {editSaving ? 'Saving…' : 'Save Notes'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Add modal */}
       {showAdd && (

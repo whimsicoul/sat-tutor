@@ -20,6 +20,7 @@ export interface TestResultRow {
   math_score: number | null;
   reading_writing_score: number | null;
   notes: string | null;
+  notes_visible_to_student: boolean;
   pdf_url: string | null;
   score_type: string | null;
   act_english_score: number | null;
@@ -38,7 +39,7 @@ export default async function AdminTestResultsPage() {
     sql`
       SELECT tr.id, tr.student_id, u.name AS student_name,
              tr.test_name, tr.test_date, tr.total_score,
-             tr.math_score, tr.reading_writing_score, tr.notes, tr.pdf_url,
+             tr.math_score, tr.reading_writing_score, tr.notes, tr.notes_visible_to_student, tr.pdf_url,
              tr.score_type, tr.act_english_score, tr.act_reading_score, tr.act_science_score, tr.created_at
       FROM test_results tr
       JOIN users u ON u.id = tr.student_id

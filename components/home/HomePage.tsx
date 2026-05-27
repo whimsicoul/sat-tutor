@@ -134,12 +134,7 @@ export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRo
               </h2>
               <p className="text-base leading-relaxed mb-5" style={{ color: 'var(--slate)' }}>
                 At DC SAT Tutor, we believe every student deserves a customized path to their best
-                score. That starts before the first session: we compare ACT and SAT diagnostic
-                results, walk students through the structure of the test, and build a daily practice
-                rhythm that fits their life.
-              </p>
-              <p className="text-base leading-relaxed mb-10" style={{ color: 'var(--slate)' }}>
-                Every step in our program is designed to build genuine understanding — not just
+                score. Every step in our program is designed to build genuine understanding — not just
                 test-taking tricks. By the end, students leave better prepared for the SAT and
                 more confident as learners.
               </p>

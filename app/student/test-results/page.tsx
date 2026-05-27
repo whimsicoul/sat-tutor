@@ -11,6 +11,7 @@ interface TestResult {
   math_score: number | null;
   reading_writing_score: number | null;
   notes: string | null;
+  notes_visible_to_student: boolean;
   pdf_url: string | null;
   score_type: string | null;
   act_english_score: number | null;
@@ -25,7 +26,7 @@ export default async function StudentTestResultsPage() {
 
   const results = await sql`
     SELECT id, test_name, test_date, total_score, math_score, reading_writing_score,
-           notes, pdf_url, score_type, act_english_score, act_reading_score, act_science_score, created_at
+           notes, notes_visible_to_student, pdf_url, score_type, act_english_score, act_reading_score, act_science_score, created_at
     FROM test_results
     WHERE student_id = ${userId}
     ORDER BY test_date DESC
@@ -168,8 +169,8 @@ export default async function StudentTestResultsPage() {
                 )
               )}
 
-              {/* Notes */}
-              {r.notes && (
+              {/* Notes — only shown when admin has made them visible */}
+              {r.notes && r.notes_visible_to_student && (
                 <div
                   className="rounded-lg px-4 py-3"
                   style={{ background: 'var(--frost)', border: '1px solid var(--fog)' }}
