@@ -140,7 +140,8 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
     setStrokeCount(count);
     onStrokeCountChange?.(count);
     redrawAll();
-  }, [initialAnnotations, redrawAll, onStrokeCountChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount-only: initialAnnotations is stable server data; unstable deps caused infinite re-renders
 
   const triggerSave = useCallback((strokes: Annotations) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
