@@ -50,7 +50,6 @@ export async function PATCH(
       if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
       return NextResponse.json(updated);
     } catch (err) {
-      console.error('[PATCH /api/admin/sessions/[id]]', err);
       return NextResponse.json({ error: String(err) }, { status: 500 });
     }
   }
