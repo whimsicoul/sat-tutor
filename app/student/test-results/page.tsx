@@ -1,7 +1,8 @@
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
+import { satToAct, actToSat } from '@/lib/concordance';
 import { format } from 'date-fns';
-import { BarChart2, FileText } from 'lucide-react';
+import { BarChart2, FileText, ArrowLeftRight } from 'lucide-react';
 
 interface TestResult {
   id: string;
@@ -34,6 +35,29 @@ export default async function StudentTestResultsPage() {
 
   const rows = results as unknown as TestResult[];
 
+  const bestSat = rows
+    .filter(r => r.score_type === 'sat' && r.total_score != null)
+    .sort((a, b) => (b.total_score ?? 0) - (a.total_score ?? 0))[0] ?? null;
+
+  const bestAct = rows
+    .filter(r => r.score_type === 'act' && r.total_score != null)
+    .sort((a, b) => (b.total_score ?? 0) - (a.total_score ?? 0))[0] ?? null;
+
+  const showComparison = bestSat != null || bestAct != null;
+
+  let satEquivAct: number | null = null;
+  let actEquivSat: number | null = null;
+  let betterTest: 'sat' | 'act' | 'equal' | null = null;
+
+  if (bestSat && bestAct) {
+    satEquivAct = satToAct(bestSat.total_score!);
+    actEquivSat = actToSat(bestAct.total_score!);
+    const diff = (bestAct.total_score ?? 0) - satEquivAct;
+    if (diff > 1) betterTest = 'act';
+    else if (diff < -1) betterTest = 'sat';
+    else betterTest = 'equal';
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -43,6 +67,133 @@ export default async function StudentTestResultsPage() {
           Your practice test scores and progress over time.
         </p>
       </div>
+
+      {/* SAT vs ACT Comparison */}
+      {showComparison && (
+        <div className="portal-card p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: 'var(--rose-ultra)', border: '1px solid rgba(224,166,175,0.25)' }}
+            >
+              <ArrowLeftRight className="h-4 w-4" style={{ color: 'var(--rose-deeper)' }} />
+            </div>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
+              SAT vs ACT Comparison
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+            {/* SAT card */}
+            <div
+              className="rounded-xl p-4"
+              style={{
+                background: bestSat && betterTest === 'sat' ? 'rgba(224,166,175,0.15)' : 'var(--frost)',
+                border: bestSat && betterTest === 'sat'
+                  ? '1.5px solid rgba(224,166,175,0.5)'
+                  : '1px solid var(--fog)',
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--mist)' }}>SAT</span>
+                {betterTest === 'sat' && (
+                  <span
+                    className="text-xs font-semibold rounded-full px-2.5 py-0.5"
+                    style={{ background: 'var(--rose-ultra)', color: 'var(--rose-deeper)', border: '1px solid rgba(224,166,175,0.4)' }}
+                  >
+                    Stronger
+                  </span>
+                )}
+              </div>
+              {bestSat ? (
+                <>
+                  <p className="text-3xl font-bold mb-1" style={{ color: 'var(--charcoal)' }}>
+                    {bestSat.total_score}
+                    <span className="text-sm font-normal ml-1" style={{ color: 'var(--mist)' }}>/1600</span>
+                  </p>
+                  {satEquivAct != null && (
+                    <p className="text-xs" style={{ color: 'var(--slate)' }}>
+                      Equivalent ACT: <span className="font-semibold">{satEquivAct}</span>
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm" style={{ color: 'var(--mist)' }}>No SAT score on file yet.</p>
+              )}
+            </div>
+
+            {/* ACT card */}
+            <div
+              className="rounded-xl p-4"
+              style={{
+                background: bestAct && betterTest === 'act' ? 'rgba(168,203,222,0.15)' : 'var(--frost)',
+                border: bestAct && betterTest === 'act'
+                  ? '1.5px solid rgba(168,203,222,0.5)'
+                  : '1px solid var(--fog)',
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--mist)' }}>ACT</span>
+                {betterTest === 'act' && (
+                  <span
+                    className="text-xs font-semibold rounded-full px-2.5 py-0.5"
+                    style={{ background: 'rgba(168,203,222,0.2)', color: 'var(--sky-deeper)', border: '1px solid rgba(168,203,222,0.4)' }}
+                  >
+                    Stronger
+                  </span>
+                )}
+              </div>
+              {bestAct ? (
+                <>
+                  <p className="text-3xl font-bold mb-1" style={{ color: 'var(--charcoal)' }}>
+                    {bestAct.total_score}
+                    <span className="text-sm font-normal ml-1" style={{ color: 'var(--mist)' }}>/36</span>
+                  </p>
+                  {actEquivSat != null && (
+                    <p className="text-xs" style={{ color: 'var(--slate)' }}>
+                      Equivalent SAT: <span className="font-semibold">{actEquivSat}</span>
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm" style={{ color: 'var(--mist)' }}>No ACT score on file yet.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Recommendation banner */}
+          <div
+            className="rounded-lg px-4 py-3 text-sm"
+            style={{ background: 'var(--frost)', border: '1px solid var(--fog)', color: 'var(--slate)' }}
+          >
+            {betterTest === 'sat' && bestSat && satEquivAct != null && bestAct && (
+              <>
+                Your SAT score of <strong>{bestSat.total_score}</strong> is equivalent to an ACT of <strong>{satEquivAct}</strong>, which is higher than your actual ACT score of <strong>{bestAct.total_score}</strong>. You&apos;re performing relatively stronger on the <strong>SAT</strong>.
+              </>
+            )}
+            {betterTest === 'act' && bestAct && actEquivSat != null && bestSat && (
+              <>
+                Your ACT score of <strong>{bestAct.total_score}</strong> is equivalent to an SAT of <strong>{actEquivSat}</strong>, which is higher than your actual SAT score of <strong>{bestSat.total_score}</strong>. You&apos;re performing relatively stronger on the <strong>ACT</strong>.
+              </>
+            )}
+            {betterTest === 'equal' && bestSat && bestAct && (
+              <>
+                Your SAT and ACT scores are roughly equivalent on the concordance scale. Both tests suit you equally well.
+              </>
+            )}
+            {!bestSat && bestAct && (
+              <>
+                Once your SAT score is uploaded, this section will show you which test you&apos;re performing stronger on.
+              </>
+            )}
+            {bestSat && !bestAct && (
+              <>
+                Once your ACT score is uploaded, this section will show you which test you&apos;re performing stronger on.
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <div className="portal-card flex flex-col items-center justify-center py-20 text-center">
