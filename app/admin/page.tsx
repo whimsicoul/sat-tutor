@@ -45,7 +45,7 @@ export default async function AdminDashboardPage() {
   const quickActions = [
     { label: 'Add User', href: '/admin/users', description: 'Create a new tutor or student account' },
     { label: 'Schedule Session', href: '/admin/schedule', description: 'Propose a session or set recurring times' },
-    { label: 'Assign Tutor', href: '/admin/assignments', description: 'Pair a tutor with a student' },
+    { label: 'Assign Tutor', href: '/admin/users', description: 'Pair a tutor with a student' },
     { label: 'Worksheets', href: '/admin/worksheets', description: 'Build and assign multi-step worksheets' },
   ];
 

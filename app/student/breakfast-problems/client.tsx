@@ -1,17 +1,14 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { Coffee, CheckCircle, XCircle, Flag, Pencil } from 'lucide-react';
+import { Coffee, CheckCircle, XCircle, Flag, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import type { TodayAssignment } from './page';
-import AnnotationCanvas, { type AnnotationCanvasHandle } from '@/components/shared/AnnotationCanvas';
-import DraggableAnnotationToolbar from '@/components/shared/DraggableAnnotationToolbar';
+import AnnotationCanvas from '@/components/shared/AnnotationCanvas';
 import type { Annotations } from '@/types/annotations';
-
-type AnnotationTool = 'highlight' | 'pen' | 'eraser';
 
 const CHOICES = ['A', 'B', 'C', 'D'] as const;
 type Choice = (typeof CHOICES)[number];
@@ -29,13 +26,7 @@ export default function StudentBreakfastClient({
 }) {
   const alreadySubmitted = initial.length > 0 && initial.every((a) => a.submitted_at !== null);
 
-  const [annotationTool, setAnnotationTool] = useState<AnnotationTool>('highlight');
-  const [annotationSliderVal, setAnnotationSliderVal] = useState(5);
-  const [strokeCounts, setStrokeCounts] = useState<Record<number, number>>({});
-  const [showAnnotationToolbar, setShowAnnotationToolbar] = useState(false);
-  const canvasRefs = useRef<(AnnotationCanvasHandle | null)[]>([]);
-
-  const totalStrokeCount = Object.values(strokeCounts).reduce((s, n) => s + n, 0);
+  const [currentIdx, setCurrentIdx] = useState(0);
 
   const [answers, setAnswers] = useState<Record<string, Choice>>(() => {
     const pre: Record<string, Choice> = {};
@@ -68,6 +59,7 @@ export default function StudentBreakfastClient({
   const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set());
 
   const allAnswered = initial.length > 0 && initial.every((a) => answers[a.problem_id]);
+  const isLastProblem = currentIdx === initial.length - 1;
 
   async function handleSubmit() {
     if (!allAnswered) return;
@@ -135,43 +127,15 @@ export default function StudentBreakfastClient({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="eyebrow-rose mb-3">Student Portal</div>
-          <h1 className="portal-section-title">Breakfast Problems</h1>
-          <p className="text-sm mt-2" style={{ color: 'var(--slate)' }}>
-            {submitted
-              ? "Here are your results for today. Incorrect answers will be reviewed at your next session."
-              : "Answer all 5 problems, then submit. Results are auto-graded."}
-          </p>
-        </div>
-        <button
-          onClick={() => setShowAnnotationToolbar((v) => !v)}
-          title={showAnnotationToolbar ? 'Hide annotation toolbar' : 'Show annotation toolbar'}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-          style={{
-            background: showAnnotationToolbar ? 'var(--rose-ultra)' : 'transparent',
-            border: showAnnotationToolbar ? '1px solid rgba(224,166,175,0.5)' : '1px solid var(--fog)',
-            color: showAnnotationToolbar ? 'var(--rose-deeper)' : 'var(--slate)',
-            cursor: 'pointer',
-            marginTop: 4,
-          }}
-        >
-          <Pencil className="h-3 w-3" />
-          {showAnnotationToolbar ? 'Hide tools' : 'Annotate'}
-        </button>
+      <div>
+        <div className="eyebrow-rose mb-3">Student Portal</div>
+        <h1 className="portal-section-title">Breakfast Problems</h1>
+        <p className="text-sm mt-2" style={{ color: 'var(--slate)' }}>
+          {submitted
+            ? "Here are your results for today. Incorrect answers will be reviewed at your next session."
+            : "Answer all 5 problems, then submit. Results are auto-graded."}
+        </p>
       </div>
-
-      {showAnnotationToolbar && (
-        <DraggableAnnotationToolbar
-          tool={annotationTool}
-          sliderVal={annotationSliderVal}
-          strokeCount={totalStrokeCount}
-          onToolChange={setAnnotationTool}
-          onSliderChange={setAnnotationSliderVal}
-          onClearAll={() => canvasRefs.current.forEach((r) => r?.clearAll())}
-        />
-      )}
 
       {initial.length === 0 ? (
         <div className="portal-card flex flex-col items-center justify-center py-20 text-center">
@@ -190,7 +154,44 @@ export default function StudentBreakfastClient({
         </div>
       ) : (
         <div className="space-y-4">
-          {initial.map((a, idx) => {
+          {/* Progress indicator */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold" style={{ color: 'var(--slate)' }}>
+              Problem {currentIdx + 1} of {initial.length}
+            </span>
+            <div className="flex items-center gap-1.5">
+              {initial.map((a, i) => {
+                const isCurrent = i === currentIdx;
+                const isAnswered = !!answers[a.problem_id];
+                return (
+                  <button
+                    key={a.problem_id}
+                    onClick={() => setCurrentIdx(i)}
+                    title={`Problem ${i + 1}`}
+                    style={{
+                      width: isCurrent ? 20 : 10,
+                      height: 10,
+                      borderRadius: isCurrent ? 5 : '50%',
+                      background: isCurrent
+                        ? 'var(--rose-deeper)'
+                        : isAnswered
+                        ? 'var(--sky-deeper)'
+                        : 'var(--fog)',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Current problem card */}
+          {(() => {
+            const a = initial[currentIdx];
+            const idx = currentIdx;
             const grade = gradeMap[a.problem_id];
             const isCorrect = grade?.isCorrect;
 
@@ -244,20 +245,13 @@ export default function StudentBreakfastClient({
                                 style={{ top: 0, transform: `translateY(-${(top / h * 100).toFixed(4)}%)` }}
                               />
                               <AnnotationCanvas
-                                ref={(el) => { canvasRefs.current[idx] = el; }}
                                 context="breakfast"
                                 assignmentId={a.assignment_id}
                                 initialAnnotations={(a.annotations ?? []) as Annotations}
-                                editable={true}
-                                externalToolbar={showAnnotationToolbar}
-                                externalTool={annotationTool}
-                                externalSliderVal={annotationSliderVal}
-                                onStrokeCountChange={(count) => setStrokeCounts((prev) => ({ ...prev, [idx]: count }))}
                               />
                             </div>
                           );
                         })()
-
                       ) : (
                         <p className="text-sm font-medium leading-snug" style={{ color: 'var(--charcoal)' }}>
                           {a.question}
@@ -286,6 +280,7 @@ export default function StudentBreakfastClient({
                         </button>
                       </div>
                     </div>
+
                     {submitted && grade && a.question_image_url && (
                       <div className="mt-2 flex justify-end">
                         {isCorrect ? (
@@ -366,24 +361,58 @@ export default function StudentBreakfastClient({
                 </div>
               </div>
             );
-          })}
+          })()}
 
-          {!submitted && (
-            <Button
-              onClick={handleSubmit}
-              disabled={!allAnswered || submitting}
-              className="w-full mt-2"
+          {/* Navigation */}
+          <div className="flex items-center justify-between gap-3">
+            <button
+              onClick={() => setCurrentIdx((i) => Math.max(0, i - 1))}
+              disabled={currentIdx === 0}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
               style={{
-                background: allAnswered ? 'var(--rose-deeper)' : undefined,
-                color: allAnswered ? 'white' : undefined,
-                border: 'none',
+                background: 'transparent',
+                border: '1px solid var(--fog)',
+                color: currentIdx === 0 ? 'var(--cloud)' : 'var(--slate)',
+                cursor: currentIdx === 0 ? 'default' : 'pointer',
+                opacity: currentIdx === 0 ? 0.5 : 1,
               }}
             >
-              {submitting ? 'Submitting…' : allAnswered ? 'Submit All Answers' : `Answer all ${initial.length} problems to submit`}
-            </Button>
-          )}
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </button>
 
-          {submitted && (
+            {isLastProblem && !submitted ? (
+              <Button
+                onClick={handleSubmit}
+                disabled={!allAnswered || submitting}
+                style={{
+                  background: allAnswered ? 'var(--rose-deeper)' : undefined,
+                  color: allAnswered ? 'white' : undefined,
+                  border: 'none',
+                }}
+              >
+                {submitting ? 'Submitting…' : allAnswered ? 'Submit All Answers' : `Answer all ${initial.length} problems to submit`}
+              </Button>
+            ) : (
+              <button
+                onClick={() => setCurrentIdx((i) => Math.min(initial.length - 1, i + 1))}
+                disabled={isLastProblem}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                style={{
+                  background: isLastProblem ? 'transparent' : 'var(--rose-deeper)',
+                  border: isLastProblem ? '1px solid var(--fog)' : 'none',
+                  color: isLastProblem ? 'var(--cloud)' : 'white',
+                  cursor: isLastProblem ? 'default' : 'pointer',
+                  opacity: isLastProblem ? 0.5 : 1,
+                }}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {submitted && isLastProblem && (
             <div
               className="rounded-xl px-5 py-4 text-center"
               style={{ background: 'var(--frost)', border: '1px solid var(--fog)' }}
@@ -391,7 +420,7 @@ export default function StudentBreakfastClient({
               <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
                 {Object.values(gradeMap).filter((g) => g.isCorrect).length > 0 || initial.some((a) => a.is_correct)
                   ? `${Object.values(gradeMap).filter((g) => g.isCorrect).length || initial.filter((a) => a.is_correct).length}/${initial.length} correct today`
-                  : "Submitted"}
+                  : 'Submitted'}
               </p>
               <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>
                 Incorrect problems will be reviewed at your next tutoring session.
