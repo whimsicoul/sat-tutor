@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { Highlighter, Pen, Eraser, Trash2 } from 'lucide-react';
+import { Highlighter, Pen, Eraser, Trash2, GripVertical } from 'lucide-react';
 import type { AnnotationStroke, Annotations } from '@/types/annotations';
 
 interface AnnotationCanvasProps {
@@ -31,6 +31,8 @@ const TOOL_CONFIG: Record<Tool, { minPx: number; maxPx: number; color: string; o
   pen:       { minPx: 1, maxPx: 8,  color: '#000000', opacity: 1.0  },
   eraser:    { minPx: 10, maxPx: 48, color: '#000000', opacity: 1.0 },
 };
+
+const TOOLBAR_HEIGHT = 44;
 
 function sliderToThicknessPct(sliderVal: number, tool: Tool, canvasWidth: number): number {
   const { minPx, maxPx } = TOOL_CONFIG[tool];
@@ -98,11 +100,80 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
 
   // Internal state — used only when externalToolbar is false
   const [internalTool, setInternalTool] = useState<Tool>('highlight');
-  const [internalSliderVal, setInternalSliderVal] = useState(5);
+  const [internalSliderVals, setInternalSliderVals] = useState<Record<Tool, number>>({
+    highlight: 5,
+    pen: 5,
+    eraser: 5,
+  });
   const [strokeCount, setStrokeCount] = useState(initialAnnotations.length);
 
   const tool: Tool = externalToolbar && externalTool != null ? externalTool : internalTool;
-  const sliderVal: number = externalToolbar && externalSliderVal != null ? externalSliderVal : internalSliderVal;
+  const sliderVal: number = externalToolbar && externalSliderVal != null
+    ? externalSliderVal
+    : internalSliderVals[tool];
+
+  // Draggable built-in toolbar state
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
+  const draggingToolbar = useRef(false);
+  const toolbarDragOffset = useRef({ x: 0, y: 0 });
+
+  const clampToolbar = useCallback((x: number, y: number) => {
+    const el = toolbarRef.current;
+    const w = el ? el.offsetWidth : 280;
+    const maxX = window.innerWidth - w;
+    const maxY = window.innerHeight - TOOLBAR_HEIGHT;
+    return {
+      x: Math.max(0, Math.min(x, maxX)),
+      y: Math.max(0, Math.min(y, maxY)),
+    };
+  }, []);
+
+  const onToolbarDragStart = useCallback((clientX: number, clientY: number) => {
+    draggingToolbar.current = true;
+    if (toolbarPos == null) return;
+    toolbarDragOffset.current = { x: clientX - toolbarPos.x, y: clientY - toolbarPos.y };
+  }, [toolbarPos]);
+
+  const onToolbarDragMove = useCallback((clientX: number, clientY: number) => {
+    if (!draggingToolbar.current) return;
+    setToolbarPos(clampToolbar(clientX - toolbarDragOffset.current.x, clientY - toolbarDragOffset.current.y));
+  }, [clampToolbar]);
+
+  const onToolbarDragEnd = useCallback(() => {
+    draggingToolbar.current = false;
+  }, []);
+
+  // Position toolbar top-right on mount
+  useEffect(() => {
+    if (externalToolbar) return;
+    const el = toolbarRef.current;
+    if (!el) return;
+    const w = el.offsetWidth || 280;
+    setToolbarPos({ x: window.innerWidth - w - 16, y: 16 });
+  }, [externalToolbar]);
+
+  // Document-level drag listeners for built-in toolbar
+  useEffect(() => {
+    if (externalToolbar) return;
+    const onMouseMove = (e: MouseEvent) => onToolbarDragMove(e.clientX, e.clientY);
+    const onMouseUp = () => onToolbarDragEnd();
+    const onTouchMove = (e: TouchEvent) => {
+      if (draggingToolbar.current) { e.preventDefault(); onToolbarDragMove(e.touches[0].clientX, e.touches[0].clientY); }
+    };
+    const onTouchEnd = () => onToolbarDragEnd();
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [externalToolbar, onToolbarDragMove, onToolbarDragEnd]);
 
   const redrawAll = useCallback(() => {
     const canvas = canvasRef.current;
@@ -268,21 +339,44 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
 
       {editable && !externalToolbar && (
         <div
+          ref={toolbarRef}
           style={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
-            zIndex: 10,
+            position: 'fixed',
+            top: toolbarPos?.y ?? -200,
+            left: toolbarPos?.x ?? -200,
+            zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
             gap: 4,
-            background: 'rgba(255,255,255,0.95)',
+            background: 'rgba(255,255,255,0.97)',
             border: '1px solid var(--fog)',
             borderRadius: 24,
-            padding: '4px 10px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            padding: '4px 10px 4px 6px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.13)',
+            userSelect: 'none',
+            height: TOOLBAR_HEIGHT,
+            boxSizing: 'border-box',
           }}
         >
+          {/* Drag handle */}
+          <div
+            title="Drag to move"
+            onMouseDown={(e) => { e.preventDefault(); onToolbarDragStart(e.clientX, e.clientY); }}
+            onTouchStart={(e) => { e.preventDefault(); onToolbarDragStart(e.touches[0].clientX, e.touches[0].clientY); }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'grab',
+              color: 'var(--mist, #b0b8c1)',
+              padding: '0 2px',
+              touchAction: 'none',
+            }}
+          >
+            <GripVertical size={16} />
+          </div>
+
+          <div style={{ width: 1, height: 18, background: 'var(--fog)', margin: '0 2px' }} />
+
           {toolButtons.map(({ id, Icon, title }) => (
             <button
               key={id}
@@ -314,7 +408,7 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
             max={10}
             value={sliderVal}
             onMouseDown={(e) => e.stopPropagation()}
-            onChange={(e) => setInternalSliderVal(Number(e.target.value))}
+            onChange={(e) => setInternalSliderVals(prev => ({ ...prev, [tool]: Number(e.target.value) }))}
             title="Thickness"
             style={{ width: 64, accentColor: 'var(--rose-deeper)', cursor: 'pointer' }}
           />

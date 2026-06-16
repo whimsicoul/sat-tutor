@@ -403,7 +403,11 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
 
   // Annotation toolbar state — shared across all problems in this step
   const [annotationTool, setAnnotationTool] = useState<'highlight' | 'pen' | 'eraser'>('highlight');
-  const [annotationSliderVal, setAnnotationSliderVal] = useState(5);
+  const [annotationSliderVals, setAnnotationSliderVals] = useState<Record<'highlight' | 'pen' | 'eraser', number>>({
+    highlight: 5,
+    pen: 5,
+    eraser: 5,
+  });
   const [annotationStrokeCount, setAnnotationStrokeCount] = useState(0);
   const annotationCanvasRef = useRef<AnnotationCanvasHandle>(null);
 
@@ -475,10 +479,10 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <DraggableAnnotationToolbar
         tool={annotationTool}
-        sliderVal={annotationSliderVal}
+        sliderVal={annotationSliderVals[annotationTool]}
         strokeCount={annotationStrokeCount}
         onToolChange={setAnnotationTool}
-        onSliderChange={setAnnotationSliderVal}
+        onSliderChange={(val) => setAnnotationSliderVals(prev => ({ ...prev, [annotationTool]: val }))}
         onClearAll={() => annotationCanvasRef.current?.clearAll()}
       />
 
@@ -497,7 +501,7 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
           editable={true}
           externalToolbar={true}
           externalTool={annotationTool}
-          externalSliderVal={annotationSliderVal}
+          externalSliderVal={annotationSliderVals[annotationTool]}
           onStrokeCountChange={setAnnotationStrokeCount}
         />
 
