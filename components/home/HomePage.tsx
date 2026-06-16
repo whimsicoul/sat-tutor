@@ -364,6 +364,33 @@ export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRo
               </p>
             </div>
 
+            {/* Ryan Goodwin card */}
+            <div
+              className="p-7 rounded-2xl flex flex-col items-center text-center"
+              style={{
+                background: 'linear-gradient(145deg, var(--sky-pale) 0%, var(--rose-pale) 100%)',
+                border: '1px solid rgba(168,203,222,0.35)',
+                boxShadow: '0 4px 24px rgba(26,29,35,0.07)',
+              }}
+            >
+              <div className="w-24 h-24 rounded-full overflow-hidden mb-4 ring-2 ring-[color:var(--sky)] ring-offset-2">
+                <Image
+                  src="/ryan-headshot.jpg"
+                  alt="Ryan Goodwin"
+                  width={96}
+                  height={96}
+                  className="object-cover w-full h-full"
+                />
+              </div>
+              <p className="text-base font-semibold mb-0.5" style={{ color: 'var(--charcoal)' }}>
+                Ryan Goodwin
+              </p>
+              <p className="text-xs mb-4" style={{ color: 'var(--sky-deeper)' }}>SAT Tutor</p>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--slate)' }}>
+                I am a rising senior at Georgetown University majoring in Linguistics and minoring in Biology and Cognitive Science. I&apos;m on the pre-health track, and I am currently a research assistant at a lab studying language learning. During the school year, I am also involved with the Georgetown Voice, the women&apos;s ultimate frisbee program, and Club Filipino.
+              </p>
+            </div>
+
             {tutors.map((tutor, i) => (
               <div
                 key={tutor.id}
