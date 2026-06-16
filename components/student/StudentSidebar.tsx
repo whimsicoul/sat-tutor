@@ -89,8 +89,8 @@ export default function StudentSidebar() {
 
       {/* Nav */}
       <nav style={{ flex: 1, padding: '16px 12px' }}>
-        {navItems.map(({ href, label, icon: Icon, exact }) => {
-          const active = exact ? pathname === href : pathname.startsWith(href);
+        {navItems.map(({ href, label, icon: Icon }) => {
+          const active = pathname.startsWith(href);
           return (
             <Link
               key={href}
