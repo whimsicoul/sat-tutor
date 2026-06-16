@@ -1,8 +1,9 @@
 'use client';
 
 import { useRef, useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { Highlighter, Pen, Eraser, Trash2, GripVertical } from 'lucide-react';
+import { Highlighter, Pen, Eraser, Trash2, GripVertical, ALargeSmall } from 'lucide-react';
 import type { AnnotationStroke, Annotations } from '@/types/annotations';
+import { useToolbarScale } from '@/hooks/useToolbarScale';
 
 interface AnnotationCanvasProps {
   context: 'worksheet' | 'breakfast';
@@ -106,6 +107,10 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
     eraser: 5,
   });
   const [strokeCount, setStrokeCount] = useState(initialAnnotations.length);
+  const [sc, setScale] = useToolbarScale();
+  const [showSizePopover, setShowSizePopover] = useState(false);
+  const sizeButtonRef = useRef<HTMLButtonElement>(null);
+  const sizePopoverRef = useRef<HTMLDivElement>(null);
 
   const tool: Tool = externalToolbar && externalTool != null ? externalTool : internalTool;
   const sliderVal: number = externalToolbar && externalSliderVal != null
@@ -122,12 +127,12 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
     const el = toolbarRef.current;
     const w = el ? el.offsetWidth : 280;
     const maxX = window.innerWidth - w;
-    const maxY = window.innerHeight - TOOLBAR_HEIGHT;
+    const maxY = window.innerHeight - TOOLBAR_HEIGHT * sc;
     return {
       x: Math.max(0, Math.min(x, maxX)),
       y: Math.max(0, Math.min(y, maxY)),
     };
-  }, []);
+  }, [sc]);
 
   const onToolbarDragStart = useCallback((clientX: number, clientY: number) => {
     draggingToolbar.current = true;
@@ -174,6 +179,20 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
       document.removeEventListener('touchend', onTouchEnd);
     };
   }, [externalToolbar, onToolbarDragMove, onToolbarDragEnd]);
+
+  // Close size popover when clicking outside
+  useEffect(() => {
+    if (!showSizePopover) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        sizeButtonRef.current?.contains(e.target as Node) ||
+        sizePopoverRef.current?.contains(e.target as Node)
+      ) return;
+      setShowSizePopover(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showSizePopover]);
 
   const redrawAll = useCallback(() => {
     const canvas = canvasRef.current;
@@ -347,14 +366,14 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
             zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
-            gap: 4,
+            gap: 4 * sc,
             background: 'rgba(255,255,255,0.97)',
             border: '1px solid var(--fog)',
-            borderRadius: 24,
-            padding: '4px 10px 4px 6px',
+            borderRadius: 24 * sc,
+            padding: `${4 * sc}px ${10 * sc}px ${4 * sc}px ${6 * sc}px`,
             boxShadow: '0 4px 16px rgba(0,0,0,0.13)',
             userSelect: 'none',
-            height: TOOLBAR_HEIGHT,
+            height: TOOLBAR_HEIGHT * sc,
             boxSizing: 'border-box',
           }}
         >
@@ -372,10 +391,10 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
               touchAction: 'none',
             }}
           >
-            <GripVertical size={16} />
+            <GripVertical size={Math.round(16 * sc)} />
           </div>
 
-          <div style={{ width: 1, height: 18, background: 'var(--fog)', margin: '0 2px' }} />
+          <div style={{ width: 1, height: 18 * sc, background: 'var(--fog)', margin: '0 2px' }} />
 
           {toolButtons.map(({ id, Icon, title }) => (
             <button
@@ -383,12 +402,12 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
               title={title}
               onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setInternalTool(id); }}
               style={{
-                width: 28,
-                height: 28,
+                width: 28 * sc,
+                height: 28 * sc,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: 8,
+                borderRadius: 8 * sc,
                 border: tool === id ? '1px solid var(--rose-deeper)' : '1px solid transparent',
                 background: tool === id ? 'var(--rose-ultra, #fdf2f4)' : 'transparent',
                 cursor: 'pointer',
@@ -396,11 +415,11 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
                 padding: 0,
               }}
             >
-              <Icon size={15} />
+              <Icon size={Math.round(15 * sc)} />
             </button>
           ))}
 
-          <div style={{ width: 1, height: 18, background: 'var(--fog)', margin: '0 2px' }} />
+          <div style={{ width: 1, height: 18 * sc, background: 'var(--fog)', margin: '0 2px' }} />
 
           <input
             type="range"
@@ -410,21 +429,21 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
             onMouseDown={(e) => e.stopPropagation()}
             onChange={(e) => setInternalSliderVals(prev => ({ ...prev, [tool]: Number(e.target.value) }))}
             title="Thickness"
-            style={{ width: 64, accentColor: 'var(--rose-deeper)', cursor: 'pointer' }}
+            style={{ width: 64 * sc, accentColor: 'var(--rose-deeper)', cursor: 'pointer' }}
           />
 
-          <div style={{ width: 1, height: 18, background: 'var(--fog)', margin: '0 2px' }} />
+          <div style={{ width: 1, height: 18 * sc, background: 'var(--fog)', margin: '0 2px' }} />
 
           <button
             title="Clear all annotations"
             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); clearAll(); }}
             style={{
-              width: 28,
-              height: 28,
+              width: 28 * sc,
+              height: 28 * sc,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: 8,
+              borderRadius: 8 * sc,
               border: '1px solid transparent',
               background: 'transparent',
               cursor: strokeCount > 0 ? 'pointer' : 'default',
@@ -432,8 +451,71 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
               padding: 0,
             }}
           >
-            <Trash2 size={15} />
+            <Trash2 size={Math.round(15 * sc)} />
           </button>
+
+          <div style={{ width: 1, height: 18 * sc, background: 'var(--fog)', margin: '0 2px' }} />
+
+          {/* Toolbar size button */}
+          <button
+            ref={sizeButtonRef}
+            title="Adjust toolbar size"
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizePopover(p => !p); }}
+            style={{
+              width: 28 * sc,
+              height: 28 * sc,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 8 * sc,
+              border: showSizePopover ? '1px solid var(--rose-deeper)' : '1px solid transparent',
+              background: showSizePopover ? 'var(--rose-ultra, #fdf2f4)' : 'transparent',
+              cursor: 'pointer',
+              color: 'var(--charcoal)',
+              padding: 0,
+            }}
+          >
+            <ALargeSmall size={Math.round(15 * sc)} />
+          </button>
+
+          {/* Size popover */}
+          {showSizePopover && (
+            <div
+              ref={sizePopoverRef}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{
+                position: 'absolute',
+                top: TOOLBAR_HEIGHT * sc + 8,
+                right: 0,
+                background: 'rgba(255,255,255,0.97)',
+                border: '1px solid var(--fog)',
+                borderRadius: 12,
+                padding: '10px 14px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.13)',
+                minWidth: 180,
+                zIndex: 1001,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+              }}
+            >
+              <span style={{ fontSize: 12, color: 'var(--mist)', fontWeight: 500 }}>Toolbar size</span>
+              <input
+                type="range"
+                min={0.75}
+                max={2}
+                step={0.05}
+                value={sc}
+                onMouseDown={(e) => e.stopPropagation()}
+                onChange={(e) => setScale(Number(e.target.value))}
+                style={{ width: '100%', accentColor: 'var(--rose-deeper)', cursor: 'pointer' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--mist)' }}>
+                <span>Small</span>
+                <span>Large</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

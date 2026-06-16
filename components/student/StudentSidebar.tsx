@@ -9,8 +9,8 @@ import { DCFlagIcon } from '@/components/ui/dc-flag';
 const navItems = [
   { href: '/student/schedule', label: 'Schedule', icon: CalendarDays },
   { href: '/student/breakfast-problems', label: 'Breakfast Problems', icon: Coffee },
-  { href: '/student/act-test', label: 'ACT Test', icon: FileText },
   { href: '/student/worksheets', label: 'Worksheets', icon: Layers },
+  { href: '/student/act-test', label: 'ACT Test', icon: FileText },
   { href: '/student/test-results', label: 'Test Results', icon: BarChart2 },
   { href: '/student/settings', label: 'Settings', icon: Settings },
 ];
