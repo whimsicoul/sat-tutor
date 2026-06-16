@@ -404,9 +404,9 @@ export async function getStudentsForTutor(tutorId: string) {
   `;
 }
 
-// ─── Breakfast Problems: Admin ────────────────────────────────────────────────
+// ─── Daily Practice: Admin ────────────────────────────────────────────────
 
-export async function bulkInsertBreakfastProblems(
+export async function bulkInsertDailyPractice(
   rows: Array<{
     question: string;
     choice_a: string;
@@ -424,7 +424,7 @@ export async function bulkInsertBreakfastProblems(
   const results = await Promise.all(
     rows.map((r) =>
       sql`
-        INSERT INTO breakfast_problems
+        INSERT INTO daily_practice
           (question, choice_a, choice_b, choice_c, choice_d, correct_answer,
            category, skill, difficulty, external_id)
         VALUES
@@ -439,11 +439,11 @@ export async function bulkInsertBreakfastProblems(
   return results.flat();
 }
 
-export async function deleteBreakfastProblem(id: string) {
-  await sql`DELETE FROM breakfast_problems WHERE id = ${id}`;
+export async function deleteDailyPractice(id: string) {
+  await sql`DELETE FROM daily_practice WHERE id = ${id}`;
 }
 
-export async function updateBreakfastProblem(
+export async function updateDailyPractice(
   id: string,
   fields: {
     question?: string;
@@ -461,7 +461,7 @@ export async function updateBreakfastProblem(
   }
 ) {
   const rows = await sql`
-    UPDATE breakfast_problems SET
+    UPDATE daily_practice SET
       question           = COALESCE(${fields.question        ?? null}, question),
       choice_a           = COALESCE(${fields.choice_a        ?? null}, choice_a),
       choice_b           = COALESCE(${fields.choice_b        ?? null}, choice_b),
@@ -480,16 +480,16 @@ export async function updateBreakfastProblem(
   return rows[0] ?? null;
 }
 
-export async function getBreakfastProblemsForCropReview() {
+export async function getDailyPracticeForCropReview() {
   return sql`
     SELECT id, question_image_url, crop_top_px, crop_bottom_px, image_width_px, image_height_px
-    FROM breakfast_problems
+    FROM daily_practice
     WHERE question_image_url IS NOT NULL
     ORDER BY id ASC
   `;
 }
 
-export async function getAllBreakfastProblems() {
+export async function getAllDailyPractice() {
   return sql`
     SELECT
       id, question, choice_a, choice_b, choice_c, choice_d,
@@ -498,12 +498,12 @@ export async function getAllBreakfastProblems() {
       answer_explanation,
       question_image_url, crop_top_px, crop_bottom_px,
       image_width_px, image_height_px
-    FROM breakfast_problems
+    FROM daily_practice
     ORDER BY created_at DESC
   `;
 }
 
-// ─── Breakfast Problems: Student ─────────────────────────────────────────────
+// ─── Daily Practice: Student ─────────────────────────────────────────────
 
 export async function getTodayAssignmentsForStudent(studentId: string) {
   return sql`
@@ -526,9 +526,9 @@ export async function getTodayAssignmentsForStudent(studentId: string) {
       sbr.is_correct,
       sbr.submitted_at,
       sba.annotations
-    FROM student_breakfast_assignments sba
-    JOIN breakfast_problems bp ON bp.id = sba.problem_id
-    LEFT JOIN student_breakfast_responses sbr
+    FROM student_daily_practice_assignments sba
+    JOIN daily_practice bp ON bp.id = sba.problem_id
+    LEFT JOIN student_daily_practice_responses sbr
            ON sbr.assignment_id = sba.id AND sbr.student_id = ${studentId}
     WHERE sba.student_id  = ${studentId}
       AND sba.assigned_date = CURRENT_DATE
@@ -536,7 +536,7 @@ export async function getTodayAssignmentsForStudent(studentId: string) {
   `;
 }
 
-export async function assignBreakfastProblemsForToday(
+export async function assignDailyPracticeForToday(
   studentId: string,
   limit: number = 5
 ): Promise<number> {
@@ -544,10 +544,10 @@ export async function assignBreakfastProblemsForToday(
   // (rounding so total == limit). Falls back to random if only one category exists.
   const categoryCounts = (await sql`
     SELECT category, COUNT(*) AS cnt
-    FROM breakfast_problems
+    FROM daily_practice
     WHERE category IN ('Math', 'Reading and Writing')
       AND id NOT IN (
-        SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
+        SELECT problem_id FROM student_daily_practice_assignments WHERE student_id = ${studentId}
       )
     GROUP BY category
   `) as { category: string; cnt: number }[];
@@ -561,12 +561,12 @@ export async function assignBreakfastProblemsForToday(
 
     const [mathRows, rwRows] = await Promise.all([
       sql`
-        INSERT INTO student_breakfast_assignments (student_id, problem_id, assigned_date)
+        INSERT INTO student_daily_practice_assignments (student_id, problem_id, assigned_date)
         SELECT ${studentId}, bp.id, CURRENT_DATE
-        FROM breakfast_problems bp
+        FROM daily_practice bp
         WHERE bp.category = 'Math'
           AND bp.id NOT IN (
-            SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
+            SELECT problem_id FROM student_daily_practice_assignments WHERE student_id = ${studentId}
           )
         ORDER BY random()
         LIMIT ${mathLimit}
@@ -574,12 +574,12 @@ export async function assignBreakfastProblemsForToday(
         RETURNING id
       `,
       sql`
-        INSERT INTO student_breakfast_assignments (student_id, problem_id, assigned_date)
+        INSERT INTO student_daily_practice_assignments (student_id, problem_id, assigned_date)
         SELECT ${studentId}, bp.id, CURRENT_DATE
-        FROM breakfast_problems bp
+        FROM daily_practice bp
         WHERE bp.category = 'Reading and Writing'
           AND bp.id NOT IN (
-            SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
+            SELECT problem_id FROM student_daily_practice_assignments WHERE student_id = ${studentId}
           )
         ORDER BY random()
         LIMIT ${rwLimit}
@@ -592,11 +592,11 @@ export async function assignBreakfastProblemsForToday(
 
   // Single category or uncategorised pool — assign randomly
   const rows = await sql`
-    INSERT INTO student_breakfast_assignments (student_id, problem_id, assigned_date)
+    INSERT INTO student_daily_practice_assignments (student_id, problem_id, assigned_date)
     SELECT ${studentId}, bp.id, CURRENT_DATE
-    FROM breakfast_problems bp
+    FROM daily_practice bp
     WHERE bp.id NOT IN (
-        SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
+        SELECT problem_id FROM student_daily_practice_assignments WHERE student_id = ${studentId}
       )
     ORDER BY random()
     LIMIT ${limit}
@@ -606,7 +606,7 @@ export async function assignBreakfastProblemsForToday(
   return rows.length;
 }
 
-export async function saveBreakfastResponse(
+export async function saveDailyPracticeResponse(
   assignmentId: string,
   studentId: string,
   problemId: string,
@@ -614,7 +614,7 @@ export async function saveBreakfastResponse(
   isCorrect: boolean
 ) {
   const rows = await sql`
-    INSERT INTO student_breakfast_responses
+    INSERT INTO student_daily_practice_responses
       (assignment_id, student_id, problem_id, student_answer, is_correct)
     VALUES
       (${assignmentId}, ${studentId}, ${problemId},
@@ -625,14 +625,14 @@ export async function saveBreakfastResponse(
   return rows[0] ?? null;
 }
 
-export async function getBreakfastCompletionByStudent(studentId: string) {
+export async function getDailyPracticeCompletionByStudent(studentId: string) {
   return sql`
     SELECT
       sba.assigned_date::text AS assigned_date,
       COUNT(sba.id)           AS total,
       COUNT(sbr.id)           AS submitted
-    FROM student_breakfast_assignments sba
-    LEFT JOIN student_breakfast_responses sbr
+    FROM student_daily_practice_assignments sba
+    LEFT JOIN student_daily_practice_responses sbr
            ON sbr.assignment_id = sba.id AND sbr.student_id = ${studentId}
     WHERE sba.student_id = ${studentId}
     GROUP BY sba.assigned_date
@@ -640,9 +640,9 @@ export async function getBreakfastCompletionByStudent(studentId: string) {
   `;
 }
 
-// ─── Breakfast Problems: Tutor / Admin Results ────────────────────────────────
+// ─── Daily Practice: Tutor / Admin Results ────────────────────────────────
 
-export async function getBreakfastResultsForTutorStudents(tutorId: string) {
+export async function getDailyPracticeResultsForTutorStudents(tutorId: string) {
   return sql`
     SELECT
       sbr.id,
@@ -663,9 +663,9 @@ export async function getBreakfastResultsForTutorStudents(tutorId: string) {
       bp.image_width_px, bp.image_height_px,
       u.id   AS student_id,
       u.name AS student_name
-    FROM student_breakfast_responses sbr
-    JOIN student_breakfast_assignments sba ON sba.id = sbr.assignment_id
-    JOIN breakfast_problems bp             ON bp.id  = sbr.problem_id
+    FROM student_daily_practice_responses sbr
+    JOIN student_daily_practice_assignments sba ON sba.id = sbr.assignment_id
+    JOIN daily_practice bp             ON bp.id  = sbr.problem_id
     JOIN users u                           ON u.id   = sbr.student_id
     JOIN tutor_student_assignments tsa     ON tsa.student_id = sbr.student_id
     WHERE tsa.tutor_id = ${tutorId}
@@ -683,7 +683,7 @@ export async function getLastSessionDatePerStudent(tutorId: string) {
   `;
 }
 
-export async function getAllBreakfastResults() {
+export async function getAllDailyPracticeResults() {
   return sql`
     SELECT
       sbr.id,
@@ -701,9 +701,9 @@ export async function getAllBreakfastResults() {
       bp.image_width_px, bp.image_height_px,
       u.id   AS student_id,
       u.name AS student_name
-    FROM student_breakfast_responses sbr
-    JOIN student_breakfast_assignments sba ON sba.id = sbr.assignment_id
-    JOIN breakfast_problems bp             ON bp.id  = sbr.problem_id
+    FROM student_daily_practice_responses sbr
+    JOIN student_daily_practice_assignments sba ON sba.id = sbr.assignment_id
+    JOIN daily_practice bp             ON bp.id  = sbr.problem_id
     JOIN users u                           ON u.id   = sbr.student_id
     ORDER BY u.name ASC, sba.assigned_date DESC
   `;
@@ -1282,7 +1282,7 @@ export async function getPreviousWorksheetAssignedDate(
   return new Date(rows[0].proposed_time as string);
 }
 
-export async function getMissedBreakfastProblemsSince(studentId: string, sinceDate: Date) {
+export async function getMissedDailyPracticeSince(studentId: string, sinceDate: Date) {
   return sql`
     SELECT
       bp.id,
@@ -1300,9 +1300,9 @@ export async function getMissedBreakfastProblemsSince(studentId: string, sinceDa
       bp.image_height_px,
       sbr.student_answer,
       sba.assigned_date
-    FROM student_breakfast_responses sbr
-    JOIN student_breakfast_assignments sba ON sba.id = sbr.assignment_id
-    JOIN breakfast_problems bp ON bp.id = sbr.problem_id
+    FROM student_daily_practice_responses sbr
+    JOIN student_daily_practice_assignments sba ON sba.id = sbr.assignment_id
+    JOIN daily_practice bp ON bp.id = sbr.problem_id
     WHERE sbr.student_id = ${studentId}
       AND sbr.is_correct = false
       AND sba.assigned_date >= ${sinceDate.toISOString().split('T')[0]}
@@ -1310,9 +1310,9 @@ export async function getMissedBreakfastProblemsSince(studentId: string, sinceDa
   `;
 }
 
-export async function hasAnyBreakfastHistory(studentId: string): Promise<boolean> {
+export async function hasAnyDailyPracticeHistory(studentId: string): Promise<boolean> {
   const rows = await sql`
-    SELECT 1 FROM student_breakfast_responses
+    SELECT 1 FROM student_daily_practice_responses
     WHERE student_id = ${studentId}
     LIMIT 1
   `;
@@ -1387,23 +1387,23 @@ export async function saveWorksheetAnnotations(
   `;
 }
 
-export async function getBreakfastAnnotations(
+export async function getDailyPracticeAnnotations(
   assignmentId: string,
 ): Promise<unknown[]> {
   const rows = await sql`
-    SELECT annotations FROM student_breakfast_assignments
+    SELECT annotations FROM student_daily_practice_assignments
     WHERE id = ${assignmentId}
     LIMIT 1
   `;
   return (rows[0]?.annotations ?? []) as unknown[];
 }
 
-export async function saveBreakfastAnnotations(
+export async function saveDailyPracticeAnnotations(
   assignmentId: string,
   annotations: unknown[],
 ): Promise<void> {
   await sql`
-    UPDATE student_breakfast_assignments
+    UPDATE student_daily_practice_assignments
     SET annotations = ${JSON.stringify(annotations)}
     WHERE id = ${assignmentId}
   `;
@@ -1412,7 +1412,7 @@ export async function saveBreakfastAnnotations(
 // ─── Analytics ────────────────────────────────────────────────────────────────
 
 export interface AnalyticsFilters {
-  source?: 'breakfast' | 'worksheets' | 'all';
+  source?: 'daily_practice' | 'worksheets' | 'all';
   studentId?: string | null;
   category?: string | null;
   dateStart?: string | null;
@@ -1460,8 +1460,8 @@ export async function getAnalyticsSummary(filters: AnalyticsFilters): Promise<{
 }> {
   const { whereClause, params } = buildAnalyticsCte(filters);
   const sourceFilter =
-    filters.source === 'breakfast'
-      ? "WHERE source = 'breakfast'"
+    filters.source === 'daily_practice'
+      ? "WHERE source = 'daily_practice'"
       : filters.source === 'worksheets'
         ? "WHERE source = 'worksheet'"
         : '';
@@ -1469,9 +1469,9 @@ export async function getAnalyticsSummary(filters: AnalyticsFilters): Promise<{
   const query = `
     WITH combined AS (
       SELECT sbr.student_id, sbr.is_correct, sbr.submitted_at,
-             bp.skill, bp.difficulty, bp.category, 'breakfast' AS source
-      FROM student_breakfast_responses sbr
-      JOIN breakfast_problems bp ON bp.id = sbr.problem_id
+             bp.skill, bp.difficulty, bp.category, 'daily_practice' AS source
+      FROM student_daily_practice_responses sbr
+      JOIN daily_practice bp ON bp.id = sbr.problem_id
       UNION ALL
       SELECT wsr.student_id,
              (wsr.selected_answer = wsp.correct_answer) AS is_correct,
@@ -1549,8 +1549,8 @@ export interface SkillRow {
 export async function getAnalyticsBySkill(filters: AnalyticsFilters): Promise<SkillRow[]> {
   const { whereClause, params } = buildAnalyticsCte(filters);
   const sourceWhere =
-    filters.source === 'breakfast'
-      ? "source = 'breakfast'"
+    filters.source === 'daily_practice'
+      ? "source = 'daily_practice'"
       : filters.source === 'worksheets'
         ? "source = 'worksheet'"
         : null;
@@ -1566,9 +1566,9 @@ export async function getAnalyticsBySkill(filters: AnalyticsFilters): Promise<Sk
   const query = `
     WITH combined AS (
       SELECT sbr.student_id, sbr.is_correct, sbr.submitted_at,
-             bp.skill, bp.difficulty, bp.category, 'breakfast' AS source
-      FROM student_breakfast_responses sbr
-      JOIN breakfast_problems bp ON bp.id = sbr.problem_id
+             bp.skill, bp.difficulty, bp.category, 'daily_practice' AS source
+      FROM student_daily_practice_responses sbr
+      JOIN daily_practice bp ON bp.id = sbr.problem_id
       UNION ALL
       SELECT wsr.student_id,
              (wsr.selected_answer = wsp.correct_answer) AS is_correct,
@@ -1616,8 +1616,8 @@ export interface DifficultyRow {
 export async function getAnalyticsByDifficulty(filters: AnalyticsFilters): Promise<DifficultyRow[]> {
   const { whereClause, params } = buildAnalyticsCte(filters);
   const sourceWhere =
-    filters.source === 'breakfast'
-      ? "source = 'breakfast'"
+    filters.source === 'daily_practice'
+      ? "source = 'daily_practice'"
       : filters.source === 'worksheets'
         ? "source = 'worksheet'"
         : null;
@@ -1633,9 +1633,9 @@ export async function getAnalyticsByDifficulty(filters: AnalyticsFilters): Promi
   const query = `
     WITH combined AS (
       SELECT sbr.student_id, sbr.is_correct, sbr.submitted_at,
-             bp.skill, bp.difficulty, bp.category, 'breakfast' AS source
-      FROM student_breakfast_responses sbr
-      JOIN breakfast_problems bp ON bp.id = sbr.problem_id
+             bp.skill, bp.difficulty, bp.category, 'daily_practice' AS source
+      FROM student_daily_practice_responses sbr
+      JOIN daily_practice bp ON bp.id = sbr.problem_id
       UNION ALL
       SELECT wsr.student_id,
              (wsr.selected_answer = wsp.correct_answer) AS is_correct,
@@ -1685,8 +1685,8 @@ export interface WeeklyRow {
 export async function getAnalyticsOverTime(filters: AnalyticsFilters): Promise<WeeklyRow[]> {
   const { whereClause, params } = buildAnalyticsCte(filters);
   const sourceWhere =
-    filters.source === 'breakfast'
-      ? "source = 'breakfast'"
+    filters.source === 'daily_practice'
+      ? "source = 'daily_practice'"
       : filters.source === 'worksheets'
         ? "source = 'worksheet'"
         : null;
@@ -1698,9 +1698,9 @@ export async function getAnalyticsOverTime(filters: AnalyticsFilters): Promise<W
   const query = `
     WITH combined AS (
       SELECT sbr.student_id, sbr.is_correct, sbr.submitted_at,
-             bp.skill, bp.difficulty, bp.category, 'breakfast' AS source
-      FROM student_breakfast_responses sbr
-      JOIN breakfast_problems bp ON bp.id = sbr.problem_id
+             bp.skill, bp.difficulty, bp.category, 'daily_practice' AS source
+      FROM student_daily_practice_responses sbr
+      JOIN daily_practice bp ON bp.id = sbr.problem_id
       UNION ALL
       SELECT wsr.student_id,
              (wsr.selected_answer = wsp.correct_answer) AS is_correct,

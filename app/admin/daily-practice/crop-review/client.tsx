@@ -70,12 +70,12 @@ export default function CropReviewClient({ problems }: Props) {
   if (problems.length === 0) {
     return (
       <div style={{ padding: '40px 48px' }}>
-        <Link href="/admin/breakfast-problems" style={{ textDecoration: 'none' }}>
+        <Link href="/admin/daily-practice" style={{ textDecoration: 'none' }}>
           <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: '1px solid var(--fog)', background: 'var(--frost)', cursor: 'pointer', fontSize: 13, color: 'var(--slate)', marginBottom: 24 }}>
             <ArrowLeft size={14} /> Back
           </button>
         </Link>
-        <p style={{ color: 'var(--mist)', fontSize: 14 }}>No breakfast problems with image URLs found.</p>
+        <p style={{ color: 'var(--mist)', fontSize: 14 }}>No daily practice problems with image URLs found.</p>
       </div>
     );
   }
@@ -86,7 +86,7 @@ export default function CropReviewClient({ problems }: Props) {
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/breakfast-problems/${problem.id}`, {
+      const res = await fetch(`/api/admin/daily-practice/${problem.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ crop_top_px: cropTop, crop_bottom_px: cropBottom }),
@@ -111,7 +111,7 @@ export default function CropReviewClient({ problems }: Props) {
     <div style={{ padding: '40px 48px', maxWidth: 1400 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
-        <Link href="/admin/breakfast-problems" style={{ textDecoration: 'none' }}>
+        <Link href="/admin/daily-practice" style={{ textDecoration: 'none' }}>
           <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: '1px solid var(--fog)', background: 'var(--frost)', cursor: 'pointer' }}>
             <ArrowLeft size={14} style={{ color: 'var(--slate)' }} />
           </button>

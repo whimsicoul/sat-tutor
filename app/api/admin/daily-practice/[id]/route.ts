@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth';
-import { deleteBreakfastProblem, updateBreakfastProblem } from '@/lib/db';
+import { deleteDailyPractice, updateDailyPractice } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
 const VALID_ANSWERS = new Set(['A', 'B', 'C', 'D']);
@@ -11,7 +11,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  await deleteBreakfastProblem(params.id);
+  await deleteDailyPractice(params.id);
   return NextResponse.json({ success: true });
 }
 
@@ -42,7 +42,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
   }
 
-  const updateFields: Parameters<typeof updateBreakfastProblem>[1] = {
+  const updateFields: Parameters<typeof updateDailyPractice>[1] = {
     question:           body.question,
     choice_a:           body.choice_a,
     choice_b:           body.choice_b,
@@ -57,7 +57,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     crop_bottom_px: body.crop_bottom_px !== undefined ? Number(body.crop_bottom_px) : undefined,
   };
 
-  const updated = await updateBreakfastProblem(params.id, updateFields);
+  const updated = await updateDailyPractice(params.id, updateFields);
 
   if (!updated) {
     return NextResponse.json({ error: 'Problem not found' }, { status: 404 });

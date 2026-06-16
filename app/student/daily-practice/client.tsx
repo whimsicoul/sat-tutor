@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Coffee, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { TodayAssignment } from './page';
 import AnnotationCanvas from '@/components/shared/AnnotationCanvas';
@@ -17,7 +17,7 @@ interface GradeResult {
   correctAnswer: string;
 }
 
-export default function StudentBreakfastClient({
+export default function StudentDailyPracticeClient({
   assignments: initial,
 }: {
   assignments: TodayAssignment[];
@@ -65,7 +65,7 @@ export default function StudentBreakfastClient({
         studentAnswer: answers[a.problem_id],
       }));
 
-      const res = await fetch('/api/breakfast-problems/submit', {
+      const res = await fetch('/api/daily-practice/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ answers: payload }),
@@ -102,7 +102,7 @@ export default function StudentBreakfastClient({
     <div className="space-y-8">
       <div>
         <div className="eyebrow-rose mb-3">Student Portal</div>
-        <h1 className="portal-section-title">Breakfast Problems</h1>
+        <h1 className="portal-section-title">☀️ Daily Practice</h1>
         <p className="text-sm mt-2" style={{ color: 'var(--slate)' }}>
           {submitted
             ? "Here are your results for today. Incorrect answers will be reviewed at your next session."
@@ -116,7 +116,7 @@ export default function StudentBreakfastClient({
             className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
             style={{ background: 'var(--rose-ultra)', border: '1px solid rgba(224,166,175,0.25)' }}
           >
-            <Coffee className="h-6 w-6" style={{ color: 'var(--rose-deeper)' }} />
+            <span style={{ fontSize: 24 }}>☀️</span>
           </div>
           <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
             No problems available yet
@@ -218,7 +218,7 @@ export default function StudentBreakfastClient({
                                 style={{ top: 0, transform: `translateY(-${(top / h * 100).toFixed(4)}%)` }}
                               />
                               <AnnotationCanvas
-                                context="breakfast"
+                                context="daily_practice"
                                 assignmentId={a.assignment_id}
                                 initialAnnotations={(a.annotations ?? []) as Annotations}
                               />

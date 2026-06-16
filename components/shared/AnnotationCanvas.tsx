@@ -6,7 +6,7 @@ import type { AnnotationStroke, Annotations } from '@/types/annotations';
 import { useToolbarScale } from '@/hooks/useToolbarScale';
 
 interface AnnotationCanvasProps {
-  context: 'worksheet' | 'breakfast';
+  context: 'worksheet' | 'daily_practice';
   worksheetId?: string;
   stepId?: string;
   questionNumber?: number;
@@ -243,8 +243,8 @@ const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCanvasProp
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ questionNumber, annotations: strokes }),
           });
-        } else if (context === 'breakfast' && assignmentId) {
-          await fetch('/api/breakfast-problems/annotations', {
+        } else if (context === 'daily_practice' && assignmentId) {
+          await fetch('/api/daily-practice/annotations', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ assignmentId, annotations: strokes }),

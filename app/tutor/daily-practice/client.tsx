@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { CheckCircle, XCircle, Coffee, Pencil, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Pencil, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import type { BreakfastResult, LastSessionDate } from './page';
+import type { DailyPracticeResult, LastSessionDate } from './page';
 
 interface EditDraft {
   question: string;
@@ -22,11 +22,11 @@ interface EditDraft {
   category: string;
 }
 
-export default function TutorBreakfastClient({
+export default function TutorDailyPracticeClient({
   results,
   lastSessionDates,
 }: {
-  results: BreakfastResult[];
+  results: DailyPracticeResult[];
   lastSessionDates: LastSessionDate[];
 }) {
   const router = useRouter();
@@ -39,7 +39,7 @@ export default function TutorBreakfastClient({
   const [sinceLastSession, setSinceLastSession] = useState(false);
 
   // Detail modal state
-  const [detailResult, setDetailResult] = useState<BreakfastResult | null>(null);
+  const [detailResult, setDetailResult] = useState<DailyPracticeResult | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<EditDraft | null>(null);
@@ -56,12 +56,12 @@ export default function TutorBreakfastClient({
     });
   }
 
-  const byStudent = filtered.reduce<Record<string, BreakfastResult[]>>((acc, r) => {
+  const byStudent = filtered.reduce<Record<string, DailyPracticeResult[]>>((acc, r) => {
     (acc[r.student_name] ??= []).push(r);
     return acc;
   }, {});
 
-  function openDetail(r: BreakfastResult) {
+  function openDetail(r: DailyPracticeResult) {
     setDetailResult(r);
     setIsEditing(false);
     setDraft(null);
@@ -86,7 +86,7 @@ export default function TutorBreakfastClient({
     if (!detailResult || !draft) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/breakfast-problems/${detailResult.problem_id}`, {
+      const res = await fetch(`/api/admin/daily-practice/${detailResult.problem_id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -117,7 +117,7 @@ export default function TutorBreakfastClient({
     <div className="space-y-8">
       <div>
         <div className="eyebrow-sky mb-3">Tutor Portal</div>
-        <h1 className="portal-section-title">Breakfast Problems</h1>
+        <h1 className="portal-section-title">☀️ Daily Practice</h1>
         <p className="text-sm mt-2" style={{ color: 'var(--slate)' }}>
           Review your students&apos; daily practice results. Use the filter to focus on work since the last session.
         </p>
@@ -157,20 +157,20 @@ export default function TutorBreakfastClient({
             className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
             style={{ background: 'rgba(168,203,222,0.14)', border: '1px solid rgba(168,203,222,0.25)' }}
           >
-            <Coffee className="h-6 w-6" style={{ color: 'var(--sky-deeper)' }} />
+            <span>☀️</span>
           </div>
           <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
             No results yet
           </p>
           <p className="text-xs mt-1" style={{ color: 'var(--mist)' }}>
             {sinceLastSession
-              ? 'No breakfast problems submitted since the last session.'
+              ? 'No daily practice submitted since the last session.'
               : "Your students haven't submitted any answers yet."}
           </p>
         </div>
       ) : (
         Object.entries(byStudent).map(([studentName, rows]) => {
-          const byDate = rows.reduce<Record<string, BreakfastResult[]>>((acc, r) => {
+          const byDate = rows.reduce<Record<string, DailyPracticeResult[]>>((acc, r) => {
             (acc[r.assigned_date] ??= []).push(r);
             return acc;
           }, {});
@@ -327,7 +327,7 @@ export default function TutorBreakfastClient({
 
                   <div className="space-y-2">
                     {(['A', 'B', 'C', 'D'] as const).map((letter) => {
-                      const key = `choice_${letter.toLowerCase()}` as keyof BreakfastResult;
+                      const key = `choice_${letter.toLowerCase()}` as keyof DailyPracticeResult;
                       const isCorrect = detailResult.correct_answer === letter;
                       const isStudentWrong = !detailResult.is_correct && detailResult.student_answer === letter;
                       return (

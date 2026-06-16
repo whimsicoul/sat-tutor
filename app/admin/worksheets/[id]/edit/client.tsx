@@ -1813,13 +1813,13 @@ function WarmUpStepInfo({
             Dynamic Warm-Up Step
           </h3>
           <p style={{ fontSize: 13, color: 'var(--mist)', lineHeight: 1.6, margin: 0 }}>
-            When a student opens this worksheet, this step will automatically show all breakfast problems they answered incorrectly since their last worksheet was assigned. No configuration needed — the content is generated dynamically per student.
+            When a student opens this worksheet, this step will automatically show all daily practice problems they answered incorrectly since their last worksheet was assigned. No configuration needed — the content is generated dynamically per student.
           </p>
         </div>
         <div style={{ fontSize: 12, color: 'var(--mist)', padding: '10px 16px', borderRadius: 10, border: '1px solid var(--fog)', background: 'var(--frost)', maxWidth: 360 }}>
           <strong style={{ color: 'var(--charcoal)' }}>If no mistakes exist</strong> — the step is skipped automatically.
           <br />
-          <strong style={{ color: 'var(--charcoal)' }}>If no breakfast history</strong> — students see a prompt to complete breakfast problems first.
+          <strong style={{ color: 'var(--charcoal)' }}>If no daily practice history</strong> — students see a prompt to complete daily practice first.
         </div>
       </div>
     </div>

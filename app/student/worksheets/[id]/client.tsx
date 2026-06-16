@@ -243,12 +243,12 @@ function WarmUpStep({ step, onNext }: { step: FlowStep; onNext: () => void }) {
   const problems = (step.warmUpProblems ?? []) as WarmUpProblem[];
   const [reattempts, setReattempts] = useState<Record<string, string>>({});
 
-  if (!step.hasBreakfastHistory) {
+  if (!step.hasDailyPracticeHistory) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '40px 24px', border: '1px dashed var(--fog)', borderRadius: 14, textAlign: 'center' }}>
         <Sun size={28} style={{ color: '#f59e0b', opacity: 0.7 }} />
         <p style={{ fontSize: 14, color: 'var(--mist)', margin: 0, maxWidth: 380 }}>
-          Students should complete daily breakfast problems, then review will be available here as a warm-up.
+          Students should complete daily practice problems, then review will be available here as a warm-up.
         </p>
       </div>
     );
@@ -259,7 +259,7 @@ function WarmUpStep({ step, onNext }: { step: FlowStep; onNext: () => void }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
         <Sun size={15} style={{ color: '#f59e0b' }} />
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--charcoal)', fontFamily: "'Syne', sans-serif" }}>
-          {problems.length} missed breakfast problem{problems.length !== 1 ? 's' : ''} to review
+          {problems.length} missed daily practice problem{problems.length !== 1 ? 's' : ''} to review
         </span>
       </div>
 

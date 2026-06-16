@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { getBreakfastAnnotations, saveBreakfastAnnotations } from '@/lib/db';
+import { getDailyPracticeAnnotations, saveDailyPracticeAnnotations } from '@/lib/db';
 import type { Annotations } from '@/types/annotations';
 
 export async function GET(req: NextRequest) {
@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   }
   const assignmentId = new URL(req.url).searchParams.get('assignmentId');
   if (!assignmentId) return NextResponse.json({ error: 'assignmentId required' }, { status: 400 });
-  const annotations = await getBreakfastAnnotations(assignmentId);
+  const annotations = await getDailyPracticeAnnotations(assignmentId);
   return NextResponse.json({ annotations });
 }
 
@@ -23,6 +23,6 @@ export async function PATCH(req: NextRequest) {
     assignmentId: string;
     annotations: Annotations;
   };
-  await saveBreakfastAnnotations(assignmentId, annotations);
+  await saveDailyPracticeAnnotations(assignmentId, annotations);
   return NextResponse.json({ ok: true });
 }

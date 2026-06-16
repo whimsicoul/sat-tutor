@@ -3,12 +3,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { CalendarDays, Coffee, BarChart2, Settings, LogOut, Layers } from 'lucide-react';
+import { CalendarDays, BarChart2, Settings, LogOut, Layers } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
+
+function SunEmoji(_props: { size?: number; className?: string }) {
+  return <span>☀️</span>;
+}
 
 const navItems = [
   { href: '/tutor/schedule', label: 'Schedule', icon: CalendarDays },
-  { href: '/tutor/breakfast-problems', label: 'Breakfast Problems', icon: Coffee },
+  { href: '/tutor/daily-practice', label: 'Daily Practice', icon: SunEmoji },
   { href: '/tutor/worksheets', label: 'Worksheets', icon: Layers },
   { href: '/tutor/test-results', label: 'Test Results', icon: BarChart2 },
   { href: '/tutor/settings', label: 'Settings', icon: Settings },

@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getBreakfastProblemsForCropReview } from '@/lib/db';
+import { getDailyPracticeForCropReview } from '@/lib/db';
 import CropReviewClient from './client';
 
 export interface CropProblem {
@@ -17,7 +17,7 @@ export default async function CropReviewPage() {
   const role = (session?.user as { role?: string } | undefined)?.role;
   if (role !== 'admin') redirect('/login');
 
-  const problems = await getBreakfastProblemsForCropReview();
+  const problems = await getDailyPracticeForCropReview();
 
   return (
     <CropReviewClient problems={problems as unknown as CropProblem[]} />

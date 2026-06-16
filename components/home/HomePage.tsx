@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, BookOpen, TrendingUp, ClipboardList, Coffee, CalendarDays, Target, PenLine } from 'lucide-react';
+import { ArrowRight, BookOpen, TrendingUp, ClipboardList, CalendarDays, Target, PenLine } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
 
 interface Tutor {
@@ -204,16 +204,16 @@ export default function HomePage({ tutors, userRole }: { tutors: Tutor[]; userRo
                 },
                 {
                   n: 3,
-                  icon: <Coffee className="h-5 w-5" />,
+                  icon: <span className="h-5 w-5 flex items-center justify-center">☀️</span>,
                   title: 'Daily Practice Problems',
-                  body: 'Five "breakfast problems" every morning: 15–20 minutes, easy to medium difficulty. Consistent daily exposure builds pattern recognition faster than any single cram session.',
+                  body: 'Five daily practice problems every morning: 15–20 minutes, easy to medium difficulty. Consistent daily exposure builds pattern recognition faster than any single cram session.',
                   accent: 'sky',
                 },
                 {
                   n: 4,
                   icon: <CalendarDays className="h-5 w-5" />,
                   title: 'Weekly Tutoring Sessions',
-                  body: "Each session opens by reviewing the breakfast problems you struggled with. Your tutor identifies error patterns — careless mistakes, concept gaps, or test-strategy issues — and adjusts the plan.",
+                  body: "Each session opens by reviewing the daily practice problems you struggled with. Your tutor identifies error patterns — careless mistakes, concept gaps, or test-strategy issues — and adjusts the plan.",
                   accent: 'rose',
                 },
                 {

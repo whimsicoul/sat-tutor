@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth';
-import { saveBreakfastResponse } from '@/lib/db';
+import { saveDailyPracticeResponse } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   const problemIds = answers.map((a) => a.problemId);
 
   const correctRows = await sql.query(
-    'SELECT id, correct_answer FROM breakfast_problems WHERE id = ANY($1::uuid[])',
+    'SELECT id, correct_answer FROM daily_practice WHERE id = ANY($1::uuid[])',
     [problemIds]
   ) as { id: string; correct_answer: string }[];
 
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const correctAnswer = correctMap.get(a.problemId);
     if (!correctAnswer) continue;
     const isCorrect = a.studentAnswer.toUpperCase() === correctAnswer;
-    const row = await saveBreakfastResponse(
+    const row = await saveDailyPracticeResponse(
       a.assignmentId,
       studentId,
       a.problemId,

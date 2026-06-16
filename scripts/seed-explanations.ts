@@ -1,6 +1,6 @@
 /**
- * One-time script — reads all breakfast problem PDFs, extracts the Rationale
- * for each problem, and saves it to breakfast_problems.answer_explanation.
+ * One-time script — reads all daily practice PDFs, extracts the Rationale
+ * for each problem, and saves it to daily_practice.answer_explanation.
  *
  * Usage: npx tsx scripts/seed-explanations.ts
  *
@@ -69,11 +69,11 @@ function getPdfPaths(baseDir: string): string[] {
 }
 
 async function main() {
-  const breakfastDir = resolve('breakfast_problems');
-  const pdfPaths = getPdfPaths(breakfastDir);
+  const dailyPracticeDir = resolve('daily_practice');
+  const pdfPaths = getPdfPaths(dailyPracticeDir);
 
   if (pdfPaths.length === 0) {
-    console.error('No PDF files found under breakfast_problems/');
+    console.error('No PDF files found under daily_practice/');
     process.exit(1);
   }
 
@@ -110,7 +110,7 @@ async function main() {
 
     for (const [externalId, rationale] of explanations) {
       const rows = await sql`
-        UPDATE breakfast_problems
+        UPDATE daily_practice
         SET answer_explanation = ${rationale}
         WHERE external_id = ${externalId}
           AND answer_explanation IS NULL
@@ -123,7 +123,7 @@ async function main() {
         // Check whether the row exists but already has an explanation
         const existing = await sql`
           SELECT id, answer_explanation IS NOT NULL AS has_explanation
-          FROM breakfast_problems
+          FROM daily_practice
           WHERE external_id = ${externalId}
           LIMIT 1
         `;

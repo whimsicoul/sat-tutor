@@ -9,11 +9,11 @@ import {
 import {
   ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock,
   Download, ExternalLink, Calendar, X, GraduationCap, Plus, Trash2, BookOpen,
-  Check, Coffee, Minus,
+  Check, Minus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
-import type { SessionRow, BreakfastDay, NextSession } from './page';
+import type { SessionRow, DailyPracticeDay, NextSession } from './page';
 
 interface SatDate {
   id: string;
@@ -248,19 +248,19 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export default function StudentScheduleClient({
   sessions: initial,
   satDates,
-  breakfastDays = [],
+  dailyPracticeDays = [],
   nextSession = null,
 }: {
   sessions: SessionRow[];
   satDates: SatDate[];
-  breakfastDays?: BreakfastDay[];
+  dailyPracticeDays?: DailyPracticeDay[];
   nextSession?: NextSession | null;
 }) {
   const [sessions, setSessions] = useState(initial);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [sessionPopup, setSessionPopup] = useState<SessionRow | null>(null);
   const [deletingSession, setDeletingSession] = useState(false);
-  const [breakfastPopupDay, setBreakfastPopupDay] = useState<string | null>(null);
+  const [dailyPracticePopupDay, setDailyPracticePopupDay] = useState<string | null>(null);
 
   const calendarDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(currentMonth));
@@ -284,11 +284,11 @@ export default function StudentScheduleClient({
     return set;
   }, [satDates]);
 
-  const breakfastByDay = useMemo(() => {
+  const dailyPracticeByDay = useMemo(() => {
     const map: Record<string, boolean> = {};
-    for (const b of breakfastDays) map[b.date] = b.completed;
+    for (const b of dailyPracticeDays) map[b.date] = b.completed;
     return map;
-  }, [breakfastDays]);
+  }, [dailyPracticeDays]);
 
   async function handleDeleteSession(id: string) {
     setDeletingSession(true);
@@ -424,8 +424,8 @@ export default function StudentScheduleClient({
             const hasSat = satDatesByDay.has(key);
             const inMonth = isSameMonth(day, currentMonth);
             const isToday = isSameDay(day, new Date());
-            const hasBreakfast = key in breakfastByDay;
-            const breakfastComplete = hasBreakfast && breakfastByDay[key];
+            const hasDailyPractice = key in dailyPracticeByDay;
+            const dailyPracticeComplete = hasDailyPractice && dailyPracticeByDay[key];
 
             return (
               <div
@@ -457,7 +457,7 @@ export default function StudentScheduleClient({
                   >
                     {format(day, 'd')}
                   </span>
-                  {breakfastComplete && (
+                  {dailyPracticeComplete && (
                     <div style={{
                       position: 'absolute', top: -3, right: -9,
                       width: 13, height: 13, borderRadius: '50%',
@@ -512,11 +512,11 @@ export default function StudentScheduleClient({
                       SAT
                     </div>
                   )}
-                  {hasBreakfast && (
+                  {hasDailyPractice && (
                     <div
                       onClick={(e) => {
                         e.stopPropagation();
-                        setBreakfastPopupDay(key);
+                        setDailyPracticePopupDay(key);
                       }}
                       style={{
                         fontSize: 10,
@@ -525,15 +525,15 @@ export default function StudentScheduleClient({
                         borderRadius: 4,
                         cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: 3,
-                        background: breakfastComplete ? 'rgba(74,222,128,0.15)' : 'rgba(251,191,36,0.12)',
-                        color: breakfastComplete ? '#15803d' : '#92400e',
-                        border: `1px solid ${breakfastComplete ? 'rgba(74,222,128,0.35)' : 'rgba(251,191,36,0.35)'}`,
+                        background: dailyPracticeComplete ? 'rgba(74,222,128,0.15)' : 'rgba(251,191,36,0.12)',
+                        color: dailyPracticeComplete ? '#15803d' : '#92400e',
+                        border: `1px solid ${dailyPracticeComplete ? 'rgba(74,222,128,0.35)' : 'rgba(251,191,36,0.35)'}`,
                         whiteSpace: 'nowrap',
                         userSelect: 'none',
                       }}
                     >
-                      <Coffee size={8} />
-                      {breakfastComplete ? 'Breakfast ✓' : 'Breakfast'}
+                      <span>☀️</span>
+                      {dailyPracticeComplete ? '☀️ Daily Practice ✓' : '☀️ Daily Practice'}
                     </div>
                   )}
                 </div>
@@ -567,11 +567,11 @@ export default function StudentScheduleClient({
       {/* SAT Test Dates */}
       <SatDatesSection initialDates={satDates} />
 
-      {/* Breakfast popup */}
-      {breakfastPopupDay && (
+      {/* Daily Practice popup */}
+      {dailyPracticePopupDay && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
-          onClick={() => setBreakfastPopupDay(null)}
+          onClick={() => setDailyPracticePopupDay(null)}
         >
           <div
             className="portal-card"
@@ -580,19 +580,19 @@ export default function StudentScheduleClient({
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Coffee size={16} style={{ color: 'var(--sky-deeper)' }} />
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>Breakfast Problems</span>
+                <span style={{ fontSize: 16 }}>☀️</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>☀️ Daily Practice</span>
               </div>
-              <button onClick={() => setBreakfastPopupDay(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mist)' }}>
+              <button onClick={() => setDailyPracticePopupDay(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mist)' }}>
                 <X size={16} />
               </button>
             </div>
 
             <p style={{ fontSize: 13, color: 'var(--slate)', marginBottom: 12 }}>
-              {format(parseISO(breakfastPopupDay), 'EEEE, MMMM d, yyyy')}
+              {format(parseISO(dailyPracticePopupDay), 'EEEE, MMMM d, yyyy')}
             </p>
 
-            {breakfastByDay[breakfastPopupDay] ? (
+            {dailyPracticeByDay[dailyPracticePopupDay] ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#15803d', fontSize: 13, marginBottom: 20 }}>
                 <CheckCircle size={14} />
                 <span>All problems completed for this day!</span>
@@ -604,7 +604,7 @@ export default function StudentScheduleClient({
             )}
 
             <a
-              href="/student/breakfast-problems"
+              href="/student/daily-practice"
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
@@ -612,7 +612,7 @@ export default function StudentScheduleClient({
                 border: '1px solid rgba(168,203,222,0.4)', textDecoration: 'none',
               }}
             >
-              Go to Breakfast Problems
+              Go to Daily Practice
               <ExternalLink size={12} />
             </a>
           </div>

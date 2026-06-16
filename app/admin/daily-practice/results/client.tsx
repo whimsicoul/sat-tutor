@@ -5,22 +5,22 @@ import { format } from 'date-fns';
 import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import type { BreakfastResult } from './page';
+import type { DailyPracticeResult } from './page';
 
-export default function AdminBreakfastResultsClient({
+export default function AdminDailyPracticeResultsClient({
   results,
 }: {
-  results: BreakfastResult[];
+  results: DailyPracticeResult[];
 }) {
   const studentNames = Array.from(new Set(results.map((r) => r.student_name))).sort();
   const [filterStudent, setFilterStudent] = useState('all');
-  const [detailResult, setDetailResult] = useState<BreakfastResult | null>(null);
+  const [detailResult, setDetailResult] = useState<DailyPracticeResult | null>(null);
 
   const filtered = filterStudent === 'all'
     ? results
     : results.filter((r) => r.student_name === filterStudent);
 
-  const byStudent = filtered.reduce<Record<string, BreakfastResult[]>>((acc, r) => {
+  const byStudent = filtered.reduce<Record<string, DailyPracticeResult[]>>((acc, r) => {
     (acc[r.student_name] ??= []).push(r);
     return acc;
   }, {});
@@ -29,7 +29,7 @@ export default function AdminBreakfastResultsClient({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link href="/admin/breakfast-problems">
+        <Link href="/admin/daily-practice">
           <button
             className="w-8 h-8 flex items-center justify-center rounded-lg"
             style={{ background: 'var(--frost)', border: '1px solid var(--fog)', color: 'var(--slate)', cursor: 'pointer' }}
@@ -42,7 +42,7 @@ export default function AdminBreakfastResultsClient({
             className="text-2xl font-bold"
             style={{ fontFamily: "'Cormorant Garamond', serif", color: 'var(--charcoal)' }}
           >
-            Breakfast Problems — Results
+            ☀️ Daily Practice — Results
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--mist)' }}>
             {results.length} response{results.length !== 1 ? 's' : ''} across all students
@@ -72,7 +72,7 @@ export default function AdminBreakfastResultsClient({
         </div>
       ) : (
         Object.entries(byStudent).map(([studentName, rows]) => {
-          const byDate = rows.reduce<Record<string, BreakfastResult[]>>((acc, r) => {
+          const byDate = rows.reduce<Record<string, DailyPracticeResult[]>>((acc, r) => {
             (acc[r.assigned_date] ??= []).push(r);
             return acc;
           }, {});
@@ -206,7 +206,7 @@ export default function AdminBreakfastResultsClient({
 
               <div className="space-y-2">
                 {(['A', 'B', 'C', 'D'] as const).map((letter) => {
-                  const key = `choice_${letter.toLowerCase()}` as keyof BreakfastResult;
+                  const key = `choice_${letter.toLowerCase()}` as keyof DailyPracticeResult;
                   const isCorrect = detailResult.correct_answer === letter;
                   const isStudentWrong = !detailResult.is_correct && detailResult.student_answer === letter;
                   return (

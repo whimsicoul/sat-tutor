@@ -1,8 +1,8 @@
 import { auth } from '@/lib/auth';
 import {
-  getBreakfastResultsForTutorStudents,
+  getDailyPracticeResultsForTutorStudents,
   getLastSessionDatePerStudent,
-  getAllBreakfastResults,
+  getAllDailyPracticeResults,
 } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
@@ -13,14 +13,14 @@ export async function GET() {
   if (role === 'tutor') {
     const tutorId = session!.user.id;
     const [results, lastSessionDates] = await Promise.all([
-      getBreakfastResultsForTutorStudents(tutorId),
+      getDailyPracticeResultsForTutorStudents(tutorId),
       getLastSessionDatePerStudent(tutorId),
     ]);
     return NextResponse.json({ results, lastSessionDates });
   }
 
   if (role === 'admin') {
-    const results = await getAllBreakfastResults();
+    const results = await getAllDailyPracticeResults();
     return NextResponse.json({ results });
   }
 

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import type { BreakfastProblem } from './page';
+import type { DailyPractice } from './page';
 
 // ── Crop sub-components (mirrors crop-review page) ────────────────────────────
 
@@ -137,14 +137,14 @@ const VALID_ANSWERS = new Set(['A', 'B', 'C', 'D']);
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function AdminBreakfastProblemsClient({
+export default function AdminDailyPracticeClient({
   problems: initial,
 }: {
-  problems: BreakfastProblem[];
+  problems: DailyPractice[];
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [problems, setProblems] = useState<BreakfastProblem[]>(initial);
+  const [problems, setProblems] = useState<DailyPractice[]>(initial);
 
   // Upload / parse state
   const [parsing, setParsing] = useState(false);
@@ -153,7 +153,7 @@ export default function AdminBreakfastProblemsClient({
   const [skipped, setSkipped] = useState<{ external_id: string; reason: string }[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Math' | 'Reading and Writing'>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
-  const [detailProblem, setDetailProblem] = useState<BreakfastProblem | null>(null);
+  const [detailProblem, setDetailProblem] = useState<DailyPractice | null>(null);
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -186,7 +186,7 @@ export default function AdminBreakfastProblemsClient({
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/admin/breakfast-problems/parse-pdf', { method: 'POST', body: fd });
+      const res = await fetch('/api/admin/daily-practice/parse-pdf', { method: 'POST', body: fd });
       if (!res.ok) throw new Error((await res.json()).error || 'Parse failed');
       const data = await res.json();
       setPreview(data.rows);
@@ -222,7 +222,7 @@ export default function AdminBreakfastProblemsClient({
     if (!preview) return;
     setUploading(true);
     try {
-      const res = await fetch('/api/admin/breakfast-problems', {
+      const res = await fetch('/api/admin/daily-practice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rows: preview }),
@@ -265,7 +265,7 @@ export default function AdminBreakfastProblemsClient({
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this problem? Students who have already been assigned it keep their records.')) return;
-    const res = await fetch(`/api/admin/breakfast-problems/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/admin/daily-practice/${id}`, { method: 'DELETE' });
     if (!res.ok) { toast.error('Delete failed.'); return; }
     setProblems((prev) => prev.filter((p) => p.id !== id));
     toast.success('Problem deleted.');
@@ -296,7 +296,7 @@ export default function AdminBreakfastProblemsClient({
     if (!detailProblem) return;
     setSavingCrop(true);
     try {
-      const res = await fetch(`/api/admin/breakfast-problems/${detailProblem.id}`, {
+      const res = await fetch(`/api/admin/daily-practice/${detailProblem.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ crop_top_px: cropTop, crop_bottom_px: cropBottom }),
@@ -324,7 +324,7 @@ export default function AdminBreakfastProblemsClient({
         skill:      draft.skill      || null,
         difficulty: draft.difficulty || null,
       };
-      const res = await fetch(`/api/admin/breakfast-problems/${detailProblem.id}`, {
+      const res = await fetch(`/api/admin/daily-practice/${detailProblem.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -368,7 +368,7 @@ export default function AdminBreakfastProblemsClient({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/admin/breakfast-problems/results">
+          <Link href="/admin/daily-practice/results">
             <Button variant="outline" className="flex items-center gap-2">
               <BarChart2 className="h-4 w-4" />
               View Results
@@ -766,7 +766,7 @@ export default function AdminBreakfastProblemsClient({
                         </p>
                         <div className="space-y-2">
                           {(['A', 'B', 'C', 'D'] as const).map((letter) => {
-                            const key = `choice_${letter.toLowerCase()}` as keyof BreakfastProblem;
+                            const key = `choice_${letter.toLowerCase()}` as keyof DailyPractice;
                             const isCorrect = detailProblem.correct_answer === letter;
                             return (
                               <div

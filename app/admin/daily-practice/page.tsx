@@ -1,9 +1,9 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getAllBreakfastProblems } from '@/lib/db';
-import AdminBreakfastProblemsClient from './client';
+import { getAllDailyPractice } from '@/lib/db';
+import AdminDailyPracticeClient from './client';
 
-export interface BreakfastProblem {
+export interface DailyPractice {
   id: string;
   question: string;
   choice_a: string;
@@ -24,16 +24,16 @@ export interface BreakfastProblem {
   image_height_px: number | null;
 }
 
-export default async function AdminBreakfastProblemsPage() {
+export default async function AdminDailyPracticePage() {
   const session = await auth();
   const role = (session?.user as { role?: string } | undefined)?.role;
   if (role !== 'admin') redirect('/login');
 
-  const problems = await getAllBreakfastProblems();
+  const problems = await getAllDailyPractice();
 
   return (
-    <AdminBreakfastProblemsClient
-      problems={problems as unknown as BreakfastProblem[]}
+    <AdminDailyPracticeClient
+      problems={problems as unknown as DailyPractice[]}
     />
   );
 }

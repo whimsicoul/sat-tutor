@@ -45,8 +45,8 @@ if (reprocess) console.log('REPROCESS mode: ALL images with a URL will be update
 if (dryRun) console.log('DRY RUN mode: no DB writes will occur.\n');
 
 const query = reprocess
-  ? `SELECT id, question_image_url FROM breakfast_problems WHERE question_image_url IS NOT NULL ORDER BY created_at`
-  : `SELECT id, question_image_url FROM breakfast_problems WHERE question_image_url IS NOT NULL AND image_height_px = 0 ORDER BY created_at`;
+  ? `SELECT id, question_image_url FROM daily_practice WHERE question_image_url IS NOT NULL ORDER BY created_at`
+  : `SELECT id, question_image_url FROM daily_practice WHERE question_image_url IS NOT NULL AND image_height_px = 0 ORDER BY created_at`;
 
 let client = await makeClient();
 const { rows } = await client.query(query);
@@ -90,7 +90,7 @@ try {
       if (!dryRun) {
         const c = await makeClient();
         await c.query(
-          `UPDATE breakfast_problems SET crop_top_px=$1, crop_bottom_px=$2, image_width_px=$3, image_height_px=$4 WHERE id=$5`,
+          `UPDATE daily_practice SET crop_top_px=$1, crop_bottom_px=$2, image_width_px=$3, image_height_px=$4 WHERE id=$5`,
           [crop_top_px, crop_bottom_px, meta.width, meta.height, id]
         );
         await c.end();

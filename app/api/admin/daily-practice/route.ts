@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth';
-import { getAllBreakfastProblems, bulkInsertBreakfastProblems } from '@/lib/db';
+import { getAllDailyPractice, bulkInsertDailyPractice } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
 const VALID_ANSWERS = new Set(['A', 'B', 'C', 'D']);
@@ -10,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const rows = await getAllBreakfastProblems();
+  const rows = await getAllDailyPractice();
   return NextResponse.json(rows);
 }
 
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const inserted = await bulkInsertBreakfastProblems(rows);
+  const inserted = await bulkInsertDailyPractice(rows);
   // inserted may be shorter than rows if duplicates were skipped via ON CONFLICT
   return NextResponse.json({ inserted: inserted.length, total: rows.length }, { status: 201 });
 }

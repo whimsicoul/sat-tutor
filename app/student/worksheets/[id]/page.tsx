@@ -9,8 +9,8 @@ import {
   getWorksheetStepResponses,
   getWorksheetStepProblems,
   getPreviousWorksheetAssignedDate,
-  getMissedBreakfastProblemsSince,
-  hasAnyBreakfastHistory,
+  getMissedDailyPracticeSince,
+  hasAnyDailyPracticeHistory,
 } from '@/lib/db';
 import WorksheetFlowClient from './client';
 
@@ -62,7 +62,7 @@ export interface FlowStep {
   initialResponses: FlowResponse[];
   problems: FlowProblem[];
   warmUpProblems?: WarmUpProblem[];
-  hasBreakfastHistory?: boolean;
+  hasDailyPracticeHistory?: boolean;
   skipStep?: boolean;
 }
 
@@ -115,8 +115,8 @@ export default async function StudentWorksheetPage({
         const prevDate = await getPreviousWorksheetAssignedDate(user.id!, id);
         const sinceDate = prevDate ?? new Date(0);
         const [missedProblems, hasHistory] = await Promise.all([
-          getMissedBreakfastProblemsSince(user.id!, sinceDate),
-          hasAnyBreakfastHistory(user.id!),
+          getMissedDailyPracticeSince(user.id!, sinceDate),
+          hasAnyDailyPracticeHistory(user.id!),
         ]);
         const warmUpProblems = missedProblems as unknown as WarmUpProblem[];
         return {
@@ -128,7 +128,7 @@ export default async function StudentWorksheetPage({
           initialResponses: [],
           problems: [],
           warmUpProblems,
-          hasBreakfastHistory: hasHistory,
+          hasDailyPracticeHistory: hasHistory,
           skipStep: hasHistory && warmUpProblems.length === 0,
         } as FlowStep;
       }

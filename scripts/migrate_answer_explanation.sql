@@ -1,5 +1,5 @@
--- DC SAT Tutor — Add answer_explanation to breakfast_problems
+-- DC SAT Tutor — Add answer_explanation to daily_practice
 -- Run once against your Neon database.
 
-ALTER TABLE breakfast_problems
+ALTER TABLE daily_practice
   ADD COLUMN IF NOT EXISTS answer_explanation TEXT;

@@ -3,14 +3,18 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { Users, CalendarDays, Coffee, LogOut, Settings, MessageSquare, BarChart2, FileText, Layers, TrendingUp } from 'lucide-react';
+import { Users, CalendarDays, LogOut, Settings, MessageSquare, BarChart2, FileText, Layers, TrendingUp } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
+
+function SunEmoji(_props: { size?: number; className?: string }) {
+  return <span>☀️</span>;
+}
 
 const navItems = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/schedule', label: 'Schedule', icon: CalendarDays },
   { href: '/admin/worksheets', label: 'Worksheets', icon: Layers },
-  { href: '/admin/breakfast-problems', label: 'Breakfast Problems', icon: Coffee },
+  { href: '/admin/daily-practice', label: 'Daily Practice', icon: SunEmoji },
   { href: '/admin/act-test', label: 'ACT Test', icon: FileText },
   { href: '/admin/test-results', label: 'Test Results', icon: BarChart2 },
   { href: '/admin/analytics', label: 'Analytics', icon: TrendingUp },

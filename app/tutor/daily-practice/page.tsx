@@ -1,9 +1,9 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getBreakfastResultsForTutorStudents, getLastSessionDatePerStudent } from '@/lib/db';
-import TutorBreakfastClient from './client';
+import { getDailyPracticeResultsForTutorStudents, getLastSessionDatePerStudent } from '@/lib/db';
+import TutorDailyPracticeClient from './client';
 
-export interface BreakfastResult {
+export interface DailyPracticeResult {
   id: string;
   problem_id: string;
   student_answer: string;
@@ -32,7 +32,7 @@ export interface LastSessionDate {
   last_session_date: string;
 }
 
-export default async function TutorBreakfastPage() {
+export default async function TutorDailyPracticePage() {
   const session = await auth();
   const role = (session?.user as { role?: string } | undefined)?.role;
   if (role !== 'tutor') redirect('/login');
@@ -40,13 +40,13 @@ export default async function TutorBreakfastPage() {
   const tutorId = session!.user.id;
 
   const [results, lastSessionDates] = await Promise.all([
-    getBreakfastResultsForTutorStudents(tutorId),
+    getDailyPracticeResultsForTutorStudents(tutorId),
     getLastSessionDatePerStudent(tutorId),
   ]);
 
   return (
-    <TutorBreakfastClient
-      results={results as unknown as BreakfastResult[]}
+    <TutorDailyPracticeClient
+      results={results as unknown as DailyPracticeResult[]}
       lastSessionDates={lastSessionDates as unknown as LastSessionDate[]}
     />
   );

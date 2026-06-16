@@ -192,7 +192,7 @@ export default function AnalyticsDashboardClient({
           Analytics
         </h1>
         <p style={{ fontSize: 14, color: MIST, margin: 0 }}>
-          Problem performance across breakfast problems and worksheets
+          Problem performance across daily practice and worksheets
         </p>
       </div>
 
@@ -206,7 +206,7 @@ export default function AnalyticsDashboardClient({
             style={selectStyle}
           >
             <option value="all">All Sources</option>
-            <option value="breakfast">Breakfast Problems</option>
+            <option value="daily_practice">☀️ Daily Practice</option>
             <option value="worksheets">Worksheets</option>
           </select>
         </div>
@@ -303,7 +303,7 @@ export default function AnalyticsDashboardClient({
             Accuracy by Skill
           </h2>
           {noSkillData ? (
-            <EmptyChart message="No skill data yet. Tag worksheet problems or breakfast problems with a skill to see this chart." />
+            <EmptyChart message="No skill data yet. Tag worksheet problems or daily practice problems with a skill to see this chart." />
           ) : (
             <ResponsiveContainer width="100%" height={Math.max(220, skillData.length * 36)}>
               <BarChart

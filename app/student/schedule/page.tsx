@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
-import { getSatDatesByStudent, getBreakfastCompletionByStudent, getWorksheetCompletionStatusesForStudent } from '@/lib/db';
+import { getSatDatesByStudent, getDailyPracticeCompletionByStudent, getWorksheetCompletionStatusesForStudent } from '@/lib/db';
 import StudentScheduleClient from './client';
 
 export interface SessionRow {
@@ -16,7 +16,7 @@ export interface SessionRow {
   recurrence_rule?: string | null;
 }
 
-export interface BreakfastDay {
+export interface DailyPracticeDay {
   date: string;
   completed: boolean;
 }
@@ -34,7 +34,7 @@ export default async function StudentSchedulePage() {
 
   const now = new Date().toISOString();
 
-  const [sessions, satDatesRaw, breakfastRaw, nextSessionRaw] = await Promise.all([
+  const [sessions, satDatesRaw, dailyPracticeRaw, nextSessionRaw] = await Promise.all([
     sql`
       SELECT s.id, s.proposed_time, s.status, s.created_at,
              u.name AS tutor_name,
@@ -48,7 +48,7 @@ export default async function StudentSchedulePage() {
       ORDER BY s.proposed_time DESC
     `,
     getSatDatesByStudent(userId),
-    getBreakfastCompletionByStudent(userId),
+    getDailyPracticeCompletionByStudent(userId),
     sql`
       SELECT s.id, s.proposed_time, s.status, u.name AS tutor_name
       FROM sessions s
@@ -84,7 +84,7 @@ export default async function StudentSchedulePage() {
   }));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const breakfastDays: BreakfastDay[] = (breakfastRaw as any[]).map((b) => ({
+  const dailyPracticeDays: DailyPracticeDay[] = (dailyPracticeRaw as any[]).map((b) => ({
     date: String(b.assigned_date).split('T')[0],
     completed: Number(b.submitted) >= Number(b.total) && Number(b.total) > 0,
   }));
@@ -106,7 +106,7 @@ export default async function StudentSchedulePage() {
     <StudentScheduleClient
       sessions={sessionsWithPs}
       satDates={satDates}
-      breakfastDays={breakfastDays}
+      dailyPracticeDays={dailyPracticeDays}
       nextSession={nextSession}
     />
   );

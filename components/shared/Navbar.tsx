@@ -3,8 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { Layers, Calendar, Coffee, LogOut, Settings, BarChart2 } from 'lucide-react';
+import { Layers, Calendar, LogOut, Settings, BarChart2 } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
+
+function SunEmoji(_props: { size?: number; className?: string }) {
+  return <span>☀️</span>;
+}
 
 interface NavbarProps {
   role: 'student' | 'tutor';
@@ -13,7 +17,7 @@ interface NavbarProps {
 
 const STUDENT_LINKS = [
   { href: '/student/schedule', label: 'Schedule', icon: Calendar },
-  { href: '/student/breakfast-problems', label: 'Breakfast Problems', icon: Coffee },
+  { href: '/student/daily-practice', label: 'Daily Practice', icon: SunEmoji },
   { href: '/student/test-results', label: 'Test Results', icon: BarChart2 },
   { href: '/student/worksheets', label: 'Worksheets', icon: Layers },
   { href: '/student/settings', label: 'Settings', icon: Settings },
@@ -21,7 +25,7 @@ const STUDENT_LINKS = [
 
 const TUTOR_LINKS = [
   { href: '/tutor/schedule', label: 'Schedule', icon: Calendar },
-  { href: '/tutor/breakfast-problems', label: 'Breakfast Problems', icon: Coffee },
+  { href: '/tutor/daily-practice', label: 'Daily Practice', icon: SunEmoji },
   { href: '/tutor/test-results', label: 'Test Results', icon: BarChart2 },
   { href: '/tutor/worksheets', label: 'Worksheets', icon: Layers },
   { href: '/tutor/settings', label: 'Settings', icon: Settings },

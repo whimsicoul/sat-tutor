@@ -38,8 +38,8 @@ next-env.d.ts
 # claude
 .claude/
 
-# breakfast problem PDFs
-breakfast_problems/
+# daily practice PDFs
+daily_practice/
 
 # ACT generated images (derived from PDF via scripts/convert-act-pdf-to-images-mupdf.mjs)
 act-images/

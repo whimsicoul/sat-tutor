@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
-import { getTodayAssignmentsForStudent, assignBreakfastProblemsForToday } from '@/lib/db';
-import StudentBreakfastClient from './client';
+import { getTodayAssignmentsForStudent, assignDailyPracticeForToday } from '@/lib/db';
+import StudentDailyPracticeClient from './client';
 
 export interface TodayAssignment {
   assignment_id: string;
@@ -23,18 +23,18 @@ export interface TodayAssignment {
   annotations: unknown[];
 }
 
-export default async function StudentBreakfastPage() {
+export default async function StudentDailyPracticePage() {
   const session = await auth();
   const userId = session!.user.id;
 
   let assignments = await getTodayAssignmentsForStudent(userId);
   if (assignments.length === 0) {
-    await assignBreakfastProblemsForToday(userId, 5);
+    await assignDailyPracticeForToday(userId, 5);
     assignments = await getTodayAssignmentsForStudent(userId);
   }
 
   return (
-    <StudentBreakfastClient
+    <StudentDailyPracticeClient
       assignments={assignments as unknown as TodayAssignment[]}
     />
   );
