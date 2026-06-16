@@ -406,15 +406,6 @@ export async function getStudentsForTutor(tutorId: string) {
 
 // ─── Breakfast Problems: Admin ────────────────────────────────────────────────
 
-export async function getAllBreakfastProblems() {
-  return sql`
-    SELECT id, question, choice_a, choice_b, choice_c, choice_d,
-           correct_answer, category, skill, difficulty, external_id, created_at
-    FROM breakfast_problems
-    ORDER BY created_at DESC
-  `;
-}
-
 export async function bulkInsertBreakfastProblems(
   rows: Array<{
     question: string;
