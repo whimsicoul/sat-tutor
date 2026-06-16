@@ -439,7 +439,7 @@ export async function bulkInsertBreakfastProblems(
         VALUES
           (${r.question}, ${r.choice_a}, ${r.choice_b}, ${r.choice_c}, ${r.choice_d},
            ${r.correct_answer.toUpperCase()}, ${r.category ?? null},
-           ${r.skill ?? null}, ${r.difficulty ?? null}, ${r.external_id ?? null})
+           ${r.skill ?? null}, ${r.difficulty ?? 'Easy'}, ${r.external_id ?? null})
         ON CONFLICT (external_id) DO NOTHING
         RETURNING id
       `
@@ -467,11 +467,8 @@ export async function updateBreakfastProblem(
     difficulty?: string | null;
     crop_top_px?: number | null;
     crop_bottom_px?: number | null;
-    review_status?: string | null;
   }
 ) {
-  const updateReviewStatus = 'review_status' in fields;
-  const newReviewStatus = fields.review_status ?? null;
   const rows = await sql`
     UPDATE breakfast_problems SET
       question           = COALESCE(${fields.question        ?? null}, question),
@@ -485,8 +482,7 @@ export async function updateBreakfastProblem(
       skill              = COALESCE(${fields.skill               ?? null}::text, skill),
       difficulty         = COALESCE(${fields.difficulty          ?? null}::text, difficulty),
       crop_top_px        = COALESCE(${fields.crop_top_px    ?? null}::int, crop_top_px),
-      crop_bottom_px     = COALESCE(${fields.crop_bottom_px ?? null}::int, crop_bottom_px),
-      review_status      = CASE WHEN ${updateReviewStatus} THEN ${newReviewStatus}::text ELSE review_status END
+      crop_bottom_px     = COALESCE(${fields.crop_bottom_px ?? null}::int, crop_bottom_px)
     WHERE id = ${id}
     RETURNING *
   `;
@@ -502,38 +498,18 @@ export async function getBreakfastProblemsForCropReview() {
   `;
 }
 
-export async function getAllBreakfastProblemsWithFlagCounts() {
+export async function getAllBreakfastProblems() {
   return sql`
     SELECT
-      bp.id, bp.question, bp.choice_a, bp.choice_b, bp.choice_c, bp.choice_d,
-      bp.correct_answer, bp.category, bp.skill, bp.difficulty,
-      bp.external_id, bp.created_at,
-      bp.answer_explanation,
-      bp.review_status,
-      bp.question_image_url, bp.crop_top_px, bp.crop_bottom_px,
-      bp.image_width_px, bp.image_height_px,
-      COUNT(bpf.id)::int AS flag_count,
-      MAX(bpf.reason)    AS latest_flag_reason
-    FROM breakfast_problems bp
-    LEFT JOIN breakfast_problem_flags bpf ON bpf.problem_id = bp.id
-    GROUP BY bp.id
-    ORDER BY bp.created_at DESC
+      id, question, choice_a, choice_b, choice_c, choice_d,
+      correct_answer, category, skill, difficulty,
+      external_id, created_at,
+      answer_explanation,
+      question_image_url, crop_top_px, crop_bottom_px,
+      image_width_px, image_height_px
+    FROM breakfast_problems
+    ORDER BY created_at DESC
   `;
-}
-
-export async function upsertBreakfastProblemFlag(
-  problemId: string,
-  studentId: string,
-  reason: string | null
-) {
-  const rows = await sql`
-    INSERT INTO breakfast_problem_flags (problem_id, student_id, reason)
-    VALUES (${problemId}, ${studentId}, ${reason})
-    ON CONFLICT (problem_id, student_id)
-    DO UPDATE SET reason = EXCLUDED.reason, created_at = now()
-    RETURNING id
-  `;
-  return rows[0] ?? null;
 }
 
 // ─── Breakfast Problems: Student ─────────────────────────────────────────────
@@ -579,7 +555,6 @@ export async function assignBreakfastProblemsForToday(
     SELECT category, COUNT(*) AS cnt
     FROM breakfast_problems
     WHERE category IN ('Math', 'Reading and Writing')
-      AND (review_status IS NULL OR review_status != 'flagged_for_review')
       AND id NOT IN (
         SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
       )
@@ -599,7 +574,6 @@ export async function assignBreakfastProblemsForToday(
         SELECT ${studentId}, bp.id, CURRENT_DATE
         FROM breakfast_problems bp
         WHERE bp.category = 'Math'
-          AND (bp.review_status IS NULL OR bp.review_status != 'flagged_for_review')
           AND bp.id NOT IN (
             SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
           )
@@ -613,7 +587,6 @@ export async function assignBreakfastProblemsForToday(
         SELECT ${studentId}, bp.id, CURRENT_DATE
         FROM breakfast_problems bp
         WHERE bp.category = 'Reading and Writing'
-          AND (bp.review_status IS NULL OR bp.review_status != 'flagged_for_review')
           AND bp.id NOT IN (
             SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
           )
@@ -631,8 +604,7 @@ export async function assignBreakfastProblemsForToday(
     INSERT INTO student_breakfast_assignments (student_id, problem_id, assigned_date)
     SELECT ${studentId}, bp.id, CURRENT_DATE
     FROM breakfast_problems bp
-    WHERE (bp.review_status IS NULL OR bp.review_status != 'flagged_for_review')
-      AND bp.id NOT IN (
+    WHERE bp.id NOT IN (
         SELECT problem_id FROM student_breakfast_assignments WHERE student_id = ${studentId}
       )
     ORDER BY random()

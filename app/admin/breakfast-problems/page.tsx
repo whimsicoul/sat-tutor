@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getAllBreakfastProblemsWithFlagCounts } from '@/lib/db';
+import { getAllBreakfastProblems } from '@/lib/db';
 import AdminBreakfastProblemsClient from './client';
 
 export interface BreakfastProblem {
@@ -17,9 +17,6 @@ export interface BreakfastProblem {
   difficulty: string | null;
   external_id: string | null;
   created_at: string;
-  flag_count: number;
-  latest_flag_reason: string | null;
-  review_status: string | null;
   question_image_url: string | null;
   crop_top_px: number | null;
   crop_bottom_px: number | null;
@@ -32,7 +29,7 @@ export default async function AdminBreakfastProblemsPage() {
   const role = (session?.user as { role?: string } | undefined)?.role;
   if (role !== 'admin') redirect('/login');
 
-  const problems = await getAllBreakfastProblemsWithFlagCounts();
+  const problems = await getAllBreakfastProblems();
 
   return (
     <AdminBreakfastProblemsClient

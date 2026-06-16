@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Upload, Trash2, Coffee, BarChart2, FileText, CheckCircle2, X, Loader2, Flag, Pencil } from 'lucide-react';
+import { Upload, Trash2, Coffee, BarChart2, FileText, CheckCircle2, X, Loader2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -153,7 +153,6 @@ export default function AdminBreakfastProblemsClient({
   const [skipped, setSkipped] = useState<{ external_id: string; reason: string }[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Math' | 'Reading and Writing'>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
-  const [reviewFilter, setReviewFilter] = useState(false);
   const [detailProblem, setDetailProblem] = useState<BreakfastProblem | null>(null);
 
   // Edit state
@@ -259,7 +258,6 @@ export default function AdminBreakfastProblemsClient({
   const filteredProblems = problems.filter((p) => {
     if (categoryFilter !== 'all' && p.category !== categoryFilter) return false;
     if (difficultyFilter !== 'all' && (p.difficulty ?? undefined) !== difficultyFilter) return false;
-    if (reviewFilter && p.review_status !== 'flagged_for_review') return false;
     return true;
   });
 
@@ -315,7 +313,7 @@ export default function AdminBreakfastProblemsClient({
     }
   }
 
-  async function handleSave(clearReviewFlag = false) {
+  async function handleSave() {
     if (!detailProblem || !draft) return;
     setSaving(true);
     try {
@@ -326,7 +324,6 @@ export default function AdminBreakfastProblemsClient({
         skill:      draft.skill      || null,
         difficulty: draft.difficulty || null,
       };
-      if (clearReviewFlag) body.review_status = null;
       const res = await fetch(`/api/admin/breakfast-problems/${detailProblem.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -338,7 +335,7 @@ export default function AdminBreakfastProblemsClient({
       setDetailProblem((prev) => prev ? { ...prev, ...updated } : prev);
       setIsEditing(false);
       setDraft(null);
-      toast.success(clearReviewFlag ? 'Problem updated and marked as reviewed.' : 'Problem updated.');
+      toast.success('Problem updated.');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Save failed');
     } finally {
@@ -553,19 +550,6 @@ export default function AdminBreakfastProblemsClient({
               {cat === 'all' ? 'All' : cat}
             </button>
           ))}
-          <span className="text-xs" style={{ color: 'var(--fog)' }}>|</span>
-          <button
-            onClick={() => setReviewFilter((v) => !v)}
-            className="text-xs px-3 py-1 rounded-full transition-all flex items-center gap-1"
-            style={{
-              background: reviewFilter ? '#FEF3C7' : 'var(--frost)',
-              color: reviewFilter ? '#92400E' : 'var(--slate)',
-              border: '1px solid ' + (reviewFilter ? '#FCD34D' : 'var(--fog)'),
-              fontWeight: reviewFilter ? 600 : 400,
-            }}
-          >
-            ⚠ Flagged for Review
-          </button>
           {difficulties.length > 0 && (
             <>
               <span className="text-xs" style={{ color: 'var(--fog)' }}>|</span>
@@ -608,7 +592,7 @@ export default function AdminBreakfastProblemsClient({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--fog)' }}>
-                  {['Question', 'Category', 'Skill', 'Difficulty', 'Answer', 'Flags', 'Added', ''].map((h) => (
+                  {['Question', 'Category', 'Skill', 'Difficulty', 'Answer', 'Added', ''].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -667,27 +651,6 @@ export default function AdminBreakfastProblemsClient({
                       >
                         {p.correct_answer}
                       </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div className="flex flex-col gap-1">
-                        {p.flag_count > 0 && (
-                          <span
-                            className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold w-fit"
-                            style={{ background: '#FEE2E2', color: '#991B1B', border: '1px solid #FECACA' }}
-                          >
-                            <Flag className="h-3 w-3" />
-                            {p.flag_count}
-                          </span>
-                        )}
-                        {p.review_status === 'flagged_for_review' && (
-                          <span
-                            className="px-2 py-0.5 rounded text-xs font-semibold w-fit"
-                            style={{ background: '#FEF3C7', color: '#92400E', border: '1px solid #FCD34D' }}
-                          >
-                            ⚠ Review
-                          </span>
-                        )}
-                      </div>
                     </td>
                     <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--slate)' }}>
                       {format(new Date(p.created_at), 'MMM d, yyyy')}
@@ -833,24 +796,6 @@ export default function AdminBreakfastProblemsClient({
                       >
                         <p className="text-xs font-semibold mb-1" style={{ color: 'var(--slate)' }}>Explanation</p>
                         <p style={{ color: 'var(--charcoal)' }}>{detailProblem.answer_explanation}</p>
-                      </div>
-                    )}
-
-                    {detailProblem.flag_count > 0 && (
-                      <div className="rounded-lg px-3 py-2 text-xs" style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B' }}>
-                        <div className="flex items-center gap-1 font-semibold mb-0.5">
-                          <Flag className="h-3 w-3" />
-                          Flagged by {detailProblem.flag_count} student{detailProblem.flag_count !== 1 ? 's' : ''}
-                        </div>
-                        {detailProblem.latest_flag_reason && (
-                          <p style={{ color: '#7F1D1D' }}>Latest reason: &ldquo;{detailProblem.latest_flag_reason}&rdquo;</p>
-                        )}
-                      </div>
-                    )}
-
-                    {detailProblem.review_status === 'flagged_for_review' && (
-                      <div className="rounded-lg px-3 py-2 text-xs" style={{ background: '#FFFBEB', border: '1px solid #FCD34D', color: '#92400E' }}>
-                        ⚠ This problem is flagged for review — it may contain a corrupted character (<code>&#65533;</code>). Edit the question to fix the typo, then mark it as reviewed.
                       </div>
                     )}
 
@@ -1097,17 +1042,6 @@ export default function AdminBreakfastProblemsClient({
                       >
                         Cancel
                       </button>
-                      {detailProblem.review_status === 'flagged_for_review' && (
-                        <button
-                          onClick={() => handleSave(true)}
-                          disabled={saving}
-                          className="flex items-center gap-2 text-sm px-4 py-2 rounded-md"
-                          style={{ background: '#D97706', color: 'white' }}
-                        >
-                          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                          {saving ? 'Saving…' : 'Save & Mark Reviewed'}
-                        </button>
-                      )}
                       <button
                         onClick={() => handleSave()}
                         disabled={saving}
