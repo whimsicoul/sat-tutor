@@ -3,11 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { LayoutDashboard, Users, CalendarDays, Coffee, LogOut, Settings, MessageSquare, BarChart2, FileText, Layers, TrendingUp } from 'lucide-react';
+import { Users, CalendarDays, Coffee, LogOut, Settings, MessageSquare, BarChart2, FileText, Layers, TrendingUp } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
 
 const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/schedule', label: 'Schedule', icon: CalendarDays },
   { href: '/admin/worksheets', label: 'Worksheets', icon: Layers },

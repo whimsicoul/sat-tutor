@@ -3,14 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { LayoutDashboard, CalendarDays, Coffee, BarChart2, Settings, LogOut, FileText, Layers } from 'lucide-react';
+import { CalendarDays, Coffee, BarChart2, Settings, LogOut, Layers } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
 
 const navItems = [
-  { href: '/tutor', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/tutor/schedule', label: 'Schedule', icon: CalendarDays },
   { href: '/tutor/breakfast-problems', label: 'Breakfast Problems', icon: Coffee },
-  { href: '/tutor/act-test', label: 'ACT Test', icon: FileText },
   { href: '/tutor/worksheets', label: 'Worksheets', icon: Layers },
   { href: '/tutor/test-results', label: 'Test Results', icon: BarChart2 },
   { href: '/tutor/settings', label: 'Settings', icon: Settings },

@@ -26,11 +26,20 @@ export interface StudentOption {
   name: string;
 }
 
+export interface NextSession {
+  id: string;
+  proposed_time: string;
+  status: string;
+  student_name: string;
+}
+
 export default async function TutorSchedulePage() {
   const session = await auth();
   const tutorId = session!.user.id;
 
-  const [sessions, students, satDatesRaw, tutorWorksheets] = await Promise.all([
+  const now = new Date().toISOString();
+
+  const [sessions, students, satDatesRaw, tutorWorksheets, nextSessionRaw] = await Promise.all([
     sql`
       SELECT s.id, s.proposed_time, s.status, s.created_at,
              u.name AS student_name, u.id AS student_id,
@@ -52,6 +61,14 @@ export default async function TutorSchedulePage() {
     `,
     getSatDatesForTutorStudents(tutorId),
     getAllWorksheets(),
+    sql`
+      SELECT s.id, s.proposed_time, s.status, u.name AS student_name
+      FROM sessions s
+      JOIN users u ON u.id = s.student_id
+      WHERE s.tutor_id = ${tutorId} AND s.proposed_time >= ${now}
+      ORDER BY s.proposed_time ASC
+      LIMIT 1
+    `,
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -76,12 +93,26 @@ export default async function TutorSchedulePage() {
     student_name: d.student_name as string,
   }));
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const nextSessionRow = (nextSessionRaw as any[])[0] ?? null;
+  const nextSession: NextSession | null = nextSessionRow
+    ? {
+        id: String(nextSessionRow.id),
+        proposed_time: nextSessionRow.proposed_time instanceof Date
+          ? nextSessionRow.proposed_time.toISOString()
+          : String(nextSessionRow.proposed_time),
+        status: String(nextSessionRow.status),
+        student_name: String(nextSessionRow.student_name),
+      }
+    : null;
+
   return (
     <TutorScheduleClient
       sessions={sessionsWithPs}
       students={students as unknown as StudentOption[]}
       allWorksheets={allWorksheets}
       satDates={satDates}
+      nextSession={nextSession}
     />
   );
 }

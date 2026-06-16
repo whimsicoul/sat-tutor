@@ -8,11 +8,11 @@ import {
 } from 'date-fns';
 import {
   ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock,
-  Download, ExternalLink, Send, X, Save, Plus, GraduationCap, Trash2, BookOpen,
+  Download, ExternalLink, Send, X, Save, Plus, GraduationCap, Trash2, BookOpen, Calendar,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
-import type { TutorSessionRow, StudentOption, TutorWorksheet } from './page';
+import type { TutorSessionRow, StudentOption, TutorWorksheet, NextSession } from './page';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -84,11 +84,13 @@ export default function TutorScheduleClient({
   students,
   allWorksheets,
   satDates,
+  nextSession = null,
 }: {
   sessions: TutorSessionRow[];
   students: StudentOption[];
   allWorksheets: TutorWorksheet[];
   satDates: TutorSatDate[];
+  nextSession?: NextSession | null;
 }) {
   const [sessions, setSessions] = useState(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -333,6 +335,52 @@ export default function TutorScheduleClient({
           Add Session
         </button>
       </div>
+
+      {/* Next session bar */}
+      {nextSession ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '12px 18px',
+            borderRadius: 10,
+            background: 'rgba(168,203,222,0.1)',
+            border: '1px solid rgba(168,203,222,0.3)',
+          }}
+        >
+          <Calendar size={15} style={{ color: 'var(--sky-deeper)', flexShrink: 0 }} />
+          <div style={{ flex: 1, fontSize: 13 }}>
+            <span style={{ fontWeight: 600, color: 'var(--charcoal)' }}>Next Session</span>
+            <span style={{ color: 'var(--slate)', marginLeft: 8 }}>
+              with {nextSession.student_name} · {format(parseISO(nextSession.proposed_time), "EEEE, MMMM d 'at' h:mm a")}
+            </span>
+          </div>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              padding: '3px 10px',
+              borderRadius: 20,
+              flexShrink: 0,
+              color: nextSession.status === 'approved'
+                ? 'var(--sky-deeper)'
+                : nextSession.status === 'denied'
+                ? '#991B1B'
+                : 'var(--rose-deeper)',
+              background: nextSession.status === 'approved'
+                ? 'rgba(168,203,222,0.2)'
+                : nextSession.status === 'denied'
+                ? '#FEF2F2'
+                : 'rgba(224,166,175,0.2)',
+            }}
+          >
+            {nextSession.status}
+          </span>
+        </div>
+      ) : null}
 
       {/* Calendar */}
       <div className="portal-card p-0 overflow-hidden">
