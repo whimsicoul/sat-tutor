@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import sql from '@/lib/db';
-import { getSatDatesByStudent, getBreakfastCompletionByStudent } from '@/lib/db';
+import { getSatDatesByStudent, getBreakfastCompletionByStudent, getWorksheetCompletionStatusesForStudent } from '@/lib/db';
 import StudentScheduleClient from './client';
 
 export interface SessionRow {
@@ -10,6 +10,7 @@ export interface SessionRow {
   created_at: string;
   tutor_name: string;
   worksheet?: { id: string; title: string } | null;
+  worksheetStatus?: 'completed' | 'started' | 'not_started';
   series_id?: string | null;
   series_end_date?: string | null;
   recurrence_rule?: string | null;
@@ -59,12 +60,20 @@ export default async function StudentSchedulePage() {
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sessionsWithPs: SessionRow[] = (sessions as any[]).map((s) => ({
+  const sessionsBase: SessionRow[] = (sessions as any[]).map((s) => ({
     ...s,
     proposed_time: s.proposed_time instanceof Date ? s.proposed_time.toISOString() : s.proposed_time,
     created_at: s.created_at instanceof Date ? s.created_at.toISOString() : s.created_at,
     series_end_date: s.series_end_date instanceof Date ? s.series_end_date.toISOString() : s.series_end_date,
     worksheet: s.worksheet_id ? { id: s.worksheet_id as string, title: s.worksheet_title as string } : null,
+  }));
+
+  const worksheetIds = sessionsBase.flatMap((s) => (s.worksheet ? [s.worksheet.id] : []));
+  const completionStatuses = await getWorksheetCompletionStatusesForStudent(worksheetIds, userId);
+
+  const sessionsWithPs: SessionRow[] = sessionsBase.map((s) => ({
+    ...s,
+    worksheetStatus: s.worksheet ? (completionStatuses[s.worksheet.id] ?? 'not_started') : undefined,
   }));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

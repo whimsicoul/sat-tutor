@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
@@ -31,6 +31,37 @@ export default function WorksheetFlowClient({
 }) {
   const visibleSteps = steps.filter((s) => !s.skipStep);
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
+
+  const problemStepIds = useMemo(
+    () => new Set(visibleSteps.filter((s) => s.type === 'problems').map((s) => s.id)),
+    [visibleSteps],
+  );
+
+  const [answeredStepIds, setAnsweredStepIds] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const step of visibleSteps) {
+      if (step.type === 'problems' && step.problems.length > 0) {
+        const allDone = step.problems.every((p) =>
+          step.initialResponses.some(
+            (r) => r.question_number === p.question_number && r.selected_answer != null,
+          ),
+        );
+        if (allDone) initial.add(step.id);
+      }
+    }
+    return initial;
+  });
+
+  const completionCalledRef = useRef(false);
+
+  useEffect(() => {
+    if (completionCalledRef.current || problemStepIds.size === 0) return;
+    const allDone = [...problemStepIds].every((id) => answeredStepIds.has(id));
+    if (allDone) {
+      completionCalledRef.current = true;
+      fetch(`/api/worksheets/${worksheet.id}/complete`, { method: 'POST' }).catch(() => undefined);
+    }
+  }, [answeredStepIds, problemStepIds, worksheet.id]);
 
   if (visibleSteps.length === 0) {
     return (
@@ -143,7 +174,11 @@ export default function WorksheetFlowClient({
         ) : isWarmUp ? (
           <WarmUpStep step={currentStep} onNext={() => setCurrentStepIdx((i) => Math.min(totalSteps - 1, i + 1))} />
         ) : (
-          <ProblemsStep step={currentStep} worksheetId={worksheet.id} />
+          <ProblemsStep
+            step={currentStep}
+            worksheetId={worksheet.id}
+            onAllAnswered={() => setAnsweredStepIds((prev) => new Set([...prev, currentStep.id]))}
+          />
         )}
       </div>
 
@@ -367,16 +402,32 @@ function WarmUpStep({ step, onNext }: { step: FlowStep; onNext: () => void }) {
 
 // ── Problems step ─────────────────────────────────────────────────────────────
 
-function ProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: string }) {
+function ProblemsStep({
+  step,
+  worksheetId,
+  onAllAnswered,
+}: {
+  step: FlowStep;
+  worksheetId: string;
+  onAllAnswered?: () => void;
+}) {
   if (step.problems.length > 0) {
-    return <PdfProblemsStep step={step} worksheetId={worksheetId} />;
+    return <PdfProblemsStep step={step} worksheetId={worksheetId} onAllAnswered={onAllAnswered} />;
   }
-  return <LegacyProblemsStep step={step} worksheetId={worksheetId} />;
+  return <LegacyProblemsStep step={step} worksheetId={worksheetId} onAllAnswered={onAllAnswered} />;
 }
 
 // ── PDF-import problems step ──────────────────────────────────────────────────
 
-function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: string }) {
+function PdfProblemsStep({
+  step,
+  worksheetId,
+  onAllAnswered,
+}: {
+  step: FlowStep;
+  worksheetId: string;
+  onAllAnswered?: () => void;
+}) {
   const problems = step.problems.slice().sort((a, b) => a.question_number - b.question_number);
   const [currentQIdx, setCurrentQIdx] = useState(0);
   const [editingQNav, setEditingQNav] = useState(false);
@@ -414,6 +465,12 @@ function PdfProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: s
   const allAnswered = problems.every(
     (p) => responses[p.question_number]?.selectedAnswer != null,
   );
+
+  const prevAllAnswered = useRef(allAnswered);
+  useEffect(() => {
+    if (allAnswered && !prevAllAnswered.current) onAllAnswered?.();
+    prevAllAnswered.current = allAnswered;
+  }, [allAnswered, onAllAnswered]);
 
   const saveTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
   const saveResponse = useCallback((questionNumber: number, state: ResponseState) => {
@@ -867,7 +924,15 @@ function ReviewSummary({
 
 // ── Legacy (image-upload) problems step ──────────────────────────────────────
 
-function LegacyProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId: string }) {
+function LegacyProblemsStep({
+  step,
+  worksheetId,
+  onAllAnswered,
+}: {
+  step: FlowStep;
+  worksheetId: string;
+  onAllAnswered?: () => void;
+}) {
   const [pages] = useState<FlowPage[]>(step.pages);
   const [positions] = useState<FlowPosition[]>(step.positions);
   const [currentPageIdx, setCurrentPageIdx] = useState(0);
@@ -932,6 +997,19 @@ function LegacyProblemsStep({ step, worksheetId }: { step: FlowStep; worksheetId
       setRevealing(false);
     }
   }
+
+  const allQuestionNumbers = useMemo(
+    () => Array.from(new Set(positions.map((p) => p.question_number))),
+    [positions],
+  );
+  const allAnswered = allQuestionNumbers.length > 0 && allQuestionNumbers.every(
+    (qNum) => responses[qNum]?.selectedAnswer != null,
+  );
+  const prevAllAnsweredLegacy = useRef(allAnswered);
+  useEffect(() => {
+    if (allAnswered && !prevAllAnsweredLegacy.current) onAllAnswered?.();
+    prevAllAnsweredLegacy.current = allAnswered;
+  }, [allAnswered, onAllAnswered]);
 
   if (pages.length === 0) {
     return (

@@ -1317,6 +1317,45 @@ export async function hasAnyBreakfastHistory(studentId: string): Promise<boolean
   return rows.length > 0;
 }
 
+// ─── Worksheet Completions ─────────────────────────────────────────────────────
+
+export async function markWorksheetCompleted(worksheetId: string, studentId: string) {
+  await sql`
+    INSERT INTO worksheet_completions (worksheet_id, student_id)
+    VALUES (${worksheetId}, ${studentId})
+    ON CONFLICT (worksheet_id, student_id) DO NOTHING
+  `;
+}
+
+export async function getWorksheetCompletionStatusesForStudent(
+  worksheetIds: string[],
+  studentId: string,
+): Promise<Record<string, 'completed' | 'started' | 'not_started'>> {
+  if (worksheetIds.length === 0) return {};
+
+  const completed = await sql`
+    SELECT worksheet_id::text FROM worksheet_completions
+    WHERE worksheet_id = ANY(${worksheetIds}::uuid[]) AND student_id = ${studentId}
+  `;
+  const completedSet = new Set(completed.map((r) => r.worksheet_id as string));
+
+  const started = await sql`
+    SELECT DISTINCT ws.worksheet_id::text
+    FROM worksheet_step_responses wsr
+    JOIN worksheet_steps ws ON ws.id = wsr.step_id
+    WHERE ws.worksheet_id = ANY(${worksheetIds}::uuid[]) AND wsr.student_id = ${studentId}
+  `;
+  const startedSet = new Set(started.map((r) => r.worksheet_id as string));
+
+  const result: Record<string, 'completed' | 'started' | 'not_started'> = {};
+  for (const id of worksheetIds) {
+    if (completedSet.has(id)) result[id] = 'completed';
+    else if (startedSet.has(id)) result[id] = 'started';
+    else result[id] = 'not_started';
+  }
+  return result;
+}
+
 export async function getWorksheetAnnotations(
   stepId: string,
   studentId: string,

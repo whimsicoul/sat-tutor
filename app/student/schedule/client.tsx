@@ -9,7 +9,7 @@ import {
 import {
   ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock,
   Download, ExternalLink, Calendar, X, GraduationCap, Plus, Trash2, BookOpen,
-  Check, Coffee,
+  Check, Coffee, Minus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
@@ -244,28 +244,6 @@ function rruleLabel(rule: string | null | undefined): string {
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function WorksheetBlock({ worksheet }: { worksheet: { id: string; title: string } | null | undefined }) {
-  if (!worksheet) return null;
-  return (
-    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--fog)' }}>
-      <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', marginBottom: 6 }}>
-        Worksheet
-      </p>
-      <a
-        href={`/student/worksheets/${worksheet.id}`}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12,
-          color: 'var(--rose-deeper)', textDecoration: 'none',
-          background: 'rgba(224,166,175,0.10)', border: '1px solid rgba(224,166,175,0.25)',
-          borderRadius: 6, padding: '3px 10px',
-        }}
-      >
-        <BookOpen size={12} />
-        {worksheet.title}
-      </a>
-    </div>
-  );
-}
 
 export default function StudentScheduleClient({
   sessions: initial,
@@ -280,8 +258,7 @@ export default function StudentScheduleClient({
 }) {
   const [sessions, setSessions] = useState(initial);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [selectedSession, setSelectedSession] = useState<SessionRow | null>(null);
+  const [sessionPopup, setSessionPopup] = useState<SessionRow | null>(null);
   const [deletingSession, setDeletingSession] = useState(false);
   const [breakfastPopupDay, setBreakfastPopupDay] = useState<string | null>(null);
 
@@ -313,30 +290,13 @@ export default function StudentScheduleClient({
     return map;
   }, [breakfastDays]);
 
-  function handleDayClick(day: Date) {
-    const key = format(day, 'yyyy-MM-dd');
-    const daySess = sessionsByDay[key] ?? [];
-    if (daySess.length === 0) return;
-    setSelectedDay(day);
-    setSelectedSession(daySess[0]);
-  }
-
-  function closePanel() {
-    setSelectedDay(null);
-    setSelectedSession(null);
-  }
-
-  const daySessions = selectedDay
-    ? (sessionsByDay[format(selectedDay, 'yyyy-MM-dd')] ?? [])
-    : [];
-
   async function handleDeleteSession(id: string) {
     setDeletingSession(true);
     try {
       const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed');
       setSessions((prev) => prev.filter((s) => s.id !== id));
-      closePanel();
+      setSessionPopup(null);
       toast.success('Session deleted.');
     } catch {
       toast.error('Failed to delete session.');
@@ -463,28 +423,22 @@ export default function StudentScheduleClient({
             const daySess = sessionsByDay[key] ?? [];
             const hasSat = satDatesByDay.has(key);
             const inMonth = isSameMonth(day, currentMonth);
-            const isSelected = selectedDay && isSameDay(day, selectedDay);
             const isToday = isSameDay(day, new Date());
-            const hasAny = daySess.length > 0 || hasSat;
             const hasBreakfast = key in breakfastByDay;
             const breakfastComplete = hasBreakfast && breakfastByDay[key];
 
             return (
               <div
                 key={key}
-                onClick={() => handleDayClick(day)}
                 style={{
                   minHeight: 108,
                   padding: '6px 8px',
                   borderRight: '1px solid var(--fog)',
                   borderBottom: '1px solid var(--fog)',
-                  background: isSelected ? 'rgba(224,166,175,0.12)' : 'transparent',
-                  cursor: daySess.length > 0 ? 'pointer' : 'default',
+                  background: 'transparent',
                   transition: 'background 0.1s',
                   opacity: inMonth ? 1 : 0.35,
                 }}
-                onMouseEnter={(e) => { if (hasAny) (e.currentTarget as HTMLDivElement).style.background = isSelected ? 'rgba(224,166,175,0.18)' : 'rgba(224,166,175,0.06)'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = isSelected ? 'rgba(224,166,175,0.12)' : 'transparent'; }}
               >
                 <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', marginBottom: 4 }}>
                   <span
@@ -519,6 +473,7 @@ export default function StudentScheduleClient({
                   {daySess.slice(0, 2).map((s) => (
                     <div
                       key={s.id}
+                      onClick={(e) => { e.stopPropagation(); setSessionPopup(s); }}
                       style={{
                         fontSize: 10,
                         lineHeight: 1.3,
@@ -529,7 +484,11 @@ export default function StudentScheduleClient({
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
+                        cursor: 'pointer',
+                        userSelect: 'none',
                       }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = '0.75'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = '1'; }}
                     >
                       {format(parseISO(s.proposed_time), 'h:mm a')}
                     </div>
@@ -660,143 +619,146 @@ export default function StudentScheduleClient({
         </div>
       )}
 
-      {/* Day detail panel */}
-      {selectedDay && (
-        <div className="portal-card p-6" style={{ borderLeft: '3px solid var(--rose)' }}>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
-              {format(selectedDay, 'EEEE, MMMM d, yyyy')}
-              <span className="ml-2 text-xs font-normal" style={{ color: 'var(--mist)' }}>
-                {daySessions.length} session{daySessions.length !== 1 ? 's' : ''}
-              </span>
-            </h2>
-            <button
-              onClick={closePanel}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mist)' }}
-            >
-              <X size={16} />
-            </button>
-          </div>
+      {/* Session popup */}
+      {sessionPopup && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
+          onClick={() => setSessionPopup(null)}
+        >
+          <div
+            className="portal-card"
+            style={{ maxWidth: 400, width: '92%', padding: 24 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Calendar size={16} style={{ color: 'var(--sky-deeper)' }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>Tutoring Session</span>
+              </div>
+              <button onClick={() => setSessionPopup(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mist)' }}>
+                <X size={16} />
+              </button>
+            </div>
 
-          {/* Session tabs if multiple — collapse approved recurring series into one tab */}
-          {(() => {
-            const seenSeries = new Set<string>();
-            const displaySessions = daySessions.filter((s) => {
-              if (s.status === 'approved' && s.series_id) {
-                if (seenSeries.has(s.series_id)) return false;
-                seenSeries.add(s.series_id);
-              }
-              return true;
-            });
-            return displaySessions.length > 1 && (
-              <div className="flex gap-2 mb-4 flex-wrap">
-                {displaySessions.map((s) => (
-                  <button
-                    key={s.series_id && s.status === 'approved' ? `series-${s.series_id}` : s.id}
-                    onClick={() => setSelectedSession(s)}
+            {/* Date / tutor / recurrence */}
+            <p style={{ fontSize: 13, color: 'var(--slate)', marginBottom: 4 }}>
+              {sessionPopup.status === 'approved' && sessionPopup.series_id
+                ? `${rruleLabel(sessionPopup.recurrence_rule)} · with ${sessionPopup.tutor_name}`
+                : `with ${sessionPopup.tutor_name} · ${format(parseISO(sessionPopup.proposed_time), "EEEE, MMMM d 'at' h:mm a")}`}
+            </p>
+            {sessionPopup.status === 'approved' && sessionPopup.series_id && sessionPopup.series_end_date && (
+              <p style={{ fontSize: 12, color: 'var(--mist)', marginBottom: 4 }}>
+                Until {format(new Date(sessionPopup.series_end_date), 'MMM d, yyyy')}
+              </p>
+            )}
+
+            {/* Status badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 20 }}>
+              {sessionPopup.status === 'pending' && <Clock size={12} style={{ color: 'var(--sky-deeper)' }} />}
+              {sessionPopup.status === 'approved' && <CheckCircle size={12} style={{ color: '#16a34a' }} />}
+              {sessionPopup.status === 'denied' && <XCircle size={12} style={{ color: 'var(--cloud)' }} />}
+              <span style={{ fontSize: 12, color: 'var(--mist)', textTransform: 'capitalize' }}>{sessionPopup.status}</span>
+            </div>
+
+            {/* Worksheet section */}
+            <div style={{ borderTop: '1px solid var(--fog)', paddingTop: 16, marginBottom: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--mist)', marginBottom: 10 }}>
+                Worksheet
+              </p>
+              {sessionPopup.worksheet ? (
+                <>
+                  {/* Completion status */}
+                  {sessionPopup.worksheetStatus === 'completed' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#15803d', fontSize: 13, marginBottom: 12 }}>
+                      <CheckCircle size={14} />
+                      <span>Worksheet completed!</span>
+                    </div>
+                  ) : sessionPopup.worksheetStatus === 'started' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 12, color: 'var(--sky-deeper)' }}>
+                      <Minus size={14} />
+                      <span>In progress — keep going!</span>
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: 13, color: 'var(--mist)', marginBottom: 12 }}>
+                      Your worksheet is ready for this session.
+                    </p>
+                  )}
+                  <a
+                    href={`/student/worksheets/${sessionPopup.worksheet.id}`}
                     style={{
-                      padding: '4px 12px',
-                      borderRadius: 20,
-                      fontSize: 12,
-                      fontWeight: selectedSession?.id === s.id ? 600 : 400,
-                      background: selectedSession?.id === s.id ? 'var(--rose)' : 'var(--frost)',
-                      color: selectedSession?.id === s.id ? 'var(--charcoal)' : 'var(--slate)',
-                      border: '1px solid var(--fog)',
-                      cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                      background: 'rgba(168,203,222,0.4)', color: 'var(--sky-deeper)',
+                      border: '1px solid rgba(168,203,222,0.4)', textDecoration: 'none',
                     }}
                   >
-                    {s.status === 'approved' && s.series_id
-                      ? `Recurring · ${format(parseISO(s.proposed_time), 'h:mm a')}`
-                      : format(parseISO(s.proposed_time), 'h:mm a')}
-                  </button>
-                ))}
-              </div>
-            );
-          })()}
-
-          {selectedSession && (
-            <div>
-              {/* Session info */}
-              <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
-                <div>
-                  {selectedSession.status === 'approved' && selectedSession.series_id ? (
-                    <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
-                      Approved {rruleLabel(selectedSession.recurrence_rule)} session with {selectedSession.tutor_name}
-                      {selectedSession.series_end_date
-                        ? ` until ${format(new Date(selectedSession.series_end_date), 'MMM d, yyyy')}`
-                        : ''}
-                    </p>
-                  ) : (
-                    <p className="text-sm font-semibold" style={{ color: 'var(--charcoal)' }}>
-                      {format(parseISO(selectedSession.proposed_time), 'h:mm a')} · with {selectedSession.tutor_name}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-1.5 mt-1">
-                    {selectedSession.status === 'pending' && <Clock size={12} style={{ color: 'var(--sky-deeper)' }} />}
-                    {selectedSession.status === 'approved' && <CheckCircle size={12} style={{ color: '#16a34a' }} />}
-                    {selectedSession.status === 'denied' && <XCircle size={12} style={{ color: 'var(--cloud)' }} />}
-                    <span className="text-xs capitalize" style={{ color: 'var(--mist)' }}>{selectedSession.status}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  {selectedSession.status === 'approved' && (
-                    <>
-                      <button
-                        onClick={() => downloadICS(selectedSession.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                        style={{
-                          background: 'var(--frost)',
-                          color: 'var(--slate)',
-                          border: '1px solid var(--fog)',
-                          cursor: 'pointer',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rose-ultra)'; e.currentTarget.style.color = 'var(--rose-deeper)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--frost)'; e.currentTarget.style.color = 'var(--slate)'; }}
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        .ics
-                      </button>
-                      <a
-                        href={getGoogleCalendarUrl({
-                          title: 'SAT Tutoring Session',
-                          start: parseISO(selectedSession.proposed_time),
-                          durationMinutes: 60,
-                        })}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                        style={{
-                          background: 'var(--frost)',
-                          color: 'var(--slate)',
-                          border: '1px solid var(--fog)',
-                          textDecoration: 'none',
-                        }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--rose-ultra)'; (e.currentTarget as HTMLAnchorElement).style.color = 'var(--rose-deeper)'; }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--frost)'; (e.currentTarget as HTMLAnchorElement).style.color = 'var(--slate)'; }}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        Google Cal
-                      </a>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <WorksheetBlock worksheet={selectedSession.worksheet} />
-              <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => handleDeleteSession(selectedSession.id)}
-                  disabled={deletingSession}
-                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
-                  style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', cursor: deletingSession ? 'not-allowed' : 'pointer', opacity: deletingSession ? 0.6 : 1 }}
-                >
-                  <Trash2 size={12} />
-                  {deletingSession ? 'Deleting…' : 'Delete session'}
-                </button>
-              </div>
+                    <BookOpen size={13} />
+                    Go to Worksheet
+                    <ExternalLink size={12} />
+                  </a>
+                </>
+              ) : (
+                <p style={{ fontSize: 13, color: 'var(--mist)' }}>
+                  Come back later to see the worksheet for this session.
+                </p>
+              )}
             </div>
-          )}
+
+            {/* Calendar export + delete */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {sessionPopup.status === 'approved' && (
+                  <>
+                    <button
+                      onClick={() => downloadICS(sessionPopup.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        padding: '5px 10px', borderRadius: 7, fontSize: 12, fontWeight: 500,
+                        background: 'var(--frost)', color: 'var(--slate)', border: '1px solid var(--fog)', cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--rose-ultra)'; e.currentTarget.style.color = 'var(--rose-deeper)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--frost)'; e.currentTarget.style.color = 'var(--slate)'; }}
+                    >
+                      <Download size={12} /> .ics
+                    </button>
+                    <a
+                      href={getGoogleCalendarUrl({
+                        title: 'SAT Tutoring Session',
+                        start: parseISO(sessionPopup.proposed_time),
+                        durationMinutes: 60,
+                      })}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        padding: '5px 10px', borderRadius: 7, fontSize: 12, fontWeight: 500,
+                        background: 'var(--frost)', color: 'var(--slate)', border: '1px solid var(--fog)', textDecoration: 'none',
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--rose-ultra)'; (e.currentTarget as HTMLAnchorElement).style.color = 'var(--rose-deeper)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--frost)'; (e.currentTarget as HTMLAnchorElement).style.color = 'var(--slate)'; }}
+                    >
+                      <ExternalLink size={12} /> Google Cal
+                    </a>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => handleDeleteSession(sessionPopup.id)}
+                disabled={deletingSession}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '5px 10px', borderRadius: 7, fontSize: 12, fontWeight: 500,
+                  background: 'rgba(239,68,68,0.08)', color: '#EF4444',
+                  border: '1px solid rgba(239,68,68,0.2)', cursor: deletingSession ? 'not-allowed' : 'pointer',
+                  opacity: deletingSession ? 0.6 : 1,
+                }}
+              >
+                <Trash2 size={12} />
+                {deletingSession ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
