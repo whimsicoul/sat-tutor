@@ -1142,7 +1142,9 @@ export async function getWorksheetsByStudent(studentId: string) {
     SELECT DISTINCT w.id, w.title, w.created_at,
            a.name AS created_by_name,
            (SELECT COUNT(*) FROM worksheet_steps ws WHERE ws.worksheet_id = w.id) AS step_count,
-           (SELECT s.proposed_time FROM sessions s WHERE s.worksheet_id = w.id AND s.student_id = ${studentId} ORDER BY s.proposed_time ASC LIMIT 1) AS session_date
+           (SELECT s.proposed_time FROM sessions s WHERE s.worksheet_id = w.id AND s.student_id = ${studentId} ORDER BY s.proposed_time ASC LIMIT 1) AS session_date,
+           EXISTS (SELECT 1 FROM worksheet_completions wc WHERE wc.worksheet_id = w.id AND wc.student_id = ${studentId}) AS is_completed,
+           (SELECT wc.completed_at FROM worksheet_completions wc WHERE wc.worksheet_id = w.id AND wc.student_id = ${studentId} LIMIT 1) AS completed_at
     FROM worksheets w
     JOIN users a ON a.id = w.created_by
     WHERE EXISTS (
