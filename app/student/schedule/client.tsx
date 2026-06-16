@@ -9,10 +9,11 @@ import {
 import {
   ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock,
   Download, ExternalLink, Calendar, X, GraduationCap, Plus, Trash2, BookOpen,
+  Check, Coffee,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getGoogleCalendarUrl } from '@/lib/calendar';
-import type { SessionRow, BreakfastDay } from './page';
+import type { SessionRow, BreakfastDay, NextSession } from './page';
 
 interface SatDate {
   id: string;
@@ -270,16 +271,19 @@ export default function StudentScheduleClient({
   sessions: initial,
   satDates,
   breakfastDays = [],
+  nextSession = null,
 }: {
   sessions: SessionRow[];
   satDates: SatDate[];
   breakfastDays?: BreakfastDay[];
+  nextSession?: NextSession | null;
 }) {
   const [sessions, setSessions] = useState(initial);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [selectedSession, setSelectedSession] = useState<SessionRow | null>(null);
   const [deletingSession, setDeletingSession] = useState(false);
+  const [breakfastPopupDay, setBreakfastPopupDay] = useState<string | null>(null);
 
   const calendarDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(currentMonth));
@@ -362,6 +366,52 @@ export default function StudentScheduleClient({
         </p>
       </div>
 
+      {/* Next session bar */}
+      {nextSession ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '12px 18px',
+            borderRadius: 10,
+            background: 'rgba(168,203,222,0.1)',
+            border: '1px solid rgba(168,203,222,0.3)',
+          }}
+        >
+          <Calendar size={15} style={{ color: 'var(--sky-deeper)', flexShrink: 0 }} />
+          <div style={{ flex: 1, fontSize: 13 }}>
+            <span style={{ fontWeight: 600, color: 'var(--charcoal)' }}>Next Session</span>
+            <span style={{ color: 'var(--slate)', marginLeft: 8 }}>
+              with {nextSession.tutor_name} · {format(parseISO(nextSession.proposed_time), "EEEE, MMMM d 'at' h:mm a")}
+            </span>
+          </div>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              padding: '3px 10px',
+              borderRadius: 20,
+              flexShrink: 0,
+              color: nextSession.status === 'approved'
+                ? 'var(--sky-deeper)'
+                : nextSession.status === 'denied'
+                ? '#991B1B'
+                : 'var(--rose-deeper)',
+              background: nextSession.status === 'approved'
+                ? 'rgba(168,203,222,0.2)'
+                : nextSession.status === 'denied'
+                ? '#FEF2F2'
+                : 'rgba(224,166,175,0.2)',
+            }}
+          >
+            {nextSession.status}
+          </span>
+        </div>
+      ) : null}
+
       {/* Calendar */}
       <div className="portal-card p-0 overflow-hidden">
         {/* Month navigation */}
@@ -416,13 +466,15 @@ export default function StudentScheduleClient({
             const isSelected = selectedDay && isSameDay(day, selectedDay);
             const isToday = isSameDay(day, new Date());
             const hasAny = daySess.length > 0 || hasSat;
+            const hasBreakfast = key in breakfastByDay;
+            const breakfastComplete = hasBreakfast && breakfastByDay[key];
 
             return (
               <div
                 key={key}
                 onClick={() => handleDayClick(day)}
                 style={{
-                  minHeight: 72,
+                  minHeight: 108,
                   padding: '6px 8px',
                   borderRight: '1px solid var(--fog)',
                   borderBottom: '1px solid var(--fog)',
@@ -434,23 +486,35 @@ export default function StudentScheduleClient({
                 onMouseEnter={(e) => { if (hasAny) (e.currentTarget as HTMLDivElement).style.background = isSelected ? 'rgba(224,166,175,0.18)' : 'rgba(224,166,175,0.06)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = isSelected ? 'rgba(224,166,175,0.12)' : 'transparent'; }}
               >
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 22,
-                    height: 22,
-                    borderRadius: '50%',
-                    fontSize: 12,
-                    fontWeight: isToday ? 700 : 400,
-                    color: isToday ? 'var(--white)' : inMonth ? 'var(--charcoal)' : 'var(--cloud)',
-                    background: isToday ? 'var(--rose-deeper)' : 'transparent',
-                    marginBottom: 4,
-                  }}
-                >
-                  {format(day, 'd')}
-                </span>
+                <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', marginBottom: 4 }}>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 22,
+                      height: 22,
+                      borderRadius: '50%',
+                      fontSize: 12,
+                      fontWeight: isToday ? 700 : 400,
+                      color: isToday ? 'var(--white)' : inMonth ? 'var(--charcoal)' : 'var(--cloud)',
+                      background: isToday ? 'var(--rose-deeper)' : 'transparent',
+                    }}
+                  >
+                    {format(day, 'd')}
+                  </span>
+                  {breakfastComplete && (
+                    <div style={{
+                      position: 'absolute', top: -3, right: -9,
+                      width: 13, height: 13, borderRadius: '50%',
+                      background: '#16a34a',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '1.5px solid white',
+                    }}>
+                      <Check size={8} color="white" strokeWidth={3} />
+                    </div>
+                  )}
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {daySess.slice(0, 2).map((s) => (
                     <div
@@ -489,23 +553,28 @@ export default function StudentScheduleClient({
                       SAT
                     </div>
                   )}
-                  {key in breakfastByDay && (
+                  {hasBreakfast && (
                     <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setBreakfastPopupDay(key);
+                      }}
                       style={{
                         fontSize: 10,
                         lineHeight: 1.3,
-                        padding: '1px 5px',
+                        padding: '2px 5px',
                         borderRadius: 4,
-                        background: breakfastByDay[key] ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)',
-                        color: breakfastByDay[key] ? '#15803d' : '#b91c1c',
-                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 3,
+                        background: breakfastComplete ? 'rgba(74,222,128,0.15)' : 'rgba(251,191,36,0.12)',
+                        color: breakfastComplete ? '#15803d' : '#92400e',
+                        border: `1px solid ${breakfastComplete ? 'rgba(74,222,128,0.35)' : 'rgba(251,191,36,0.35)'}`,
                         whiteSpace: 'nowrap',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
+                        userSelect: 'none',
                       }}
                     >
-                      {breakfastByDay[key] ? '✓' : '✗'} BP
+                      <Coffee size={8} />
+                      {breakfastComplete ? 'Breakfast ✓' : 'Breakfast'}
                     </div>
                   )}
                 </div>
@@ -538,6 +607,58 @@ export default function StudentScheduleClient({
 
       {/* SAT Test Dates */}
       <SatDatesSection initialDates={satDates} />
+
+      {/* Breakfast popup */}
+      {breakfastPopupDay && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
+          onClick={() => setBreakfastPopupDay(null)}
+        >
+          <div
+            className="portal-card"
+            style={{ maxWidth: 340, width: '90%', padding: 24 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Coffee size={16} style={{ color: 'var(--sky-deeper)' }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--charcoal)' }}>Breakfast Problems</span>
+              </div>
+              <button onClick={() => setBreakfastPopupDay(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mist)' }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: 13, color: 'var(--slate)', marginBottom: 12 }}>
+              {format(parseISO(breakfastPopupDay), 'EEEE, MMMM d, yyyy')}
+            </p>
+
+            {breakfastByDay[breakfastPopupDay] ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#15803d', fontSize: 13, marginBottom: 20 }}>
+                <CheckCircle size={14} />
+                <span>All problems completed for this day!</span>
+              </div>
+            ) : (
+              <p style={{ fontSize: 13, color: 'var(--mist)', marginBottom: 20 }}>
+                Your daily practice problems are ready.
+              </p>
+            )}
+
+            <a
+              href="/student/breakfast-problems"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                background: 'rgba(168,203,222,0.4)', color: 'var(--sky-deeper)',
+                border: '1px solid rgba(168,203,222,0.4)', textDecoration: 'none',
+              }}
+            >
+              Go to Breakfast Problems
+              <ExternalLink size={12} />
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Day detail panel */}
       {selectedDay && (

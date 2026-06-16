@@ -20,11 +20,20 @@ export interface BreakfastDay {
   completed: boolean;
 }
 
+export interface NextSession {
+  id: string;
+  proposed_time: string;
+  status: string;
+  tutor_name: string;
+}
+
 export default async function StudentSchedulePage() {
   const session = await auth();
   const userId = session!.user.id;
 
-  const [sessions, satDatesRaw, breakfastRaw] = await Promise.all([
+  const now = new Date().toISOString();
+
+  const [sessions, satDatesRaw, breakfastRaw, nextSessionRaw] = await Promise.all([
     sql`
       SELECT s.id, s.proposed_time, s.status, s.created_at,
              u.name AS tutor_name,
@@ -39,6 +48,14 @@ export default async function StudentSchedulePage() {
     `,
     getSatDatesByStudent(userId),
     getBreakfastCompletionByStudent(userId),
+    sql`
+      SELECT s.id, s.proposed_time, s.status, u.name AS tutor_name
+      FROM sessions s
+      JOIN users u ON u.id = s.tutor_id
+      WHERE s.student_id = ${userId} AND s.proposed_time >= ${now}
+      ORDER BY s.proposed_time ASC
+      LIMIT 1
+    `,
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,5 +80,25 @@ export default async function StudentSchedulePage() {
     completed: Number(b.submitted) >= Number(b.total) && Number(b.total) > 0,
   }));
 
-  return <StudentScheduleClient sessions={sessionsWithPs} satDates={satDates} breakfastDays={breakfastDays} />;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const nextSessionRow = (nextSessionRaw as any[])[0] ?? null;
+  const nextSession: NextSession | null = nextSessionRow
+    ? {
+        id: String(nextSessionRow.id),
+        proposed_time: nextSessionRow.proposed_time instanceof Date
+          ? nextSessionRow.proposed_time.toISOString()
+          : String(nextSessionRow.proposed_time),
+        status: String(nextSessionRow.status),
+        tutor_name: String(nextSessionRow.tutor_name),
+      }
+    : null;
+
+  return (
+    <StudentScheduleClient
+      sessions={sessionsWithPs}
+      satDates={satDates}
+      breakfastDays={breakfastDays}
+      nextSession={nextSession}
+    />
+  );
 }
