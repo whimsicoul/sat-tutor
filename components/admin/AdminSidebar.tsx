@@ -6,7 +6,7 @@ import { signOut } from 'next-auth/react';
 import { Users, CalendarDays, LogOut, Settings, MessageSquare, BarChart2, FileText, Layers, TrendingUp } from 'lucide-react';
 import { DCFlagIcon } from '@/components/ui/dc-flag';
 
-function SunEmoji(_props: { size?: number; className?: string }) {
+function SunEmoji() {
   return <span>☀️</span>;
 }
 
